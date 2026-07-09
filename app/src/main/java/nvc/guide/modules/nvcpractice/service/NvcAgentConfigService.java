@@ -11,6 +11,7 @@ import nvc.guide.modules.nvcpractice.repository.NvcAgentConfigRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.util.List;
@@ -60,6 +61,7 @@ public class NvcAgentConfigService {
    * 更新 Agent 配置（热更新）
    * 更新 DB + 清除缓存，下次调用自动生效
    */
+  @Transactional
   public NvcAgentConfigEntity updateConfig(
       NvcAgentScene scene, AgentConfigUpdateRequest request) {
     NvcAgentConfigEntity config = agentConfigRepository.findByAgentScene(scene)
