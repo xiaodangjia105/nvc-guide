@@ -1,4 +1,4 @@
-package interview.guide;
+package nvc.guide;
 
 import org.junit.jupiter.api.Test;
 

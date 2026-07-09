@@ -23,7 +23,7 @@ springdoc:
     operations-sorter: alpha
   api-docs:
     path: /v3/api-docs
-  packages-to-scan: interview.guide.modules
+  packages-to-scan: nvc.guide.modules
 
 spring:
   config:

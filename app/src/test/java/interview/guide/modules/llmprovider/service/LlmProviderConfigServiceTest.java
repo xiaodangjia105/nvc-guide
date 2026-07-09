@@ -1,15 +1,15 @@
-package interview.guide.modules.llmprovider.service;
+package nvc.guide.modules.llmprovider.service;
 
-import interview.guide.common.ai.LlmProviderRegistry;
-import interview.guide.common.config.LlmProviderProperties;
-import interview.guide.common.exception.BusinessException;
-import interview.guide.common.exception.ErrorCode;
-import interview.guide.modules.llmprovider.dto.CreateProviderRequest;
-import interview.guide.modules.llmprovider.dto.DefaultProviderDTO;
-import interview.guide.modules.llmprovider.dto.UpdateProviderRequest;
-import interview.guide.modules.voiceinterview.config.VoiceInterviewProperties;
-import interview.guide.modules.voiceinterview.service.QwenAsrService;
-import interview.guide.modules.voiceinterview.service.QwenTtsService;
+import nvc.guide.common.ai.LlmProviderRegistry;
+import nvc.guide.common.config.LlmProviderProperties;
+import nvc.guide.common.exception.BusinessException;
+import nvc.guide.common.exception.ErrorCode;
+import nvc.guide.modules.llmprovider.dto.CreateProviderRequest;
+import nvc.guide.modules.llmprovider.dto.DefaultProviderDTO;
+import nvc.guide.modules.llmprovider.dto.UpdateProviderRequest;
+import nvc.guide.modules.voiceinterview.config.VoiceInterviewProperties;
+import nvc.guide.modules.voiceinterview.service.QwenAsrService;
+import nvc.guide.modules.voiceinterview.service.QwenTtsService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;

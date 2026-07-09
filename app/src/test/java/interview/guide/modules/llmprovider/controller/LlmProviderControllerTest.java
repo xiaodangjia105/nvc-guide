@@ -1,9 +1,9 @@
-package interview.guide.modules.llmprovider.controller;
+package nvc.guide.modules.llmprovider.controller;
 
-import interview.guide.common.result.Result;
-import interview.guide.modules.llmprovider.dto.DefaultProviderDTO;
-import interview.guide.modules.llmprovider.dto.ProviderDTO;
-import interview.guide.modules.llmprovider.service.LlmProviderConfigService;
+import nvc.guide.common.result.Result;
+import nvc.guide.modules.llmprovider.dto.DefaultProviderDTO;
+import nvc.guide.modules.llmprovider.dto.ProviderDTO;
+import nvc.guide.modules.llmprovider.service.LlmProviderConfigService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

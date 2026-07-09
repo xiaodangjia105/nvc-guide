@@ -1,8 +1,8 @@
-package interview.guide.common.ai;
+package nvc.guide.common.ai;
 
-import interview.guide.common.config.LlmProviderProperties;
-import interview.guide.common.config.LlmProviderProperties.ProviderConfig;
-import interview.guide.common.exception.BusinessException;
+import nvc.guide.common.config.LlmProviderProperties;
+import nvc.guide.common.config.LlmProviderProperties.ProviderConfig;
+import nvc.guide.common.exception.BusinessException;
 import io.micrometer.observation.ObservationRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

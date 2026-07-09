@@ -1,14 +1,14 @@
-package interview.guide.modules.voiceinterview.service;
+package nvc.guide.modules.voiceinterview.service;
 
-import interview.guide.common.exception.BusinessException;
-import interview.guide.modules.voiceinterview.config.VoiceInterviewProperties;
-import interview.guide.modules.voiceinterview.dto.CreateSessionRequest;
-import interview.guide.modules.voiceinterview.dto.SessionResponseDTO;
-import interview.guide.modules.voiceinterview.model.VoiceInterviewMessageEntity;
-import interview.guide.modules.voiceinterview.model.VoiceInterviewSessionEntity;
-import interview.guide.modules.voiceinterview.model.VoiceInterviewSessionStatus;
-import interview.guide.modules.voiceinterview.repository.VoiceInterviewMessageRepository;
-import interview.guide.modules.voiceinterview.repository.VoiceInterviewSessionRepository;
+import nvc.guide.common.exception.BusinessException;
+import nvc.guide.modules.voiceinterview.config.VoiceInterviewProperties;
+import nvc.guide.modules.voiceinterview.dto.CreateSessionRequest;
+import nvc.guide.modules.voiceinterview.dto.SessionResponseDTO;
+import nvc.guide.modules.voiceinterview.model.VoiceInterviewMessageEntity;
+import nvc.guide.modules.voiceinterview.model.VoiceInterviewSessionEntity;
+import nvc.guide.modules.voiceinterview.model.VoiceInterviewSessionStatus;
+import nvc.guide.modules.voiceinterview.repository.VoiceInterviewMessageRepository;
+import nvc.guide.modules.voiceinterview.repository.VoiceInterviewSessionRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;

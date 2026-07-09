@@ -1,6 +1,6 @@
-package interview.guide.common.aspect;
+package nvc.guide.common.aspect;
 
-import interview.guide.common.annotation.RateLimit;
+import nvc.guide.common.annotation.RateLimit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 

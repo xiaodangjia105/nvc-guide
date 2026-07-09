@@ -1,4 +1,4 @@
-package interview.guide.modules.voiceinterview.service;
+package nvc.guide.modules.voiceinterview.service;
 
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;

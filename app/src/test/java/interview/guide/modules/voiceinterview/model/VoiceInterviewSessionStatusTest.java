@@ -1,4 +1,4 @@
-package interview.guide.modules.voiceinterview.model;
+package nvc.guide.modules.voiceinterview.model;
 
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;

@@ -1,8 +1,8 @@
-package interview.guide.common.ai;
+package nvc.guide.common.ai;
 
 import com.sun.net.httpserver.HttpServer;
-import interview.guide.common.config.LlmProviderProperties;
-import interview.guide.common.config.LlmProviderProperties.ProviderConfig;
+import nvc.guide.common.config.LlmProviderProperties;
+import nvc.guide.common.config.LlmProviderProperties.ProviderConfig;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -26,7 +26,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * 回归测试：确保 base-url 末尾已带 {@code /v1}（如阿里 DashScope 的 compatible-mode）
  * 时，不会再被拼成 {@code .../v1/v1/chat/completions}（Spring AI OpenAiApi 的默认行为）。
  *
- * <p>真实场景下：UI 上点 "测试连接" 走的是 {@link interview.guide.modules.llmprovider
+ * <p>真实场景下：UI 上点 "测试连接" 走的是 {@link nvc.guide.modules.llmprovider
  * .service.LlmProviderConfigService#testProvider}（自己拼路径，所以 OK），但模拟面试
  * 调用走 {@link LlmProviderRegistry} → Spring AI {@code OpenAiApi}，之前会 404。
  */

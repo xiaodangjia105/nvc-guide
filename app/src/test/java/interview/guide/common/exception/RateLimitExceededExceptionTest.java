@@ -1,4 +1,4 @@
-package interview.guide.common.exception;
+package nvc.guide.common.exception;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

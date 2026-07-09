@@ -1,6 +1,6 @@
-package interview.guide.infrastructure.file;
+package nvc.guide.infrastructure.file;
 
-import interview.guide.common.exception.BusinessException;
+import nvc.guide.common.exception.BusinessException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
