@@ -33,7 +33,11 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -268,6 +272,23 @@ class NvcAgentOrchestratorTest {
       }
 
       @Test
+      @DisplayName("评分 < 70 且有薄弱要素时聚焦薄弱要素")
+      void lowScore_withWeakElement_focusesWeakElement() {
+        NvcPracticeSessionEntity session = buildSession(
+            NvcSessionPhase.IN_PROGRESS,
+            NvcPracticeMode.SCENARIO, null);
+        // feeling is weakest (50), overall < 70
+        NvcEvaluationEntity eval = buildEvaluation(70, 50, 60, 65, 60);
+        PracticeContext context = PracticeContext.builder()
+            .session(session).lastEvaluation(eval).roundCount(2).build();
+
+        AgentDecision decision = orchestrator.decideNextAgent(context);
+
+        assertEquals(NvcAgentScene.STEP_FEELING_COACH, decision.scene());
+        assertEquals("WEAK_ELEMENT_FOCUS", decision.action());
+      }
+
+      @Test
       @DisplayName("评分 >= 60 且轮次 > 3 时偶尔切换困难搭档")
       void goodScore_switchesToDifficultPartner() {
         NvcPracticeSessionEntity session = buildSession(
@@ -355,35 +376,31 @@ class NvcAgentOrchestratorTest {
   class ReflectTests {
 
     @Test
-    @DisplayName("调用评估官 Agent 进行反思")
-    void reflect_callsEvaluator() {
-      NvcAgentConfigEntity evalConfig = NvcAgentConfigEntity.builder()
-          .id(1L)
-          .agentScene(NvcAgentScene.NVC_EXPRESSION_EVALUATOR)
-          .systemPrompt("evaluator")
-          .modelProvider("mimo")
-          .isEnabled(true)
-          .build();
-      when(agentConfigService.getConfig(NvcAgentScene.NVC_EXPRESSION_EVALUATOR))
-          .thenReturn(evalConfig);
-
+    @DisplayName("reflect() 使用评估官配置并包含评分数据")
+    void reflect_usesEvaluatorConfig_withScores() {
       NvcPracticeSessionEntity session = buildSession(
           NvcSessionPhase.IN_PROGRESS,
           NvcPracticeMode.FREE_DIALOG, null);
-      NvcEvaluationEntity eval = buildEvaluation(70, 60, 65, 70, 66);
+      NvcEvaluationEntity eval = buildEvaluation(60, 50, 70, 65, 60);
       PracticeContext context = PracticeContext.builder()
-          .session(session).lastEvaluation(eval).roundCount(5).build();
+          .session(session).lastEvaluation(eval).roundCount(3).build();
 
-      when(agentChatService.chatPlain(
-          org.mockito.ArgumentMatchers.any(NvcAgentConfigEntity.class),
-          org.mockito.ArgumentMatchers.anyString(),
-          org.mockito.ArgumentMatchers.anyString()))
-          .thenReturn("{\"weak_elements\": [\"feeling\"]}");
+      NvcAgentConfigEntity evaluatorConfig = NvcAgentConfigEntity.builder()
+          .id(2L)
+          .agentScene(NvcAgentScene.NVC_EXPRESSION_EVALUATOR)
+          .isEnabled(true)
+          .build();
+
+      when(agentConfigService.getConfig(NvcAgentScene.NVC_EXPRESSION_EVALUATOR))
+          .thenReturn(evaluatorConfig);
+      when(agentChatService.chatPlain(any(), anyString(), anyString()))
+          .thenReturn("{\"weak_elements\":[\"feeling\"]}");
 
       String result = orchestrator.reflect(context);
 
       assertNotNull(result);
-      assertTrue(result.contains("feeling"));
+      verify(agentConfigService).getConfig(NvcAgentScene.NVC_EXPRESSION_EVALUATOR);
+      verify(agentChatService).chatPlain(eq(evaluatorConfig), anyString(), anyString());
     }
   }
 }

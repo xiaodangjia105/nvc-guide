@@ -228,6 +228,12 @@ public class NvcAgentOrchestrator {
    * 练习结束后反思，分析表现并给出策略建议
    */
   public String reflect(PracticeContext context) {
+    if (context.getLastEvaluation() == null) {
+      log.warn("Cannot reflect: no evaluation found for session {}",
+          context.getSession().getId());
+      return "{\"weak_elements\":[],\"suggested_difficulty\":\"MEDIUM\",\"suggested_scenario_type\":\"any\",\"strategy_note\":\"No evaluation data available\"}";
+    }
+
     NvcAgentConfigEntity evaluatorConfig =
         agentConfigService.getConfig(NvcAgentScene.NVC_EXPRESSION_EVALUATOR);
 
