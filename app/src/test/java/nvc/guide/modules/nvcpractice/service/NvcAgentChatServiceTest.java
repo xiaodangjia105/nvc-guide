@@ -2,7 +2,11 @@ package nvc.guide.modules.nvcpractice.service;
 
 import nvc.guide.common.ai.LlmProviderRegistry;
 import nvc.guide.modules.nvcpractice.dto.PracticeContext;
-import nvc.guide.modules.nvcpractice.model.*;
+import nvc.guide.modules.nvcpractice.model.NvcAgentConfigEntity;
+import nvc.guide.modules.nvcpractice.model.NvcAgentScene;
+import nvc.guide.modules.nvcpractice.model.NvcPracticeMode;
+import nvc.guide.modules.nvcpractice.model.NvcPracticeSessionEntity;
+import nvc.guide.modules.nvcpractice.model.NvcSessionPhase;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -11,9 +15,16 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.ai.chat.client.ChatClient;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("NvcAgentChatService 测试")
