@@ -1,6 +1,5 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import InterviewMessageBubble from './InterviewMessageBubble';
 
 interface Message {
   role: 'user' | 'ai';
@@ -13,6 +12,32 @@ interface RealtimeSubtitleProps {
   userText: string;
   aiText: string;
   isAiSpeaking: boolean;
+}
+
+// 简单的消息气泡组件
+function MessageBubble({ role, text, highlight, italic, suffix }: {
+  role: 'user' | 'interviewer';
+  text: string;
+  highlight?: boolean;
+  italic?: boolean;
+  suffix?: ReactNode;
+}) {
+  const isUser = role === 'user';
+  return (
+    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
+      <div className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed
+        ${isUser
+          ? 'bg-primary-500 text-white rounded-br-md'
+          : 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-bl-md'
+        }
+        ${highlight ? 'ring-2 ring-primary-300 dark:ring-primary-600' : ''}
+        ${italic ? 'italic opacity-80' : ''}
+      `}>
+        {text}
+        {suffix}
+      </div>
+    </div>
+  );
 }
 
 export default function RealtimeSubtitle({
@@ -66,7 +91,7 @@ export default function RealtimeSubtitle({
           {/* History Messages */}
           {messages.map((msg) => (
             <div key={msg.id}>
-              <InterviewMessageBubble
+              <MessageBubble
                 role={msg.role === 'user' ? 'user' : 'interviewer'}
                 text={msg.text}
               />
@@ -81,7 +106,7 @@ export default function RealtimeSubtitle({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
             >
-              <InterviewMessageBubble
+              <MessageBubble
                 role="interviewer"
                 text={activeAiText}
                 highlight
@@ -98,7 +123,7 @@ export default function RealtimeSubtitle({
 
           {/* Current User Input (Real-time) */}
           {userText && (
-            <InterviewMessageBubble
+            <MessageBubble
               role="user"
               text={userText}
               highlight
@@ -119,7 +144,7 @@ export default function RealtimeSubtitle({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                 </svg>
               </div>
-              <p className="text-sm">面试即将开始，请准备</p>
+              <p className="text-sm">等待对话开始...</p>
             </motion.div>
           )}
         </AnimatePresence>

@@ -1,9 +1,7 @@
-import {Link, Outlet, useLocation, useNavigate} from 'react-router-dom';
+import {Link, Outlet, useLocation} from 'react-router-dom';
 import {motion} from 'framer-motion';
-import {Calendar, ChevronRight, Database, FileStack, MessageSquare, Moon, Settings, Sparkles, Sun, Users,} from 'lucide-react';
+import {Database, MessageSquare, Moon, Settings, Sun,} from 'lucide-react';
 import {useTheme} from '../hooks/useTheme';
-import {useState} from 'react';
-import UnifiedInterviewModal, {UnifiedInterviewConfig} from './UnifiedInterviewModal';
 
 interface NavItem {
   id: string;
@@ -23,74 +21,9 @@ export default function Layout() {
   const location = useLocation();
   const currentPath = location.pathname;
   const {theme, toggleTheme} = useTheme();
-  const navigate = useNavigate();
-  const [interviewModalPreset, setInterviewModalPreset] = useState<{
-    defaultMode: 'text' | 'voice';
-    defaultResumeId?: number;
-    title: string;
-    subtitle: string;
-    startButtonText: string;
-  } | null>(null);
-
-  const openInterviewModalWithResume = (resumeId: number) => {
-    setInterviewModalPreset({
-      defaultMode: 'text',
-      defaultResumeId: resumeId,
-      title: '开始模拟面试',
-      subtitle: '配置面试参数，开始练习',
-      startButtonText: '开始面试',
-    });
-  };
-
-  const handleInterviewStart = (config: UnifiedInterviewConfig) => {
-    setInterviewModalPreset(null);
-    if (config.mode === 'text') {
-      navigate('/interview', {
-        state: {
-          resumeId: config.resumeId,
-          interviewConfig: {
-            skillId: config.skillId,
-            difficulty: config.difficulty,
-            questionCount: config.questionCount,
-            llmProvider: config.llmProvider,
-          },
-        },
-      });
-      return;
-    }
-
-    const params = new URLSearchParams({
-      skillId: config.skillId,
-      difficulty: config.difficulty,
-    });
-    navigate(`/voice-interview?${params.toString()}`, {
-      state: {
-        voiceConfig: {
-          skillId: config.skillId,
-          difficulty: config.difficulty,
-          techEnabled: true,
-          projectEnabled: true,
-          hrEnabled: true,
-          plannedDuration: config.plannedDuration,
-          resumeId: config.resumeId,
-          llmProvider: config.llmProvider,
-        },
-      },
-    });
-  };
 
   // 按业务模块组织的导航项
   const navGroups: NavGroup[] = [
-    {
-      id: 'interview',
-      title: '面试准备',
-      items: [
-        { id: 'resumes', path: '/history', label: '简历管理', icon: FileStack, description: '管理简历，AI 分析' },
-        { id: 'interview-hub', path: '/interview-hub', label: '模拟面试', icon: Sparkles, description: '文字/语音面试练习' },
-        { id: 'interviews', path: '/interviews', label: '面试记录', icon: Users, description: '查看面试历史' },
-        { id: 'interview-schedule', path: '/interview-schedule', label: '面试日程', icon: Calendar, description: '管理面试安排' },
-      ],
-    },
     {
       id: 'knowledge',
       title: '知识库',
@@ -111,18 +44,6 @@ export default function Layout() {
   // 判断当前页面是否匹配导航项
   const isActive = (path: string) => {
     if (path.startsWith('#')) return false;
-    if (path === '/history') {
-      return currentPath === '/history'
-        || currentPath === '/'
-        || currentPath.startsWith('/history/')
-        || currentPath === '/upload';
-    }
-    if (path === '/interview-hub') {
-      return currentPath === '/interview-hub'
-        || currentPath === '/interview'
-        || currentPath.startsWith('/interview/')
-        || currentPath.startsWith('/voice-interview');
-    }
     if (path === '/knowledgebase') {
       return currentPath === '/knowledgebase' || currentPath === '/knowledgebase/upload';
     }
@@ -135,13 +56,13 @@ export default function Layout() {
       <aside className="w-64 bg-white dark:bg-slate-900 border-r border-slate-100 dark:border-slate-700 fixed h-screen left-0 top-0 z-50 flex flex-col">
         {/* Logo */}
         <div className="p-6 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
-          <Link to="/history" className="flex items-center gap-3">
+          <Link to="/knowledgebase" className="flex items-center gap-3">
             <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-primary-500/30">
-              <Sparkles className="w-5 h-5" />
+              <MessageSquare className="w-5 h-5" />
             </div>
             <div>
-              <span className="text-lg font-bold text-slate-800 dark:text-white tracking-tight block">AI Interview</span>
-              <span className="text-xs text-slate-400 dark:text-slate-500">智能面试助手</span>
+              <span className="text-lg font-bold text-slate-800 dark:text-white tracking-tight block">NVC 练习</span>
+              <span className="text-xs text-slate-400 dark:text-slate-500">非暴力沟通助手</span>
             </div>
           </Link>
         </div>
@@ -208,7 +129,6 @@ export default function Layout() {
                             </span>
                           )}
                         </div>
-                        {active && <ChevronRight className="w-4 h-4 text-primary-400" />}
                       </Link>
                     );
                   })}
@@ -221,8 +141,8 @@ export default function Layout() {
         {/* 底部信息 */}
         <div className="p-4 border-t border-slate-100 dark:border-slate-700">
           <div className="px-3 py-2 bg-gradient-to-r from-primary-50 to-indigo-50 dark:from-primary-900/30 dark:to-slate-800 rounded-xl">
-            <p className="text-xs text-primary-600 dark:text-primary-400 font-medium">AI 面试助手 v1.0</p>
-            <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Powered by AI</p>
+            <p className="text-xs text-primary-600 dark:text-primary-400 font-medium">NVC 练习助手 v0.1</p>
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">非暴力沟通练习平台</p>
           </div>
         </div>
       </aside>
@@ -236,22 +156,9 @@ export default function Layout() {
           exit={{ opacity: 0, y: -20 }}
           transition={{ duration: 0.3 }}
         >
-          <Outlet context={{ openInterviewModalWithResume }} />
+          <Outlet />
         </motion.div>
       </main>
-
-      {/* 统一面试弹窗 */}
-      <UnifiedInterviewModal
-        isOpen={interviewModalPreset !== null}
-        onClose={() => setInterviewModalPreset(null)}
-        onStart={handleInterviewStart}
-        defaultMode={interviewModalPreset?.defaultMode || 'text'}
-        defaultResumeId={interviewModalPreset?.defaultResumeId}
-        hideModeSwitch={interviewModalPreset?.defaultResumeId == null}
-        title={interviewModalPreset?.title || '开始模拟面试'}
-        subtitle={interviewModalPreset?.subtitle || '选择面试模式和主题，快速开始'}
-        startButtonText={interviewModalPreset?.startButtonText || '开始面试'}
-      />
     </div>
   );
 }

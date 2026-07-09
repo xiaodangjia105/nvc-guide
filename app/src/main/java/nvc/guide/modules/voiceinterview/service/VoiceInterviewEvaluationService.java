@@ -6,7 +6,6 @@ import nvc.guide.common.evaluation.QaRecord;
 import nvc.guide.common.evaluation.UnifiedEvaluationService;
 import nvc.guide.common.exception.BusinessException;
 import nvc.guide.common.exception.ErrorCode;
-import nvc.guide.modules.interview.skill.InterviewSkillService;
 import nvc.guide.modules.voiceinterview.dto.VoiceEvaluationDetailDTO;
 import nvc.guide.modules.voiceinterview.dto.VoiceEvaluationDetailDTO.AnswerDetail;
 import nvc.guide.modules.voiceinterview.model.VoiceInterviewEvaluationEntity;
@@ -43,7 +42,6 @@ public class VoiceInterviewEvaluationService {
     private final VoiceInterviewMessageRepository messageRepository;
     private final VoiceInterviewSessionRepository sessionRepository;
     private final ObjectMapper objectMapper;
-    private final InterviewSkillService skillService;
 
     /**
      * 生成语音面试评估（由异步消费者调用）
@@ -69,7 +67,8 @@ public class VoiceInterviewEvaluationService {
             ChatClient chatClient = llmProviderRegistry.getChatClientOrDefault(provider);
 
             String sessionIdStr = String.valueOf(sessionId);
-            String referenceContext = skillService.buildEvaluationReferenceSectionSafe(session.getSkillId());
+            // TODO: 后续改造为 NVC 模式，从 NVC 知识库获取参考上下文
+            String referenceContext = null;
             EvaluationReport report = unifiedEvaluationService.evaluate(
                 chatClient, sessionIdStr, qaRecords, null, referenceContext);
 
@@ -79,14 +78,14 @@ public class VoiceInterviewEvaluationService {
             throw e;
         } catch (Exception e) {
             log.error("生成语音面试评估失败: sessionId={}", sessionId, e);
-            throw new BusinessException(ErrorCode.VOICE_EVALUATION_FAILED,
+            throw new BusinessException(ErrorCode.NVC_VOICE_EVALUATION_FAILED,
                 "生成评估失败: " + e.getMessage());
         }
     }
 
     public VoiceEvaluationDetailDTO getEvaluation(Long sessionId) {
         VoiceInterviewEvaluationEntity evaluation = evaluationRepository.findBySessionId(sessionId)
-            .orElseThrow(() -> new BusinessException(ErrorCode.VOICE_EVALUATION_NOT_FOUND,
+            .orElseThrow(() -> new BusinessException(ErrorCode.NVC_VOICE_EVALUATION_NOT_FOUND,
                 "评估结果不存在: " + sessionId));
 
         return buildDetailDTO(evaluation);
@@ -183,7 +182,7 @@ public class VoiceInterviewEvaluationService {
             log.info("评估结果已保存: sessionId={}, score={}", sessionId, entity.getOverallScore());
         } catch (Exception e) {
             log.error("保存评估结果失败: sessionId={}", sessionId, e);
-            throw new BusinessException(ErrorCode.VOICE_EVALUATION_FAILED,
+            throw new BusinessException(ErrorCode.NVC_VOICE_EVALUATION_FAILED,
                 "保存评估失败: " + e.getMessage());
         }
     }
@@ -207,7 +206,7 @@ public class VoiceInterviewEvaluationService {
             log.info("空评估结果已保存: sessionId={}", sessionId);
         } catch (Exception e) {
             log.error("保存空评估结果失败: sessionId={}", sessionId, e);
-            throw new BusinessException(ErrorCode.VOICE_EVALUATION_FAILED,
+            throw new BusinessException(ErrorCode.NVC_VOICE_EVALUATION_FAILED,
                 "保存空评估失败: " + e.getMessage());
         }
     }
@@ -265,14 +264,14 @@ public class VoiceInterviewEvaluationService {
 
         } catch (Exception e) {
             log.error("构建评估详情失败: sessionId={}", entity.getSessionId(), e);
-            throw new BusinessException(ErrorCode.VOICE_EVALUATION_FAILED,
+            throw new BusinessException(ErrorCode.NVC_VOICE_EVALUATION_FAILED,
                 "构建评估结果失败: " + e.getMessage());
         }
     }
 
     private VoiceInterviewSessionEntity getSession(Long sessionId) {
         return sessionRepository.findById(sessionId)
-            .orElseThrow(() -> new BusinessException(ErrorCode.VOICE_SESSION_NOT_FOUND,
+            .orElseThrow(() -> new BusinessException(ErrorCode.NVC_VOICE_SESSION_NOT_FOUND,
                 "语音面试会话不存在: " + sessionId));
     }
 }

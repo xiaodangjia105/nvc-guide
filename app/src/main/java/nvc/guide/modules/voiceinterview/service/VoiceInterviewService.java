@@ -590,7 +590,7 @@ public class VoiceInterviewService {
     @Transactional
     public void deleteSession(Long sessionId) {
         if (!sessionRepository.existsById(sessionId)) {
-            throw new BusinessException(ErrorCode.VOICE_SESSION_NOT_FOUND, "会话不存在: " + sessionId);
+            throw new BusinessException(ErrorCode.NVC_VOICE_SESSION_NOT_FOUND, "会话不存在: " + sessionId);
         }
         evaluationRepository.findBySessionId(sessionId).ifPresent(evaluationRepository::delete);
         messageRepository.deleteBySessionId(sessionId);

@@ -2,8 +2,6 @@ package nvc.guide.modules.voiceinterview.service;
 
 import nvc.guide.common.ai.LlmProviderRegistry;
 import nvc.guide.common.ai.PromptSanitizer;
-import nvc.guide.modules.resume.model.ResumeEntity;
-import nvc.guide.modules.resume.repository.ResumeRepository;
 import nvc.guide.modules.voiceinterview.config.VoiceInterviewProperties;
 import nvc.guide.modules.voiceinterview.model.VoiceInterviewSessionEntity;
 import lombok.RequiredArgsConstructor;
@@ -26,7 +24,6 @@ public class DashscopeLlmService {
 
     private final LlmProviderRegistry llmProviderRegistry;
     private final VoiceInterviewPromptService promptService;
-    private final ResumeRepository resumeRepository;
     private final VoiceInterviewProperties voiceInterviewProperties;
     private final PromptSanitizer promptSanitizer;
 
@@ -155,15 +152,9 @@ public class DashscopeLlmService {
     }
 
     private PromptContext buildPromptContext(String userInput, VoiceInterviewSessionEntity session, List<String> conversationHistory) {
-        String resumeText = null;
-        if (session.getResumeId() != null) {
-            ResumeEntity resume = resumeRepository.findById(session.getResumeId()).orElse(null);
-            if (resume != null) {
-                resumeText = resume.getResumeText();
-            }
-        }
-
-        String systemPrompt = promptService.generateSystemPromptWithContext(session.getSkillId(), resumeText);
+        // TODO: 后续改造为 NVC 模式，从用户档案获取上下文
+        String contextText = null;
+        String systemPrompt = promptService.generateSystemPromptWithContext(session.getSkillId(), contextText);
 
         StringBuilder promptBuilder = new StringBuilder();
         if (conversationHistory != null && !conversationHistory.isEmpty()) {

@@ -178,7 +178,7 @@ public class UnifiedEvaluationService {
         try {
             return structuredOutputInvoker.invoke(
                 chatClient, systemPromptWithFormat, userPrompt, outputConverter,
-                ErrorCode.INTERVIEW_EVALUATION_FAILED, "批次评估失败：", "批次评估", log
+                ErrorCode.NVC_EVALUATION_FAILED, "批次评估失败：", "批次评估", log
             );
         } catch (Exception e) {
             log.error("批次评估失败: sessionId={}, batchSize={}, error={}",
@@ -265,7 +265,7 @@ public class UnifiedEvaluationService {
             String systemWithFormat = summarySystem + "\n\n" + summaryOutputConverter.getFormat();
             SummaryDTO dto = structuredOutputInvoker.invoke(
                 chatClient, systemWithFormat, summaryUser, summaryOutputConverter,
-                ErrorCode.INTERVIEW_EVALUATION_FAILED, "总结评估失败：", "总结评估", log
+                ErrorCode.NVC_EVALUATION_FAILED, "总结评估失败：", "总结评估", log
             );
 
             String feedback = dto != null && dto.overallFeedback() != null && !dto.overallFeedback().isBlank()

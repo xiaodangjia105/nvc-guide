@@ -158,7 +158,7 @@ public class VoiceInterviewController {
 
         VoiceInterviewSessionEntity session = voiceInterviewService.getSession(sessionId);
         if (session == null) {
-            throw new BusinessException(ErrorCode.VOICE_SESSION_NOT_FOUND, "会话不存在: " + sessionId);
+            throw new BusinessException(ErrorCode.NVC_VOICE_SESSION_NOT_FOUND, "会话不存在: " + sessionId);
         }
 
         AsyncTaskStatus status = session.getEvaluateStatus();
@@ -188,7 +188,7 @@ public class VoiceInterviewController {
 
         VoiceInterviewSessionEntity session = voiceInterviewService.getSession(sessionId);
         if (session == null) {
-            throw new BusinessException(ErrorCode.VOICE_SESSION_NOT_FOUND, "会话不存在: " + sessionId);
+            throw new BusinessException(ErrorCode.NVC_VOICE_SESSION_NOT_FOUND, "会话不存在: " + sessionId);
         }
 
         // If already completed, return cached result
