@@ -306,7 +306,8 @@ class NvcAgentOrchestratorTest {
               NvcPracticeMode.FREE_DIALOG, null))
           .roundCount(1).build();
 
-      when(agentChatService.chat(config, context, "你好")).thenReturn("你好！我是引导官。");
+      when(agentChatService.chat(config, context, "你好"))
+          .thenReturn("你好！我是引导官。");
 
       String result = orchestrator.executeAgent(
           NvcAgentScene.DIALOGUE_GUIDE, context, "你好");
