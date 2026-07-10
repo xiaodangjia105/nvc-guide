@@ -15,22 +15,22 @@ public class InterviewEvaluationProperties {
     /**
      * 评估系统提示词路径
      */
-    private String systemPromptPath = "prompts/nvc-evaluation-system.st";
+    private String systemPromptPath = "classpath:prompts/nvc-evaluation-system.st";
 
     /**
      * 评估用户提示词路径
      */
-    private String userPromptPath = "prompts/nvc-evaluation-user.st";
+    private String userPromptPath = "classpath:prompts/nvc-evaluation-user.st";
 
     /**
      * 汇总系统提示词路径
      */
-    private String summarySystemPromptPath = "prompts/nvc-evaluation-summary-system.st";
+    private String summarySystemPromptPath = "classpath:prompts/nvc-evaluation-summary-system.st";
 
     /**
      * 汇总用户提示词路径
      */
-    private String summaryUserPromptPath = "prompts/nvc-evaluation-summary-user.st";
+    private String summaryUserPromptPath = "classpath:prompts/nvc-evaluation-summary-user.st";
 
     /**
      * 评估批次大小
