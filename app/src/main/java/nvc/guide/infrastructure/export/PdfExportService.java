@@ -124,11 +124,92 @@ public class PdfExportService {
 
     /**
      * 导出 NVC 练习报告为 PDF
-     * TODO: Task 6 中实现完整 PDF 渲染逻辑
      */
     public byte[] exportNvcReport(nvc.guide.modules.nvcpractice.dto.NvcPracticeReport report) {
-        log.info("Exporting NVC report for session: {}", report.sessionId());
-        // TODO: 实现完整的 PDF 渲染
-        return new byte[0];
+        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+            PdfDocument pdf = createPdfDocument(outputStream);
+            Document document = new Document(pdf);
+            PdfFont font = createChineseFont();
+
+            // 1. 标题
+            document.add(createTitle("NVC 练习报告", font));
+
+            // 2. 会话信息
+            document.add(createSubtitle("会话信息", font));
+            document.add(createBody(String.format(
+                "练习模式：%s  |  难度：%s  |  总轮次：%d",
+                report.practiceMode(), report.difficulty(), report.totalRounds()), font));
+            if (report.startedAt() != null) {
+                document.add(createBody(String.format(
+                    "开始时间：%s  |  完成时间：%s",
+                    report.startedAt().format(DATE_FORMAT),
+                    report.completedAt() != null
+                        ? report.completedAt().format(DATE_FORMAT) : "进行中"), font));
+            }
+
+            // 3. 五维度评分表格
+            document.add(createSubtitle("五维度评分", font));
+            Table scoreTable = new Table(UnitValue.createPercentArray(
+                new float[]{25, 15, 60}))
+                .useAllAvailableWidth();
+            scoreTable.addHeaderCell(createHeaderCell("维度", font));
+            scoreTable.addHeaderCell(createHeaderCell("分数", font));
+            scoreTable.addHeaderCell(createHeaderCell("分析", font));
+
+            addScoreRow(scoreTable, "观察", report.observationScore(),
+                report.observationDetail(), font);
+            addScoreRow(scoreTable, "感受", report.feelingScore(),
+                report.feelingDetail(), font);
+            addScoreRow(scoreTable, "需求", report.needScore(),
+                report.needDetail(), font);
+            addScoreRow(scoreTable, "请求", report.requestScore(),
+                report.requestDetail(), font);
+            addScoreRow(scoreTable, "共情", report.empathyScore(),
+                report.empathyDetail(), font);
+            addScoreRow(scoreTable, "综合", report.overallScore(),
+                null, font);
+            document.add(scoreTable);
+
+            // 4. 优势
+            if (report.strengths() != null) {
+                document.add(createSubtitle("优势", font));
+                document.add(createBody(report.strengths(), font));
+            }
+
+            // 5. 改进建议
+            if (report.improvements() != null) {
+                document.add(createSubtitle("改进建议", font));
+                document.add(createBody(report.improvements(), font));
+            }
+
+            // 6. 参考表达
+            if (report.referenceExpressions() != null) {
+                document.add(createSubtitle("参考 NVC 表达", font));
+                document.add(createBody(report.referenceExpressions(), font));
+            }
+
+            // 7. 综合评价
+            if (report.summary() != null) {
+                document.add(createSubtitle("综合评价", font));
+                document.add(createBody(report.summary(), font));
+            }
+
+            document.close();
+            return outputStream.toByteArray();
+        } catch (Exception e) {
+            log.error("NVC报告PDF导出失败: sessionId={}", report.sessionId(), e);
+            throw new nvc.guide.common.exception.BusinessException(
+                nvc.guide.common.exception.ErrorCode.EXPORT_PDF_FAILED,
+                "NVC报告PDF导出失败: " + e.getMessage());
+        }
+    }
+
+    private void addScoreRow(Table table, String dimension, Integer score,
+                              String detail, PdfFont font) {
+        table.addCell(createDataCell(dimension, font));
+        table.addCell(createDataCell(
+            score != null ? String.valueOf(score) : "-", font));
+        table.addCell(createDataCell(
+            detail != null ? detail : "-", font));
     }
 }
