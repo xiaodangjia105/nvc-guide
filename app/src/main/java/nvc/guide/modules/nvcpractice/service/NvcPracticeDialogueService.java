@@ -28,6 +28,7 @@ public class NvcPracticeDialogueService {
   private final NvcPracticeMessageRepository messageRepository;
   private final NvcAgentOrchestrator orchestrator;
   private final ObjectMapper objectMapper;
+  private final NvcEvaluationService evaluationService;
 
   /**
    * 发送消息并获取 AI 回复（非流式）
@@ -85,7 +86,20 @@ public class NvcPracticeDialogueService {
             .build();
     messageRepository.save(aiMsg);
 
-    // 9. 返回结果
+    // 9. 异步触发实时评估（不阻塞对话）
+    try {
+      evaluationService.evaluateRealtime(
+          sessionId,
+          session.getUserId(),
+          userMessage,
+          aiReply,
+          session.getCurrentStep());
+    } catch (Exception e) {
+      log.warn("Realtime evaluation failed (non-blocking): sessionId={}",
+          sessionId, e);
+    }
+
+    // 10. 返回结果
     return new DialogueResponse(
         sessionId,
         aiReply,
@@ -131,8 +145,9 @@ public class NvcPracticeDialogueService {
 
     // 3. 构建上下文 + Agent 调度
     var currentStep = session.getCurrentStep();
+    Long userId = session.getUserId();
     PracticeContext context = orchestrator.buildPracticeContext(
-        sessionId, session.getUserId());
+        sessionId, userId);
     AgentDecision decision =
         orchestrator.decideNextAgent(context);
     sessionService.updateAgentScene(sessionId, decision.scene());
@@ -182,6 +197,19 @@ public class NvcPracticeDialogueService {
           messageRepository.save(aiMsg);
           log.info("Stream reply saved: sessionId={}, length={}",
               sessionId, fullReply.length());
+
+          // 实时评估（不阻塞流式输出）
+          try {
+            evaluationService.evaluateRealtime(
+                sessionId,
+                userId,
+                userMessage,
+                fullReply.toString(),
+                currentStep);
+          } catch (Exception e) {
+            log.warn("Realtime evaluation failed in stream (non-blocking): sessionId={}",
+                sessionId, e);
+          }
         });
   }
 

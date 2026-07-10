@@ -9,10 +9,12 @@ import nvc.guide.modules.nvcpractice.dto.PracticeSessionResponse;
 import nvc.guide.modules.nvcpractice.dto.SendMessageRequest;
 import nvc.guide.modules.nvcpractice.model.NvcPracticeSessionEntity;
 import nvc.guide.modules.nvcpractice.model.NvcSessionPhase;
+import nvc.guide.modules.nvcpractice.listener.NvcEvaluateStreamProducer;
 import nvc.guide.modules.nvcpractice.service.NvcPracticeDialogueService;
 import nvc.guide.modules.nvcpractice.service.NvcPracticeSessionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -27,11 +29,13 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/nvc/practice")
+@Slf4j
 @RequiredArgsConstructor
 public class NvcPracticeController {
 
   private final NvcPracticeSessionService sessionService;
   private final NvcPracticeDialogueService dialogueService;
+  private final NvcEvaluateStreamProducer evaluateStreamProducer;
 
   /**
    * 创建练习会话
@@ -117,6 +121,16 @@ public class NvcPracticeController {
       @PathVariable Long sessionId) {
     NvcPracticeSessionEntity session =
         sessionService.completeSession(sessionId);
+
+    // 推送异步最终评估任务
+    try {
+      evaluateStreamProducer.sendEvaluateTask(
+          sessionId, session.getUserId());
+    } catch (Exception e) {
+      log.warn("Failed to send final evaluation task: sessionId={}",
+          sessionId, e);
+    }
+
     return Result.success(toSessionResponse(session));
   }
 
