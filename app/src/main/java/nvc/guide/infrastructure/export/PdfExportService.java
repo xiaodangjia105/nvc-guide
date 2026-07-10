@@ -122,6 +122,13 @@ public class PdfExportService {
                 .setBorder(null);
     }
 
-    // TODO: 后续添加 NVC 练习报告导出方法
-    // public byte[] exportNvcPracticeReport(NvcPracticeSessionEntity session, NvcEvaluationEntity evaluation) { ... }
+    /**
+     * 导出 NVC 练习报告为 PDF
+     * TODO: Task 6 中实现完整 PDF 渲染逻辑
+     */
+    public byte[] exportNvcReport(nvc.guide.modules.nvcpractice.dto.NvcPracticeReport report) {
+        log.info("Exporting NVC report for session: {}", report.sessionId());
+        // TODO: 实现完整的 PDF 渲染
+        return new byte[0];
+    }
 }
