@@ -22,6 +22,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import reactor.core.publisher.Flux;
 import java.util.List;
 
 /**
@@ -220,6 +221,18 @@ public class NvcAgentOrchestrator {
     }
 
     return agentChatService.chat(config, context, userMessage);
+  }
+
+  /**
+   * 流式执行 Agent 对话
+   */
+  public Flux<String> executeAgentStream(
+      NvcAgentScene scene, PracticeContext context, String userMessage) {
+    NvcAgentConfigEntity config = agentConfigService.getConfig(scene);
+    if (!config.getIsEnabled()) {
+      config = agentConfigService.getConfig(NvcAgentScene.DIALOGUE_GUIDE);
+    }
+    return agentChatService.chatStream(config, context, userMessage);
   }
 
   // ==================== REFLECT：反思与策略调整 ====================
