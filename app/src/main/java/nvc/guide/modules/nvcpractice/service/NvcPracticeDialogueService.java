@@ -142,13 +142,13 @@ public class NvcPracticeDialogueService {
         decision.scene().name(),
         decision.reason(),
         decision.action(),
-        session.getCurrentStep() != null
-            ? session.getCurrentStep().name() : null
+        currentStep != null ? currentStep.name() : null
     );
     String metadataJson;
     try {
       metadataJson = objectMapper.writeValueAsString(metadata);
     } catch (Exception e) {
+      log.warn("Failed to serialize StreamMetadata", e);
       metadataJson = "{}";
     }
 
