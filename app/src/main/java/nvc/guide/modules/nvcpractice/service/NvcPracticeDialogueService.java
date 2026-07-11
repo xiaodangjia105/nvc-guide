@@ -9,6 +9,7 @@ import nvc.guide.modules.nvcpractice.dto.StreamMetadata;
 import nvc.guide.modules.nvcpractice.model.NvcAgentScene;
 import nvc.guide.modules.nvcpractice.model.NvcMessageRole;
 import nvc.guide.modules.nvcpractice.model.NvcPracticeMessageEntity;
+import nvc.guide.modules.nvcpractice.model.NvcPracticeMode;
 import nvc.guide.modules.nvcpractice.model.NvcPracticeSessionEntity;
 import nvc.guide.modules.nvcpractice.model.NvcSessionPhase;
 import nvc.guide.modules.nvcpractice.repository.NvcPracticeMessageRepository;
@@ -31,6 +32,7 @@ public class NvcPracticeDialogueService {
   private final ObjectMapper objectMapper;
   private final NvcEvaluationService evaluationService;
   private final NvcScenarioService scenarioService;
+  private final NvcStructuredPracticeService structuredPracticeService;
 
   /**
    * 发送消息并获取 AI 回复（非流式）
@@ -106,6 +108,16 @@ public class NvcPracticeDialogueService {
           sessionId, e);
     }
 
+    // 9.5 结构化四步模式：检查是否需要推进步骤
+    if (session.getPracticeMode() == NvcPracticeMode.STRUCTURED_FOUR_STEP
+        && decision.action() != null
+        && decision.action().equals("STEP_ADVANCE")) {
+      structuredPracticeService.advanceStep(sessionId);
+      session = sessionService.getSession(sessionId);
+      log.info("Step advanced: sessionId={}, newStep={}",
+          sessionId, session.getCurrentStep());
+    }
+
     // 10. 返回结果
     return new DialogueResponse(
         sessionId,
@@ -157,6 +169,7 @@ public class NvcPracticeDialogueService {
 
     // 3. 构建上下文 + Agent 调度
     var currentStep = session.getCurrentStep();
+    var practiceMode = session.getPracticeMode();
     Long userId = session.getUserId();
     PracticeContext context = orchestrator.buildPracticeContext(
         sessionId, userId);
@@ -221,6 +234,14 @@ public class NvcPracticeDialogueService {
           } catch (Exception e) {
             log.warn("Realtime evaluation failed in stream (non-blocking): sessionId={}",
                 sessionId, e);
+          }
+
+          // 结构化四步模式：检查是否需要推进步骤
+          if (practiceMode == NvcPracticeMode.STRUCTURED_FOUR_STEP
+              && decision.action() != null
+              && decision.action().equals("STEP_ADVANCE")) {
+            structuredPracticeService.advanceStep(sessionId);
+            log.info("Step advanced in stream: sessionId={}", sessionId);
           }
         });
   }
