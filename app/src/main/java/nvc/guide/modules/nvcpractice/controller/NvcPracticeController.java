@@ -7,11 +7,13 @@ import nvc.guide.modules.nvcpractice.dto.DialogueResponse;
 import nvc.guide.modules.nvcpractice.dto.MessageResponse;
 import nvc.guide.modules.nvcpractice.dto.PracticeSessionResponse;
 import nvc.guide.modules.nvcpractice.dto.SendMessageRequest;
+import nvc.guide.modules.nvcpractice.dto.StepProgressDTO;
 import nvc.guide.modules.nvcpractice.model.NvcPracticeSessionEntity;
 import nvc.guide.modules.nvcpractice.model.NvcSessionPhase;
 import nvc.guide.modules.nvcpractice.listener.NvcEvaluateStreamProducer;
 import nvc.guide.modules.nvcpractice.service.NvcPracticeDialogueService;
 import nvc.guide.modules.nvcpractice.service.NvcPracticeSessionService;
+import nvc.guide.modules.nvcpractice.service.NvcStructuredPracticeService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,6 +38,7 @@ public class NvcPracticeController {
   private final NvcPracticeSessionService sessionService;
   private final NvcPracticeDialogueService dialogueService;
   private final NvcEvaluateStreamProducer evaluateStreamProducer;
+  private final NvcStructuredPracticeService structuredPracticeService;
 
   /**
    * 创建练习会话
@@ -132,6 +135,41 @@ public class NvcPracticeController {
     }
 
     return Result.success(toSessionResponse(session));
+  }
+
+  /**
+   * 获取结构化练习的步骤进度
+   */
+  @GetMapping("/sessions/{sessionId}/step-progress")
+  public Result<StepProgressDTO> getStepProgress(
+      @PathVariable Long sessionId) {
+    StepProgressDTO progress =
+        structuredPracticeService.getStepProgress(sessionId);
+    return Result.success(progress);
+  }
+
+  /**
+   * 手动推进到下一步
+   */
+  @RateLimit(count = 10)
+  @PostMapping("/sessions/{sessionId}/advance-step")
+  public Result<StepProgressDTO> advanceStep(
+      @PathVariable Long sessionId) {
+    StepProgressDTO progress =
+        structuredPracticeService.advanceStep(sessionId);
+    return Result.success(progress);
+  }
+
+  /**
+   * 重置步骤（重新开始）
+   */
+  @RateLimit(count = 5)
+  @PostMapping("/sessions/{sessionId}/reset-step")
+  public Result<StepProgressDTO> resetStep(
+      @PathVariable Long sessionId) {
+    StepProgressDTO progress =
+        structuredPracticeService.resetStep(sessionId);
+    return Result.success(progress);
   }
 
   private PracticeSessionResponse toSessionResponse(
