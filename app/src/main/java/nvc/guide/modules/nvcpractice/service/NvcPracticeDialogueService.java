@@ -12,6 +12,7 @@ import nvc.guide.modules.nvcpractice.model.NvcPracticeMessageEntity;
 import nvc.guide.modules.nvcpractice.model.NvcPracticeSessionEntity;
 import nvc.guide.modules.nvcpractice.model.NvcSessionPhase;
 import nvc.guide.modules.nvcpractice.repository.NvcPracticeMessageRepository;
+import nvc.guide.modules.nvcscenario.service.NvcScenarioService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -29,6 +30,7 @@ public class NvcPracticeDialogueService {
   private final NvcAgentOrchestrator orchestrator;
   private final ObjectMapper objectMapper;
   private final NvcEvaluationService evaluationService;
+  private final NvcScenarioService scenarioService;
 
   /**
    * 发送消息并获取 AI 回复（非流式）
@@ -56,6 +58,11 @@ public class NvcPracticeDialogueService {
             .step(session.getCurrentStep())
             .build();
     messageRepository.save(userMsg);
+
+    // 3.5 场景驱动模式：增加场景使用次数
+    if (session.getScenarioId() != null) {
+      scenarioService.incrementUsage(session.getScenarioId());
+    }
 
     // 4. 构建练习上下文
     PracticeContext context = orchestrator.buildPracticeContext(
@@ -142,6 +149,11 @@ public class NvcPracticeDialogueService {
             .step(session.getCurrentStep())
             .build();
     messageRepository.save(userMsg);
+
+    // 2.5 场景驱动模式：增加场景使用次数
+    if (session.getScenarioId() != null) {
+      scenarioService.incrementUsage(session.getScenarioId());
+    }
 
     // 3. 构建上下文 + Agent 调度
     var currentStep = session.getCurrentStep();
