@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import reactor.core.publisher.Flux;
 
 import java.time.LocalDateTime;
 
@@ -29,6 +30,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -187,6 +189,111 @@ class NvcPracticeDialogueServiceTest {
 
       // Assert
       assertNotNull(result);
+      verify(structuredPracticeService, never()).advanceStep(anyLong());
+    }
+  }
+
+  // ========== sendMessageStream() step advancement ==========
+
+  @Nested
+  @DisplayName("sendMessageStream() 结构化四步推进")
+  class SendMessageStreamStepAdvancementTests {
+
+    @Test
+    @DisplayName("STEP_ADVANCE action 触发步骤推进（流式 doOnComplete 回调）")
+    void streamStepAdvanceAction_triggersAdvance() {
+      // Arrange
+      NvcPracticeSessionEntity session =
+          buildSession(NvcPracticeMode.STRUCTURED_FOUR_STEP, NvcPracticeStep.OBSERVE);
+      when(sessionService.getSession(1L)).thenReturn(session);
+      when(messageRepository.countBySessionId(1L)).thenReturn(0);
+      when(messageRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+      AgentDecision decision = new AgentDecision(
+          NvcAgentScene.STEP_OBSERVE_COACH, "测试", "STEP_ADVANCE");
+      when(orchestrator.buildPracticeContext(1L, 100L))
+          .thenReturn(PracticeContext.builder().build());
+      when(orchestrator.decideNextAgent(any())).thenReturn(decision);
+      when(orchestrator.executeAgentStream(any(), any(), any()))
+          .thenReturn(Flux.just("AI", "回复"));
+      when(structuredPracticeService.advanceStep(1L)).thenReturn(null);
+
+      // 让 objectMapper 序列化成功
+      try {
+        when(objectMapper.writeValueAsString(any())).thenReturn("{}");
+      } catch (Exception ignored) {
+        // 不会发生
+      }
+
+      // Act — 订阅 Flux 并等待完成，触发 doOnComplete 回调
+      dialogueService.sendMessageStream(1L, "用户消息")
+          .collectList().block();
+
+      // Assert — doOnComplete 中应调用 advanceStep
+      verify(structuredPracticeService).advanceStep(1L);
+      // 用户消息 + AI 回复至少保存两次
+      verify(messageRepository, atLeast(2)).save(any());
+    }
+
+    @Test
+    @DisplayName("非 STEP_ADVANCE action 不触发步骤推进（流式）")
+    void streamNonStepAdvanceAction_doesNotTriggerAdvance() {
+      // Arrange
+      NvcPracticeSessionEntity session =
+          buildSession(NvcPracticeMode.STRUCTURED_FOUR_STEP, NvcPracticeStep.OBSERVE);
+      when(sessionService.getSession(1L)).thenReturn(session);
+      when(messageRepository.countBySessionId(1L)).thenReturn(0);
+      when(messageRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+      AgentDecision decision = new AgentDecision(
+          NvcAgentScene.STEP_OBSERVE_COACH, "测试", "CONTINUE");
+      when(orchestrator.buildPracticeContext(1L, 100L))
+          .thenReturn(PracticeContext.builder().build());
+      when(orchestrator.decideNextAgent(any())).thenReturn(decision);
+      when(orchestrator.executeAgentStream(any(), any(), any()))
+          .thenReturn(Flux.just("AI", "回复"));
+
+      try {
+        when(objectMapper.writeValueAsString(any())).thenReturn("{}");
+      } catch (Exception ignored) {
+      }
+
+      // Act
+      dialogueService.sendMessageStream(1L, "用户消息")
+          .collectList().block();
+
+      // Assert
+      verify(structuredPracticeService, never()).advanceStep(anyLong());
+    }
+
+    @Test
+    @DisplayName("非结构化四步模式不触发步骤推进（流式）")
+    void streamNonStructuredMode_doesNotTriggerAdvance() {
+      // Arrange
+      NvcPracticeSessionEntity session =
+          buildSession(NvcPracticeMode.FREE_DIALOG, null);
+      when(sessionService.getSession(1L)).thenReturn(session);
+      when(messageRepository.countBySessionId(1L)).thenReturn(0);
+      when(messageRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+      AgentDecision decision = new AgentDecision(
+          NvcAgentScene.DIALOGUE_GUIDE, "测试", "STEP_ADVANCE");
+      when(orchestrator.buildPracticeContext(1L, 100L))
+          .thenReturn(PracticeContext.builder().build());
+      when(orchestrator.decideNextAgent(any())).thenReturn(decision);
+      when(orchestrator.executeAgentStream(any(), any(), any()))
+          .thenReturn(Flux.just("AI", "回复"));
+
+      try {
+        when(objectMapper.writeValueAsString(any())).thenReturn("{}");
+      } catch (Exception ignored) {
+      }
+
+      // Act
+      dialogueService.sendMessageStream(1L, "用户消息")
+          .collectList().block();
+
+      // Assert
       verify(structuredPracticeService, never()).advanceStep(anyLong());
     }
   }
