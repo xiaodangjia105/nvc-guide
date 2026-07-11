@@ -2,6 +2,8 @@ package nvc.guide.modules.nvcpractice.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.LocalDateTime;
 
 @Entity
@@ -40,6 +42,7 @@ public class NvcPracticeMessageEntity {
     private Integer sequenceNum;
 
     @Column(columnDefinition = "JSONB")
+    @JdbcTypeCode(SqlTypes.JSON)
     private String metadata;
 
     @Column(name = "created_at", updatable = false)

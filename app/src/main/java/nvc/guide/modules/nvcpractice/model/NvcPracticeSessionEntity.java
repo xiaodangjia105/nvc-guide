@@ -2,6 +2,8 @@ package nvc.guide.modules.nvcpractice.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.LocalDateTime;
 
 @Entity
@@ -51,6 +53,7 @@ public class NvcPracticeSessionEntity {
     private String contextSummary;
 
     @Column(name = "session_config", columnDefinition = "JSONB")
+    @JdbcTypeCode(SqlTypes.JSON)
     private String sessionConfig;
 
     @Column(name = "started_at")

@@ -2,6 +2,8 @@ package nvc.guide.modules.nvcprofile.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.LocalDateTime;
 import nvc.guide.modules.nvcscenario.model.NvcScenarioType;
 
@@ -33,6 +35,7 @@ public class NvcCommunicationRecordEntity {
     private String rawContent;
 
     @Column(name = "analysis_result", columnDefinition = "JSONB")
+    @JdbcTypeCode(SqlTypes.JSON)
     private String analysisResult;
 
     @Column(name = "nvc_suggestion", columnDefinition = "TEXT")

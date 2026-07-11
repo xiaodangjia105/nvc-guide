@@ -2,6 +2,8 @@ package nvc.guide.modules.nvcscenario.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.LocalDateTime;
 
 @Entity
@@ -18,7 +20,7 @@ public class NvcScenarioEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, length = 200)
+    @Column(nullable = false, unique = true, length = 200)
     private String title;
 
     @Column(nullable = false, columnDefinition = "TEXT")
@@ -33,6 +35,7 @@ public class NvcScenarioEntity {
     private nvc.guide.modules.nvcpractice.model.NvcDifficulty difficulty;
 
     @Column(name = "focus_elements", columnDefinition = "JSONB")
+    @JdbcTypeCode(SqlTypes.JSON)
     private String focusElements;
 
     @Column(columnDefinition = "TEXT")
@@ -42,6 +45,7 @@ public class NvcScenarioEntity {
     private String sampleDialogue;
 
     @Column(columnDefinition = "JSONB")
+    @JdbcTypeCode(SqlTypes.JSON)
     private String tags;
 
     @Column(name = "is_system")

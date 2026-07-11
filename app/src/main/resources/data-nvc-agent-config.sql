@@ -166,4 +166,5 @@ INSERT INTO nvc_agent_config (agent_scene, display_name, description, system_pro
 4. 常见场景：统计用户最常练习的场景类型
 5. 薄弱要素：分析用户在四要素中的弱项
 
-请以JSON格式返回分析结果。', 0.3, 2000, 0.9, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+请以JSON格式返回分析结果。', 0.3, 2000, 0.9, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+ON CONFLICT (agent_scene) DO NOTHING;

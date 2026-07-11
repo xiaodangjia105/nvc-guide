@@ -63,4 +63,5 @@ INSERT INTO nvc_scenario (title, description, scenario_type, difficulty, focus_e
 ('职业选择的迷茫', '你对现在的工作感到迷茫，不确定是否要换方向。你需要和自己对话，理清内心真正的需求。',
  'SELF', 'HARD', '["need", "request"]',
  '你做了3年现在的工作，薪资还行但总觉得没有热情。看到别人做其他方向好像更有意思，但又不确定。家人希望你稳定，你内心很纠结。',
- '["自我对话", "职业", "迷茫", "需求"]', true, 0, CURRENT_TIMESTAMP);
+ '["自我对话", "职业", "迷茫", "需求"]', true, 0, CURRENT_TIMESTAMP)
+ON CONFLICT (title) DO NOTHING;

@@ -38,10 +38,9 @@ spring:
 
   # PostgreSQL数据库配置
   datasource:
-    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:nvc_practice}
-    username: ${POSTGRES_USER:postgres}
-    # 与根目录 docker-compose.yml 中 postgres 服务默认一致（本地只起依赖容器 + bootRun 时无需改）
-    password: ${POSTGRES_PASSWORD:password}
+    url: jdbc:postgresql://${POSTGRES_HOST:10.237.255.9}:${POSTGRES_PORT:5432}/${POSTGRES_DB:nvc_practice}
+    username: ${POSTGRES_USER:nvc}
+    password: ${POSTGRES_PASSWORD:nvc123}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -56,7 +55,7 @@ spring:
 
   sql:
     init:
-      mode: always
+      mode: never
       data-locations:
         - classpath:data-nvc-agent-config.sql
         - classpath:data-nvc-scenario.sql
@@ -73,8 +72,8 @@ spring:
     redisson:
       config: |
         singleServerConfig:
-          address: "redis://${REDIS_HOST:localhost}:${REDIS_PORT:6379}"
-          database: ${REDIS_DATABASE:0}
+          address: "redis://${REDIS_HOST:10.237.255.9}:${REDIS_PORT:6379}"
+          database: ${REDIS_DATABASE:2}
           connectionMinimumIdleSize: 10
           connectionPoolSize: 64
           subscriptionConnectionMinimumIdleSize: 1
@@ -148,7 +147,7 @@ app:
       # 小米 MiMo（OpenAI 兼容）
       mimo:
         base-url: https://token-plan-cn.xiaomimimo.com/v1
-        api-key: ${PROVIDER_MIMO_API_KEY:}
+        api-key: ${PROVIDER_MIMO_API_KEY:sk-cgmf0ae7ifxn4kdqyi2qr94ony1womyri1qtom1ba2qhhkh2}
         model: ${PROVIDER_MIMO_MODEL:mimo-2.5}
         supports-embedding: false
     advisors:
@@ -184,7 +183,7 @@ app:
 
   # RustFS (S3兼容) 存储配置
   storage:
-    endpoint: ${APP_STORAGE_ENDPOINT:http://localhost:9000}
+    endpoint: ${APP_STORAGE_ENDPOINT:http://10.237.255.9:9000}
     access-key: ${APP_STORAGE_ACCESS_KEY:minioadmin}
     secret-key: ${APP_STORAGE_SECRET_KEY:minioadmin}
     bucket: ${APP_STORAGE_BUCKET:nvc-guide}

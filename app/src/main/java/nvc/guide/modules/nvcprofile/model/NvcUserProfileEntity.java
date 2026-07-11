@@ -2,6 +2,8 @@ package nvc.guide.modules.nvcprofile.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.LocalDateTime;
 
 @Entity
@@ -23,6 +25,7 @@ public class NvcUserProfileEntity {
     private String communicationBackground;
 
     @Column(name = "personality_traits", columnDefinition = "JSONB")
+    @JdbcTypeCode(SqlTypes.JSON)
     private String personalityTraits;
 
     @Enumerated(EnumType.STRING)
@@ -33,9 +36,11 @@ public class NvcUserProfileEntity {
     private String emotionalTriggers;
 
     @Column(name = "common_scenarios", columnDefinition = "JSONB")
+    @JdbcTypeCode(SqlTypes.JSON)
     private String commonScenarios;
 
     @Column(name = "relationship_types", columnDefinition = "JSONB")
+    @JdbcTypeCode(SqlTypes.JSON)
     private String relationshipTypes;
 
     @Enumerated(EnumType.STRING)

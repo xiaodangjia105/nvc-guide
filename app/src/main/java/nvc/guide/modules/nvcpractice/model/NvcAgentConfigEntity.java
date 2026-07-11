@@ -2,6 +2,8 @@ package nvc.guide.modules.nvcpractice.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.LocalDateTime;
 
 @Entity
@@ -51,6 +53,7 @@ public class NvcAgentConfigEntity {
     private Boolean isEnabled = true;
 
     @Column(name = "config_metadata", columnDefinition = "JSONB")
+    @JdbcTypeCode(SqlTypes.JSON)
     private String configMetadata;
 
     @Column(name = "created_at", updatable = false)
