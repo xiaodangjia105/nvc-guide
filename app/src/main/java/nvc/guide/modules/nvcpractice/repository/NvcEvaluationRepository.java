@@ -13,6 +13,6 @@ public interface NvcEvaluationRepository extends JpaRepository<NvcEvaluationEnti
 
     List<NvcEvaluationEntity> findByUserIdOrderByCreatedAtDesc(Long userId);
 
-    Optional<NvcEvaluationEntity> findBySessionIdAndEvaluationType(
+    Optional<NvcEvaluationEntity> findFirstBySessionIdAndEvaluationTypeOrderByCreatedAtDesc(
         Long sessionId, NvcEvaluationType type);
 }

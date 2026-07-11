@@ -2,7 +2,6 @@ package nvc.guide.modules.nvcpractice.service;
 
 import nvc.guide.common.exception.BusinessException;
 import nvc.guide.common.exception.ErrorCode;
-import nvc.guide.infrastructure.redis.RedisService;
 import nvc.guide.modules.nvcpractice.dto.StepProgressDTO;
 import nvc.guide.modules.nvcpractice.model.NvcAgentConfigEntity;
 import nvc.guide.modules.nvcpractice.model.NvcAgentScene;
@@ -44,15 +43,13 @@ class NvcStructuredPracticeServiceTest {
   private NvcEvaluationRepository evaluationRepository;
   @Mock
   private NvcAgentConfigService agentConfigService;
-  @Mock
-  private RedisService redisService;
 
   private NvcStructuredPracticeService service;
 
   @BeforeEach
   void setUp() {
     service = new NvcStructuredPracticeService(
-        sessionService, evaluationRepository, agentConfigService, redisService);
+        sessionService, evaluationRepository, agentConfigService);
   }
 
   private NvcPracticeSessionEntity buildSession(
@@ -147,7 +144,7 @@ class NvcStructuredPracticeServiceTest {
           .observationScore(85)
           .evaluationType(NvcEvaluationType.REALTIME)
           .build();
-      when(evaluationRepository.findBySessionIdAndEvaluationType(
+      when(evaluationRepository.findFirstBySessionIdAndEvaluationTypeOrderByCreatedAtDesc(
           1L, NvcEvaluationType.REALTIME)).thenReturn(Optional.of(eval));
 
       NvcAgentConfigEntity config = buildConfig(NvcAgentScene.STEP_OBSERVE_COACH);
@@ -172,7 +169,7 @@ class NvcStructuredPracticeServiceTest {
           1L, NvcPracticeMode.STRUCTURED_FOUR_STEP, NvcPracticeStep.FEELING);
       when(sessionService.getSession(1L)).thenReturn(session);
 
-      when(evaluationRepository.findBySessionIdAndEvaluationType(
+      when(evaluationRepository.findFirstBySessionIdAndEvaluationTypeOrderByCreatedAtDesc(
           1L, NvcEvaluationType.REALTIME)).thenReturn(Optional.empty());
 
       NvcAgentConfigEntity config = buildConfig(NvcAgentScene.STEP_FEELING_COACH);
@@ -202,7 +199,7 @@ class NvcStructuredPracticeServiceTest {
           .needScore(50)
           .evaluationType(NvcEvaluationType.REALTIME)
           .build();
-      when(evaluationRepository.findBySessionIdAndEvaluationType(
+      when(evaluationRepository.findFirstBySessionIdAndEvaluationTypeOrderByCreatedAtDesc(
           1L, NvcEvaluationType.REALTIME)).thenReturn(Optional.of(eval));
 
       NvcAgentConfigEntity config = buildConfig(NvcAgentScene.STEP_NEED_COACH);
@@ -230,7 +227,7 @@ class NvcStructuredPracticeServiceTest {
           .requestScore(75)
           .evaluationType(NvcEvaluationType.REALTIME)
           .build();
-      when(evaluationRepository.findBySessionIdAndEvaluationType(
+      when(evaluationRepository.findFirstBySessionIdAndEvaluationTypeOrderByCreatedAtDesc(
           1L, NvcEvaluationType.REALTIME)).thenReturn(Optional.of(eval));
 
       NvcAgentConfigEntity config = buildConfig(NvcAgentScene.STEP_REQUEST_COACH);
@@ -259,7 +256,7 @@ class NvcStructuredPracticeServiceTest {
           .observationScore(null)
           .evaluationType(NvcEvaluationType.REALTIME)
           .build();
-      when(evaluationRepository.findBySessionIdAndEvaluationType(
+      when(evaluationRepository.findFirstBySessionIdAndEvaluationTypeOrderByCreatedAtDesc(
           1L, NvcEvaluationType.REALTIME)).thenReturn(Optional.of(eval));
 
       NvcAgentConfigEntity config = buildConfig(NvcAgentScene.STEP_OBSERVE_COACH);

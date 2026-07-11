@@ -237,11 +237,15 @@ public class NvcPracticeDialogueService {
           }
 
           // 结构化四步模式：检查是否需要推进步骤
-          if (practiceMode == NvcPracticeMode.STRUCTURED_FOUR_STEP
-              && decision.action() != null
-              && decision.action().equals("STEP_ADVANCE")) {
-            structuredPracticeService.advanceStep(sessionId);
-            log.info("Step advanced in stream: sessionId={}", sessionId);
+          try {
+            if (practiceMode == NvcPracticeMode.STRUCTURED_FOUR_STEP
+                && decision.action() != null
+                && decision.action().equals("STEP_ADVANCE")) {
+              structuredPracticeService.advanceStep(sessionId);
+              log.info("Step advanced in stream: sessionId={}", sessionId);
+            }
+          } catch (Exception e) {
+            log.error("Step advancement failed in stream: sessionId={}", sessionId, e);
           }
         });
   }

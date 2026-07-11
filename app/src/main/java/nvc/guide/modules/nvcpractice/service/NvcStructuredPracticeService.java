@@ -2,7 +2,6 @@ package nvc.guide.modules.nvcpractice.service;
 
 import nvc.guide.common.exception.BusinessException;
 import nvc.guide.common.exception.ErrorCode;
-import nvc.guide.infrastructure.redis.RedisService;
 import nvc.guide.modules.nvcpractice.dto.StepProgressDTO;
 import nvc.guide.modules.nvcpractice.model.NvcAgentConfigEntity;
 import nvc.guide.modules.nvcpractice.model.NvcAgentScene;
@@ -25,9 +24,6 @@ public class NvcStructuredPracticeService {
     private final NvcPracticeSessionService sessionService;
     private final NvcEvaluationRepository evaluationRepository;
     private final NvcAgentConfigService agentConfigService;
-    private final RedisService redisService;
-
-    private static final String STEP_PROGRESS_CACHE_PREFIX = "nvc:step:progress:";
 
     /**
      * 获取步骤进度。
@@ -50,7 +46,7 @@ public class NvcStructuredPracticeService {
         }
 
         NvcEvaluationEntity latestEval = evaluationRepository
-            .findBySessionIdAndEvaluationType(sessionId, NvcEvaluationType.REALTIME)
+            .findFirstBySessionIdAndEvaluationTypeOrderByCreatedAtDesc(sessionId, NvcEvaluationType.REALTIME)
             .orElse(null);
 
         Integer currentStepScore = null;

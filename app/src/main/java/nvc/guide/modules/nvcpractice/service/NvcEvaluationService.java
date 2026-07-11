@@ -79,7 +79,7 @@ public class NvcEvaluationService {
      */
     public NvcEvaluationEntity getLatestRealtimeEvaluation(Long sessionId) {
         return evaluationRepository
-            .findBySessionIdAndEvaluationType(sessionId, NvcEvaluationType.REALTIME)
+            .findFirstBySessionIdAndEvaluationTypeOrderByCreatedAtDesc(sessionId, NvcEvaluationType.REALTIME)
             .orElse(null);
     }
 
@@ -88,7 +88,7 @@ public class NvcEvaluationService {
      */
     public NvcEvaluationEntity getFinalEvaluation(Long sessionId) {
         return evaluationRepository
-            .findBySessionIdAndEvaluationType(sessionId, NvcEvaluationType.FINAL)
+            .findFirstBySessionIdAndEvaluationTypeOrderByCreatedAtDesc(sessionId, NvcEvaluationType.FINAL)
             .orElse(null);
     }
 
