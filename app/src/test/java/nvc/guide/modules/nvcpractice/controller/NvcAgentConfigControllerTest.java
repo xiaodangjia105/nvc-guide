@@ -51,7 +51,8 @@ class NvcAgentConfigControllerTest {
     NvcAgentConfigEntity config = buildConfig(NvcAgentScene.DIALOGUE_GUIDE);
     AgentConfigDTO dto = new AgentConfigDTO(
         NvcAgentScene.DIALOGUE_GUIDE, "测试 Agent", "测试描述",
-        "你是测试 Agent", "mimo", "test-model", 0.7, 2000, 0.9, true);
+        "你是测试 Agent", "mimo", "test-model", 0.7, 2000, 0.9, true,
+        70, 10, 30);
 
     when(agentConfigService.getAllConfigs()).thenReturn(List.of(config));
     when(agentConfigService.toDTO(config)).thenReturn(dto);
@@ -69,7 +70,8 @@ class NvcAgentConfigControllerTest {
     NvcAgentConfigEntity config = buildConfig(NvcAgentScene.SCENARIO_GENERATOR);
     AgentConfigDTO dto = new AgentConfigDTO(
         NvcAgentScene.SCENARIO_GENERATOR, "测试 Agent", "测试描述",
-        "你是测试 Agent", "mimo", "test-model", 0.7, 2000, 0.9, true);
+        "你是测试 Agent", "mimo", "test-model", 0.7, 2000, 0.9, true,
+        70, 10, 30);
 
     when(agentConfigService.getConfig(NvcAgentScene.SCENARIO_GENERATOR)).thenReturn(config);
     when(agentConfigService.toDTO(config)).thenReturn(dto);
@@ -87,13 +89,14 @@ class NvcAgentConfigControllerTest {
     updated.setTemperature(0.9);
     AgentConfigDTO dto = new AgentConfigDTO(
         NvcAgentScene.DIALOGUE_GUIDE, "测试 Agent", "测试描述",
-        "你是测试 Agent", "mimo", "test-model", 0.9, 2000, 0.9, true);
+        "你是测试 Agent", "mimo", "test-model", 0.9, 2000, 0.9, true,
+        70, 10, 30);
 
     when(agentConfigService.updateConfig(any(), any())).thenReturn(updated);
     when(agentConfigService.toDTO(updated)).thenReturn(dto);
 
     AgentConfigUpdateRequest request = new AgentConfigUpdateRequest(
-        null, null, null, 0.9, null, null, null);
+        null, null, null, 0.9, null, null, null, null, null, null);
 
     Result<AgentConfigDTO> result = controller.updateConfig(
         NvcAgentScene.DIALOGUE_GUIDE, request);

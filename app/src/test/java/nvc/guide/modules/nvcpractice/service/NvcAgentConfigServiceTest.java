@@ -129,7 +129,7 @@ class NvcAgentConfigServiceTest {
       when(agentConfigRepository.save(any())).thenAnswer(i -> i.getArgument(0));
 
       AgentConfigUpdateRequest request = new AgentConfigUpdateRequest(
-          "新提示词", null, null, 0.9, null, null, null);
+          "新提示词", null, null, 0.9, null, null, null, null, null, null);
 
       NvcAgentConfigEntity result = service.updateConfig(
           NvcAgentScene.DIALOGUE_GUIDE, request);
@@ -148,10 +148,31 @@ class NvcAgentConfigServiceTest {
           .thenReturn(Optional.empty());
 
       AgentConfigUpdateRequest request = new AgentConfigUpdateRequest(
-          null, null, null, null, null, null, null);
+          null, null, null, null, null, null, null, null, null, null);
 
       assertThrows(BusinessException.class,
           () -> service.updateConfig(NvcAgentScene.EMPATHY_COACH, request));
+    }
+
+    @Test
+    @DisplayName("更新步骤配置字段")
+    void updatesStepConfigFields() {
+      NvcAgentConfigEntity existing = buildConfig(NvcAgentScene.STEP_OBSERVE_COACH);
+      when(agentConfigRepository.findByAgentScene(NvcAgentScene.STEP_OBSERVE_COACH))
+          .thenReturn(Optional.of(existing));
+      when(agentConfigRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+      AgentConfigUpdateRequest request = new AgentConfigUpdateRequest(
+          null, null, null, null, null, null, null, 80, 5, 60);
+
+      NvcAgentConfigEntity result = service.updateConfig(
+          NvcAgentScene.STEP_OBSERVE_COACH, request);
+
+      assertEquals(80, result.getStepAdvanceThreshold());
+      assertEquals(5, result.getMaxStepAttempts());
+      assertEquals(60, result.getStepTimeoutMinutes());
+      // 未传的字段保持原值
+      assertEquals("你是测试 Agent", result.getSystemPrompt());
     }
   }
 
@@ -170,6 +191,10 @@ class NvcAgentConfigServiceTest {
       assertEquals("测试 Agent", dto.displayName());
       assertEquals(0.7, dto.temperature());
       assertTrue(dto.isEnabled());
+      // 验证步骤配置默认值
+      assertEquals(70, dto.stepAdvanceThreshold());
+      assertEquals(10, dto.maxStepAttempts());
+      assertEquals(30, dto.stepTimeoutMinutes());
     }
   }
 }

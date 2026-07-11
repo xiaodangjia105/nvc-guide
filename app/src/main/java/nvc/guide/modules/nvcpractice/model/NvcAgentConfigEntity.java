@@ -56,6 +56,18 @@ public class NvcAgentConfigEntity {
     @JdbcTypeCode(SqlTypes.JSON)
     private String configMetadata;
 
+    @Column(name = "step_advance_threshold")
+    @Builder.Default
+    private Integer stepAdvanceThreshold = 70;
+
+    @Column(name = "max_step_attempts")
+    @Builder.Default
+    private Integer maxStepAttempts = 10;
+
+    @Column(name = "step_timeout_minutes")
+    @Builder.Default
+    private Integer stepTimeoutMinutes = 30;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 

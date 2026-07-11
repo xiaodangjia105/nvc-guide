@@ -15,5 +15,8 @@ public record AgentConfigDTO(
     Double temperature,
     Integer maxTokens,
     Double topP,
-    Boolean isEnabled
+    Boolean isEnabled,
+    Integer stepAdvanceThreshold,
+    Integer maxStepAttempts,
+    Integer stepTimeoutMinutes
 ) {}

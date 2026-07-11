@@ -23,5 +23,14 @@ public record AgentConfigUpdateRequest(
     @DecimalMin("0.0") @DecimalMax("1.0")
     Double topP,
 
-    Boolean isEnabled
+    Boolean isEnabled,
+
+    @Min(0) @Max(100)
+    Integer stepAdvanceThreshold,
+
+    @Min(1) @Max(100)
+    Integer maxStepAttempts,
+
+    @Min(1) @Max(1440)
+    Integer stepTimeoutMinutes
 ) {}

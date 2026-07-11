@@ -90,6 +90,15 @@ public class NvcAgentConfigService {
     if (request.isEnabled() != null) {
       config.setIsEnabled(request.isEnabled());
     }
+    if (request.stepAdvanceThreshold() != null) {
+      config.setStepAdvanceThreshold(request.stepAdvanceThreshold());
+    }
+    if (request.maxStepAttempts() != null) {
+      config.setMaxStepAttempts(request.maxStepAttempts());
+    }
+    if (request.stepTimeoutMinutes() != null) {
+      config.setStepTimeoutMinutes(request.stepTimeoutMinutes());
+    }
 
     NvcAgentConfigEntity saved = agentConfigRepository.save(config);
 
@@ -115,7 +124,10 @@ public class NvcAgentConfigService {
         entity.getTemperature(),
         entity.getMaxTokens(),
         entity.getTopP(),
-        entity.getIsEnabled()
+        entity.getIsEnabled(),
+        entity.getStepAdvanceThreshold(),
+        entity.getMaxStepAttempts(),
+        entity.getStepTimeoutMinutes()
     );
   }
 }
