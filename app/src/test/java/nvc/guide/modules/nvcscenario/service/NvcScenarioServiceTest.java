@@ -2,8 +2,9 @@ package nvc.guide.modules.nvcscenario.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import nvc.guide.common.ai.LlmProviderRegistry;
-import nvc.guide.common.ai.StructuredOutputInvoker;
 import nvc.guide.common.exception.BusinessException;
+import nvc.guide.modules.nvcscenario.dto.ScenarioGenerateRequest;
+import org.springframework.ai.chat.client.ChatClient;
 import nvc.guide.modules.nvcpractice.model.NvcDifficulty;
 import nvc.guide.modules.nvcscenario.dto.ScenarioDTO;
 import nvc.guide.modules.nvcscenario.dto.ScenarioQueryRequest;
@@ -34,8 +35,6 @@ class NvcScenarioServiceTest {
     @Mock
     private LlmProviderRegistry llmProviderRegistry;
     @Mock
-    private StructuredOutputInvoker structuredOutputInvoker;
-    @Mock
     private ObjectMapper objectMapper;
 
     private NvcScenarioService service;
@@ -43,8 +42,7 @@ class NvcScenarioServiceTest {
     @BeforeEach
     void setUp() {
         service = new NvcScenarioService(
-            scenarioRepository, llmProviderRegistry,
-            structuredOutputInvoker, objectMapper);
+            scenarioRepository, llmProviderRegistry, objectMapper);
     }
 
     private NvcScenarioEntity buildScenario(Long id, String title,
@@ -191,6 +189,94 @@ class NvcScenarioServiceTest {
 
             assertDoesNotThrow(() -> service.incrementUsage(999L));
             verify(scenarioRepository, never()).save(any());
+        }
+    }
+
+    @Nested
+    @DisplayName("generateScenario()")
+    class GenerateScenarioTests {
+
+        private NvcScenarioService realService;
+
+        @BeforeEach
+        void setUp() {
+            realService = new NvcScenarioService(
+                scenarioRepository, llmProviderRegistry, new ObjectMapper());
+        }
+
+        private void mockChatClient(String response) {
+            ChatClient chatClient = mock(ChatClient.class);
+            ChatClient.ChatClientRequestSpec requestSpec = mock(ChatClient.ChatClientRequestSpec.class);
+            ChatClient.CallResponseSpec callResponse = mock(ChatClient.CallResponseSpec.class);
+
+            when(llmProviderRegistry.getPlainChatClient(null)).thenReturn(chatClient);
+            when(chatClient.prompt()).thenReturn(requestSpec);
+            when(requestSpec.system(any(String.class))).thenReturn(requestSpec);
+            when(requestSpec.user(any(String.class))).thenReturn(requestSpec);
+            when(requestSpec.call()).thenReturn(callResponse);
+            when(callResponse.content()).thenReturn(response);
+        }
+
+        @Test
+        @DisplayName("AI 生成场景成功保存并返回")
+        void generateScenario_success() {
+            mockChatClient("""
+                {"title":"职场迟到","description":"同事经常迟到影响团队","context":"办公室环境","focus_elements":["observation"]}
+                """);
+
+            NvcScenarioEntity saved = NvcScenarioEntity.builder()
+                .id(1L).title("职场迟到").description("同事经常迟到影响团队")
+                .scenarioType(NvcScenarioType.WORKPLACE).difficulty(NvcDifficulty.MEDIUM)
+                .context("办公室环境").focusElements("[\"observation\"]")
+                .isSystem(false).usageCount(0)
+                .build();
+            when(scenarioRepository.save(any())).thenReturn(saved);
+
+            ScenarioGenerateRequest request = new ScenarioGenerateRequest(
+                NvcScenarioType.WORKPLACE, NvcDifficulty.MEDIUM,
+                List.of("observation"), "同事经常迟到");
+
+            NvcScenarioEntity result = realService.generateScenario(request);
+
+            assertNotNull(result);
+            assertEquals("职场迟到", result.getTitle());
+            assertFalse(result.getIsSystem());
+            verify(scenarioRepository).save(any());
+        }
+
+        @Test
+        @DisplayName("缺少字段时使用默认值")
+        void generateScenario_missingFields_usesDefaults() {
+            mockChatClient("""
+                {"description":"简短描述"}
+                """);
+
+            NvcScenarioEntity saved = NvcScenarioEntity.builder()
+                .id(2L).title("AI 生成场景").description("简短描述")
+                .scenarioType(NvcScenarioType.WORKPLACE).difficulty(NvcDifficulty.MEDIUM)
+                .isSystem(false).usageCount(0)
+                .build();
+            when(scenarioRepository.save(any())).thenReturn(saved);
+
+            ScenarioGenerateRequest request = new ScenarioGenerateRequest(
+                null, null, null, null);
+
+            NvcScenarioEntity result = realService.generateScenario(request);
+
+            assertNotNull(result);
+            assertEquals("AI 生成场景", result.getTitle());
+        }
+
+        @Test
+        @DisplayName("JSON 解析失败时抛出 BusinessException")
+        void generateScenario_parseFailure_throwsException() {
+            mockChatClient("not valid json {{{");
+
+            ScenarioGenerateRequest request = new ScenarioGenerateRequest(
+                NvcScenarioType.WORKPLACE, NvcDifficulty.MEDIUM, null, null);
+
+            assertThrows(BusinessException.class,
+                () -> realService.generateScenario(request));
         }
     }
 
