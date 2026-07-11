@@ -16,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -91,7 +92,7 @@ public class NvcScenarioService {
 
         } catch (Exception e) {
             log.error("Failed to parse AI generated scenario: {}", result, e);
-            throw new BusinessException(ErrorCode.AI_SERVICE_TIMEOUT,
+            throw new BusinessException(ErrorCode.AI_SERVICE_ERROR,
                 "场景生成失败，请重试");
         }
     }
@@ -101,6 +102,7 @@ public class NvcScenarioService {
             ClassPathResource resource = new ClassPathResource("prompts/nvc-scenario-generate-system.st");
             return new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
         } catch (IOException e) {
+            log.warn("Failed to load scenario prompt, using default", e);
             return "你是NVC练习场景设计师，请根据用户需求生成NVC练习场景，以JSON格式返回。";
         }
     }
@@ -127,6 +129,7 @@ public class NvcScenarioService {
     /**
      * 场景使用次数 +1
      */
+    @Transactional
     public void incrementUsage(Long scenarioId) {
         scenarioRepository.findById(scenarioId).ifPresent(scenario -> {
             scenario.setUsageCount(scenario.getUsageCount() + 1);

@@ -1,5 +1,6 @@
 package nvc.guide.modules.nvcscenario.controller;
 
+import nvc.guide.common.annotation.RateLimit;
 import nvc.guide.common.result.Result;
 import nvc.guide.modules.nvcpractice.model.NvcDifficulty;
 import nvc.guide.modules.nvcscenario.dto.ScenarioDTO;
@@ -52,6 +53,7 @@ public class NvcScenarioController {
     /**
      * AI 生成新场景
      */
+    @RateLimit(count = 10)
     @PostMapping("/generate")
     public Result<ScenarioDTO> generateScenario(@Valid @RequestBody ScenarioGenerateRequest request) {
         var scenario = scenarioService.generateScenario(request);
