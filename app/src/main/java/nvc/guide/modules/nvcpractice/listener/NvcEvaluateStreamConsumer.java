@@ -3,8 +3,11 @@ package nvc.guide.modules.nvcpractice.listener;
 import nvc.guide.common.async.AbstractStreamConsumer;
 import nvc.guide.infrastructure.redis.RedisService;
 import nvc.guide.modules.nvcpractice.model.NvcPracticeMessageEntity;
+import nvc.guide.modules.nvcpractice.model.NvcPracticeType;
 import nvc.guide.modules.nvcpractice.repository.NvcPracticeMessageRepository;
 import nvc.guide.modules.nvcpractice.service.NvcEvaluationService;
+import nvc.guide.modules.nvcpractice.model.NvcEvaluationEntity;
+import nvc.guide.modules.nvcprofile.service.NvcProfileService;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.stream.StreamMessageId;
 import org.springframework.stereotype.Component;
@@ -22,13 +25,16 @@ public class NvcEvaluateStreamConsumer extends AbstractStreamConsumer<NvcEvaluat
 
     private final NvcEvaluationService evaluationService;
     private final NvcPracticeMessageRepository messageRepository;
+    private final NvcProfileService profileService;
 
     public NvcEvaluateStreamConsumer(RedisService redisService,
                                       NvcEvaluationService evaluationService,
-                                      NvcPracticeMessageRepository messageRepository) {
+                                      NvcPracticeMessageRepository messageRepository,
+                                      NvcProfileService profileService) {
         super(redisService);
         this.evaluationService = evaluationService;
         this.messageRepository = messageRepository;
+        this.profileService = profileService;
     }
 
     @Override
@@ -90,7 +96,16 @@ public class NvcEvaluateStreamConsumer extends AbstractStreamConsumer<NvcEvaluat
             return;
         }
 
-        evaluationService.evaluateFinal(task.sessionId(), task.userId(), messages);
+        NvcEvaluationEntity saved = evaluationService.evaluateFinal(task.sessionId(), task.userId(), messages);
+
+        // 更新用户档案能力分数
+        profileService.updateAbilityScore(
+            task.userId(),
+            task.sessionId(),
+            saved,
+            NvcPracticeType.TEXT
+        );
+        log.info("User profile ability score updated: userId={}", task.userId());
     }
 
     @Override
