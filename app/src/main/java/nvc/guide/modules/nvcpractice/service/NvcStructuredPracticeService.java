@@ -30,7 +30,8 @@ public class NvcStructuredPracticeService {
     private static final String STEP_PROGRESS_CACHE_PREFIX = "nvc:step:progress:";
 
     /**
-     * 获取步骤进度
+     * 获取步骤进度。
+     * 如果会话不是结构化四步模式，返回 null（调用方据此判断是否为结构化练习）。
      */
     public StepProgressDTO getStepProgress(Long sessionId) {
         NvcPracticeSessionEntity session = sessionService.getSession(sessionId);
@@ -85,13 +86,13 @@ public class NvcStructuredPracticeService {
 
         if (session.getPracticeMode() != NvcPracticeMode.STRUCTURED_FOUR_STEP) {
             throw new BusinessException(
-                ErrorCode.NVC_SESSION_NOT_FOUND,
+                ErrorCode.BAD_REQUEST,
                 "Session is not in structured four-step mode: " + sessionId);
         }
 
         if (currentStep == null || currentStep == NvcPracticeStep.COMPLETED) {
             throw new BusinessException(
-                ErrorCode.NVC_SESSION_NOT_FOUND,
+                ErrorCode.BAD_REQUEST,
                 "Session already completed: " + sessionId);
         }
 
@@ -143,7 +144,7 @@ public class NvcStructuredPracticeService {
 
         if (session.getPracticeMode() != NvcPracticeMode.STRUCTURED_FOUR_STEP) {
             throw new BusinessException(
-                ErrorCode.NVC_SESSION_NOT_FOUND,
+                ErrorCode.BAD_REQUEST,
                 "Session is not in structured four-step mode: " + sessionId);
         }
 
