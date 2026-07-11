@@ -454,3 +454,54 @@ if (session.getPracticeMode() == NvcPracticeMode.STRUCTURED_FOUR_STEP
 
 6. ... 以此类推直到 REQUEST 完成
 ```
+
+---
+
+## 7.10 完成记录
+
+**完成日期：** 2026-07-11
+
+**创建的文件：**
+
+| 文件 | 说明 |
+|------|------|
+| `nvc-step-observe-system.st` | 观察步骤教练 Prompt |
+| `nvc-step-feeling-system.st` | 感受步骤教练 Prompt |
+| `nvc-step-need-system.st` | 需求步骤教练 Prompt |
+| `nvc-step-request-system.st` | 请求步骤教练 Prompt |
+| `StepProgressDTO.java` | 步骤进度 DTO（10 个字段） |
+| `NvcStructuredPracticeService.java` | 结构化练习服务（4 个公共方法） |
+| `NvcStructuredPracticeServiceTest.java` | 25 个单元测试 |
+| `NvcPracticeDialogueServiceTest.java` | 7 个测试 |
+
+**修改的文件：**
+
+| 文件 | 改动 |
+|------|------|
+| `NvcAgentConfigEntity` | 添加 stepAdvanceThreshold, maxStepAttempts, stepTimeoutMinutes |
+| `AgentConfigDTO` | 添加 3 个新字段 |
+| `AgentConfigUpdateRequest` | 添加 3 个带验证的新字段 |
+| `NvcAgentConfigService` | 更新 toDTO 和 updateConfig 方法 |
+| `NvcPracticeController` | 添加 3 个端点 |
+| `NvcPracticeDialogueService` | 集成步骤自动推进逻辑 |
+| `NvcEvaluationRepository` | 重命名为 findFirstBySessionIdAndEvaluationTypeOrderByCreatedAtDesc |
+
+**API 端点：**
+
+| 方法 | 路径 | 说明 | 限流 |
+|------|------|------|------|
+| GET | `/api/nvc/practice/sessions/{sessionId}/step-progress` | 获取步骤进度 | - |
+| POST | `/api/nvc/practice/sessions/{sessionId}/advance-step` | 手动推进步骤 | 10/min |
+| POST | `/api/nvc/practice/sessions/{sessionId}/reset-step` | 重置步骤 | 5/min |
+
+**关键实现细节：**
+
+1. **步骤推进阈值**：通过 Agent 配置可配置（默认 70 分）
+2. **错误处理**：使用 `ErrorCode.BAD_REQUEST`（非 `NVC_SESSION_NOT_FOUND`）
+3. **事务管理**：`advanceStep()` 和 `resetStep()` 使用 `@Transactional`
+4. **异常保护**：`doOnComplete` 中的 `advanceStep` 调用有 try-catch 保护
+5. **Repository 优化**：使用 `findFirst` 避免 `IncorrectResultSizeDataAccessException`
+
+**Commits:** `0619adc..51130af` (10 commits)
+
+**测试覆盖：** 69 个测试套件全部通过
