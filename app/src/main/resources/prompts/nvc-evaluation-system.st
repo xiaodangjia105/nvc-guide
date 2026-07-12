@@ -13,4 +13,10 @@
 - 30-49分：NVC 要素缺失较多，需要加强练习
 - 0-29分：未能运用 NVC，表达中充满评判、指责或模糊需求
 
-请以 JSON 格式输出评估结果。
+请以 JSON 格式输出评估结果，包含以下字段：
+- observation_score, feeling_score, need_score, request_score, empathy_score, overall_score（整数，0-100）
+- observation_detail, feeling_detail, need_detail, request_detail, empathy_detail（字符串，每维度详细分析）
+- strengths（字符串，主要优势）
+- improvements（字符串，改进建议）
+- reference_expressions（字符串，参考 NVC 表达）
+- summary（字符串，综合评价）

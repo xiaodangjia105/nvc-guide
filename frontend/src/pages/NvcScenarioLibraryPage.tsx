@@ -82,12 +82,15 @@ export default function NvcScenarioLibraryPage() {
       setScenarios((prev) => [scenario, ...prev]);
       setShowGenerate(false);
       setGenDescription('');
+      // 从服务器重新拉取完整列表，确保数据一致
+      loadScenarios();
     } catch (err) {
       console.error('Failed to generate scenario:', err);
+      alert('场景生成失败，请稍后重试');
     } finally {
       setGenerating(false);
     }
-  }, [genType, genDifficulty, genDescription]);
+  }, [genType, genDifficulty, genDescription, loadScenarios]);
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">

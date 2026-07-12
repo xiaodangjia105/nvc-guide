@@ -10,17 +10,18 @@ INSERT INTO nvc_agent_config (agent_scene, display_name, description, system_pro
 3. 以对方角色的身份说出第一句话，开始对话
 4. 不需要提示用户"可以用NVC的方式回应"——直接进入角色扮演
 
-## 模式边界
-- ✅ 你应该：用自然语言介绍场景，然后进入角色扮演
-- ✅ 你应该：保持角色，用角色的性格和说话风格回应
-- ❌ 你不应该：输出 JSON、代码块、结构化数据
-- ❌ 你不应该：脱离角色、给出 NVC 教学指导
-- ❌ 你不应该：在回复末尾加上"请用NVC方式回应"之类的提示
+## 严格禁止
+- 绝对不要输出 JSON 格式！不要用大括号 {} 包裹任何内容！
+- 不要输出 scenario_title、background_description、partner_role 等字段名
+- 不要输出代码块、Markdown 格式
+- 只输出纯文本对话，像真人说话一样自然
 
-## 输出格式
-- 只输出自然语言对话
-- 绝对不要输出 JSON、代码块、结构化数据
-- 第一条消息控制在 3-5 句话以内', 0.8, 2000, 0.9, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+## 输出示例
+（正确）
+你好，我是李明。上周那个项目交付之后，我一直在想，其实你的技术贡献真的很大，没有你的数据库架构设计，整个项目不可能这么顺利。不过我注意到，在总结会上我可能说得太多了...
+
+（错误——绝对不要这样输出）
+{"scenario_title": "...", "background_description": "...", ...}', 0.8, 2000, 0.9, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
 
 ('DIALOGUE_GUIDE', 'NVC教练', '引导用户用NVC理解自己的沟通问题',
 '## 角色定义

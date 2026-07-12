@@ -30,10 +30,47 @@ interface DisplayMessage {
  */
 function cleanAiResponse(raw: string): string {
   let result = raw;
+  // 1. 去除代码块
   result = result.replace(/```[a-zA-Z]*\s*\n[\s\S]*?```/g, '');
+  // 2. 去除独立 JSON 对象/数组段落
   result = result.replace(/^\s*\{[\s\S]*?\}\s*$/gm, '');
+  result = result.replace(/^\s*\[[\s\S]*?\]\s*$/gm, '');
+  // 3. 去除混合内容中的 JSON 块（大括号计数处理嵌套）
+  result = removeInlineJson(result);
+  // 4. 压缩多余空行
   result = result.replace(/\n{3,}/g, '\n\n');
   return result.trim();
+}
+
+/**
+ * 移除混合内容中的 JSON 块
+ */
+function removeInlineJson(text: string): string {
+  let result = '';
+  let i = 0;
+  while (i < text.length) {
+    if (text[i] === '{') {
+      let j = i + 1;
+      while (j < text.length && /\s/.test(text[j])) j++;
+      if (j < text.length && text[j] === '"') {
+        let depth = 0;
+        let valid = true;
+        let end = i;
+        for (let k = i; k < text.length; k++) {
+          if (text[k] === '{') depth++;
+          else if (text[k] === '}') {
+            depth--;
+            if (depth === 0) { end = k + 1; break; }
+          }
+          if (k === text.length - 1 && depth > 0) valid = false;
+        }
+        if (valid && end > i) { i = end; continue; }
+      }
+    }
+    result += text[i];
+    i++;
+  }
+  return result;
 }
 
 export default function NvcChatPanel({

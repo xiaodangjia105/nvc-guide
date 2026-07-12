@@ -26,6 +26,11 @@ public final class AiResponseCleaner {
       "^\\s*\\[[\\s\\S]*?]\\s*$",
       Pattern.MULTILINE);
 
+  // 匹配混合内容中以 { 开头的 JSON 块（如 "是啊\n{ ... }"）
+  private static final Pattern JSON_OBJECT_INLINE = Pattern.compile(
+      "\\{\\s*\"[\\s\\S]*?\"\\s*:\\s*[\\s\\S]*?\\}",
+      Pattern.MULTILINE);
+
   // 匹配连续 3 行以上空行
   private static final Pattern EXCESS_NEWLINES = Pattern.compile(
       "\\n{3,}");
@@ -52,10 +57,56 @@ public final class AiResponseCleaner {
     // 3. 去除独立 JSON 数组段落
     result = JSON_ARRAY.matcher(result).replaceAll("");
 
-    // 4. 压缩多余空行
+    // 4. 去除混合内容中的 JSON 块（用大括号计数处理嵌套）
+    result = removeInlineJson(result);
+
+    // 5. 压缩多余空行
     result = EXCESS_NEWLINES.matcher(result).replaceAll("\n\n");
 
-    // 5. trim
+    // 6. trim
     return result.trim();
+  }
+
+  /**
+   * 移除混合内容中的 JSON 块，使用大括号计数正确处理嵌套
+   */
+  private static String removeInlineJson(String text) {
+    StringBuilder sb = new StringBuilder();
+    int i = 0;
+    while (i < text.length()) {
+      if (text.charAt(i) == '{') {
+        // 检查是否像 JSON（下一个非空字符是 "）
+        int j = i + 1;
+        while (j < text.length() && Character.isWhitespace(text.charAt(j))) j++;
+        if (j < text.length() && text.charAt(j) == '"') {
+          // 用大括号计数找到匹配的闭合
+          int depth = 0;
+          int start = i;
+          boolean valid = true;
+          for (int k = i; k < text.length(); k++) {
+            char c = text.charAt(k);
+            if (c == '{') depth++;
+            else if (c == '}') {
+              depth--;
+              if (depth == 0) {
+                // 跳过整个 JSON 块
+                i = k + 1;
+                break;
+              }
+            }
+            // 如果在字符串内，跳过转义字符
+            if (k == text.length() - 1 && depth > 0) {
+              valid = false;
+            }
+          }
+          if (valid && i > start) {
+            continue;
+          }
+        }
+      }
+      sb.append(text.charAt(i));
+      i++;
+    }
+    return sb.toString();
   }
 }

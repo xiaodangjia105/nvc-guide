@@ -141,8 +141,14 @@ public class NvcAgentChatService {
       }
     }
 
-    // 7. 当前用户消息
-    messages.add(new UserMessage(userMessage));
+    // 7. 当前用户消息（防御性去重：recentMessages 已在 DB 保存后构建，可能已包含当前消息）
+    boolean alreadyIncluded = context.getRecentMessages() != null
+        && !context.getRecentMessages().isEmpty()
+        && context.getRecentMessages().getLast().getRole() == NvcMessageRole.USER
+        && context.getRecentMessages().getLast().getContent().equals(userMessage);
+    if (!alreadyIncluded) {
+      messages.add(new UserMessage(userMessage));
+    }
 
     return messages;
   }

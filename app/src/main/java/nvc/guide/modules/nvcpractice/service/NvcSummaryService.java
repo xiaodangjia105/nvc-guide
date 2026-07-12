@@ -43,7 +43,7 @@ public class NvcSummaryService {
       已有摘要：
       %s
 
-      请提取用户表达中的四要素：
+      请结合对话历史和已有摘要，给出每个要素的最终完整内容：
       1. 观察：用户描述的客观事实（不含评判）
       2. 感受：用户表达的真实情绪
       3. 需求：用户表达或暗示的深层需求
@@ -51,16 +51,17 @@ public class NvcSummaryService {
 
       返回 JSON：
       {
-        "observation": "提取的观察内容，或 null",
-        "feeling": "提取的感受内容，或 null",
-        "need": "提取的需求内容，或 null",
-        "request": "提取的请求内容，或 null",
+        "observation": "该要素的最终完整内容，或 null",
+        "feeling": "该要素的最终完整内容，或 null",
+        "need": "该要素的最终完整内容，或 null",
+        "request": "该要素的最终完整内容，或 null",
         "hint": "引导提示，建议用户下一步可以表达什么"
       }
 
       规则：
-      - 只提取用户明确表达的内容，不要推断
-      - 如果用户没有表达某个要素，返回 null
+      - 返回每个要素的最终完整值（综合已有摘要和新内容，不是只返回新增部分）
+      - 如果用户没有表达某个要素且已有摘要中也没有，返回 null
+      - 如果用户对已有要素描述得更清晰，用更清晰的版本替换
       - hint 应该根据缺失的要素，给出具体的引导建议
       - 只输出 JSON，不要其他内容
       """;
@@ -134,11 +135,8 @@ public class NvcSummaryService {
       JsonNode node) {
     if (node != null && !node.isNull()) {
       String newValue = node.asText();
-      String existing = getter.get();
-      if (existing == null || existing.isBlank()) {
-        setter.accept(newValue);
-      }
-      // 保留已有值，不覆盖
+      // 始终采用 LLM 返回的最新值（LLM 已收到已有摘要上下文，会做出综合判断）
+      setter.accept(newValue);
     }
   }
 

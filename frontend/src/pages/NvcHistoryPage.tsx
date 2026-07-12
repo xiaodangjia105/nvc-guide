@@ -108,7 +108,14 @@ export default function NvcHistoryPage() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.03 }}
-                onClick={() => navigate(`/nvc/history/${session.id}/report`)}
+                onClick={() => {
+                  const phase = session.currentPhase;
+                  if (phase === 'CREATED' || phase === 'IN_PROGRESS' || phase === 'PAUSED') {
+                    navigate(`/nvc/practice/${session.id}`);
+                  } else {
+                    navigate(`/nvc/history/${session.id}/report`);
+                  }
+                }}
                 className="w-full bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700 flex items-center gap-4 hover:shadow-md hover:border-primary-300 dark:hover:border-primary-600 transition-all text-left"
               >
                 <div className="w-10 h-10 rounded-lg bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center">

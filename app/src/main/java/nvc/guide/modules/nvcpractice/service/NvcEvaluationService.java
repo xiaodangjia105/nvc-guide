@@ -168,6 +168,7 @@ public class NvcEvaluationService {
             .feelingDetail(result.feelingDetail())
             .needDetail(result.needDetail())
             .requestDetail(result.requestDetail())
+            .empathyDetail(result.empathyDetail())
             .strengths(result.strengths())
             .improvements(result.improvements())
             .referenceExpressions(result.referenceExpressions())

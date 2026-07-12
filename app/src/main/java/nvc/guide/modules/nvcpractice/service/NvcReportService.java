@@ -37,12 +37,26 @@ public class NvcReportService {
         List<NvcPracticeMessageEntity> messages =
             messageRepository.findBySessionIdOrderBySequenceNumAsc(sessionId);
 
+        // 防御性检查：未完成的会话不触发 LLM 评估，直接返回默认报告
+        if (session.getCurrentPhase() != nvc.guide.modules.nvcpractice.model.NvcSessionPhase.COMPLETED
+            && session.getCurrentPhase() != nvc.guide.modules.nvcpractice.model.NvcSessionPhase.EVALUATED) {
+            log.warn("Session not completed, returning default report: sessionId={}, phase={}",
+                sessionId, session.getCurrentPhase());
+            return buildDefaultReport(session, messages);
+        }
+
         NvcEvaluationEntity finalEval = evaluationService.getFinalEvaluation(sessionId);
 
         // 如果还没有最终评估，先执行一次
         if (finalEval == null) {
-            finalEval = evaluationService.evaluateFinal(
-                sessionId, session.getUserId(), messages);
+            try {
+                finalEval = evaluationService.evaluateFinal(
+                    sessionId, session.getUserId(), messages);
+            } catch (Exception e) {
+                log.warn("Final evaluation failed, returning report with default scores: sessionId={}",
+                    sessionId, e);
+                return buildDefaultReport(session, messages);
+            }
         }
 
         // 统计用户消息轮次
@@ -67,11 +81,37 @@ public class NvcReportService {
             finalEval.getFeelingDetail(),
             finalEval.getNeedDetail(),
             finalEval.getRequestDetail(),
-            null, // empathyDetail — Entity 没有此字段，暂为 null
+            finalEval.getEmpathyDetail(),
             finalEval.getStrengths(),
             finalEval.getImprovements(),
             finalEval.getReferenceExpressions(),
             finalEval.getSummary()
+        );
+    }
+
+    /**
+     * 构建默认报告（评估失败时使用）
+     */
+    private NvcPracticeReport buildDefaultReport(
+            NvcPracticeSessionEntity session,
+            List<NvcPracticeMessageEntity> messages) {
+        long totalRounds = messages.stream()
+            .filter(m -> m.getRole() == NvcMessageRole.USER)
+            .count();
+        return new NvcPracticeReport(
+            session.getId(),
+            session.getPracticeMode(),
+            session.getDifficulty(),
+            totalRounds,
+            session.getStartedAt(),
+            session.getCompletedAt(),
+            0, 0, 0, 0, 0, 0,
+            "评估暂未完成", "评估暂未完成", "评估暂未完成",
+            "评估暂未完成", "评估暂未完成",
+            "评估暂未完成，请稍后刷新页面查看完整报告。",
+            "评估暂未完成，请稍后刷新页面查看完整报告。",
+            "评估暂未完成，请稍后刷新页面查看完整报告。",
+            "评估暂未完成，请稍后刷新页面查看完整报告。"
         );
     }
 

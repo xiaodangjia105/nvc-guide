@@ -45,7 +45,7 @@ public class NvcScenarioService {
         if (query.difficulty() != null) {
             return scenarioRepository.findByDifficulty(query.difficulty());
         }
-        return scenarioRepository.findByIsSystemTrueOrderByUsageCountDesc();
+        return scenarioRepository.findAllByOrderByUsageCountDesc();
     }
 
     /**
@@ -73,7 +73,9 @@ public class NvcScenarioService {
             .content();
 
         try {
-            var node = objectMapper.readTree(result);
+            // 从可能的 markdown 代码块中提取 JSON
+            String jsonContent = extractJson(result);
+            var node = objectMapper.readTree(jsonContent);
             NvcScenarioEntity scenario = NvcScenarioEntity.builder()
                 .title(node.has("title") ? node.get("title").asText() : "AI 生成场景")
                 .description(node.has("description") ? node.get("description").asText() : result)
@@ -129,6 +131,42 @@ public class NvcScenarioService {
     /**
      * 场景使用次数 +1
      */
+
+    /**
+     * 从可能包含 markdown 代码块的文本中提取纯 JSON
+     */
+    private String extractJson(String text) {
+        if (text == null || text.isBlank()) return text;
+        String trimmed = text.trim();
+
+        // 尝试提取 ```json ... ``` 中的内容
+        int codeBlockStart = trimmed.indexOf("```json");
+        if (codeBlockStart >= 0) {
+            int jsonStart = trimmed.indexOf('\n', codeBlockStart);
+            int codeBlockEnd = trimmed.lastIndexOf("```");
+            if (jsonStart >= 0 && codeBlockEnd > jsonStart) {
+                return trimmed.substring(jsonStart + 1, codeBlockEnd).trim();
+            }
+        }
+        // 尝试提取 ``` ... ``` 中的内容
+        codeBlockStart = trimmed.indexOf("```");
+        if (codeBlockStart >= 0) {
+            int jsonStart = trimmed.indexOf('\n', codeBlockStart);
+            int codeBlockEnd = trimmed.lastIndexOf("```");
+            if (jsonStart >= 0 && codeBlockEnd > jsonStart) {
+                return trimmed.substring(jsonStart + 1, codeBlockEnd).trim();
+            }
+        }
+
+        // 尝试找到第一个 { 和最后一个 } 之间的内容
+        int firstBrace = trimmed.indexOf('{');
+        int lastBrace = trimmed.lastIndexOf('}');
+        if (firstBrace >= 0 && lastBrace > firstBrace) {
+            return trimmed.substring(firstBrace, lastBrace + 1);
+        }
+
+        return trimmed;
+    }
     @Transactional
     public void incrementUsage(Long scenarioId) {
         scenarioRepository.findById(scenarioId).ifPresent(scenario -> {

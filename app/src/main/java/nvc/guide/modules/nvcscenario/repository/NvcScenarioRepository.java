@@ -14,6 +14,8 @@ public interface NvcScenarioRepository extends JpaRepository<NvcScenarioEntity, 
 
     List<NvcScenarioEntity> findByIsSystemTrueOrderByUsageCountDesc();
 
+    List<NvcScenarioEntity> findAllByOrderByUsageCountDesc();
+
     List<NvcScenarioEntity> findByScenarioType(NvcScenarioType type);
 
     List<NvcScenarioEntity> findByDifficulty(NvcDifficulty difficulty);

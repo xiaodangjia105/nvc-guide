@@ -23,11 +23,7 @@ public class ScenarioRouter implements ModeRouter {
     var session = context.getSession();
     Map<String, String> vars = new HashMap<>();
     vars.put("mode", "scenario");
-
-    // 注入场景详情
-    if (context.getScenarioDescription() != null) {
-      vars.put("scenario_context", context.getScenarioDescription());
-    }
+    // 场景详情已通过 buildMessages 的 [练习场景] 注入，无需重复注入
 
     // CREATED 阶段：使用场景生成官引入场景
     if (session.getCurrentPhase() == NvcSessionPhase.CREATED) {
