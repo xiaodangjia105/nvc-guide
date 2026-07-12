@@ -33,6 +33,7 @@ public class NvcPracticeDialogueService {
   private final NvcAgentOrchestrator orchestrator;
   private final ObjectMapper objectMapper;
   private final NvcEvaluationService evaluationService;
+  private final NvcSummaryService summaryService;
   private final NvcScenarioService scenarioService;
   private final NvcStructuredPracticeService structuredPracticeService;
 
@@ -100,16 +101,11 @@ public class NvcPracticeDialogueService {
             .build();
     messageRepository.save(aiMsg);
 
-    // 9. 异步触发实时评估（不阻塞对话）
+    // 9. 异步触发摘要更新（不阻塞对话）
     try {
-      evaluationService.evaluateRealtime(
-          sessionId,
-          session.getUserId(),
-          userMessage,
-          aiReply,
-          session.getCurrentStep());
+      summaryService.updateSummary(sessionId, userMessage);
     } catch (Exception e) {
-      log.warn("Realtime evaluation failed (non-blocking): sessionId={}",
+      log.warn("Summary update failed (non-blocking): sessionId={}",
           sessionId, e);
     }
 
@@ -244,16 +240,11 @@ public class NvcPracticeDialogueService {
           log.info("Stream reply saved: sessionId={}, length={}",
               sessionId, fullReply.length());
 
-          // 实时评估（不阻塞流式输出）
+          // 异步触发摘要更新（不阻塞流式输出）
           try {
-            evaluationService.evaluateRealtime(
-                sessionId,
-                userId,
-                userMessage,
-                cleanedReply,
-                currentStep);
+            summaryService.updateSummary(sessionId, userMessage);
           } catch (Exception e) {
-            log.warn("Realtime evaluation failed in stream (non-blocking): sessionId={}",
+            log.warn("Summary update failed in stream (non-blocking): sessionId={}",
                 sessionId, e);
           }
 

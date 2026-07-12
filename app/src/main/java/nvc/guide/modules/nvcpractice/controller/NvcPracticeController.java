@@ -8,16 +8,25 @@ import nvc.guide.modules.nvcpractice.dto.MessageResponse;
 import nvc.guide.modules.nvcpractice.dto.PracticeSessionResponse;
 import nvc.guide.modules.nvcpractice.dto.SendMessageRequest;
 import nvc.guide.modules.nvcpractice.dto.StepProgressDTO;
+import nvc.guide.modules.nvcpractice.model.NvcEvaluationEntity;
+import nvc.guide.modules.nvcpractice.model.NvcPracticeMessageEntity;
 import nvc.guide.modules.nvcpractice.model.NvcPracticeSessionEntity;
 import nvc.guide.modules.nvcpractice.model.NvcSessionPhase;
 import nvc.guide.modules.nvcpractice.listener.NvcEvaluateStreamProducer;
+import nvc.guide.modules.nvcpractice.repository.NvcPracticeMessageRepository;
+import nvc.guide.modules.nvcpractice.service.NvcEvaluationService;
 import nvc.guide.modules.nvcpractice.service.NvcPracticeDialogueService;
 import nvc.guide.modules.nvcpractice.service.NvcPracticeSessionService;
 import nvc.guide.modules.nvcpractice.service.NvcStructuredPracticeService;
+import nvc.guide.modules.nvcpractice.service.NvcSummaryService;
+import nvc.guide.modules.nvcpractice.model.NvcSummaryEntity;
+import nvc.guide.modules.nvcscenario.model.NvcScenarioEntity;
+import nvc.guide.modules.nvcscenario.repository.NvcScenarioRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
+import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -39,6 +48,10 @@ public class NvcPracticeController {
   private final NvcPracticeDialogueService dialogueService;
   private final NvcEvaluateStreamProducer evaluateStreamProducer;
   private final NvcStructuredPracticeService structuredPracticeService;
+  private final NvcEvaluationService evaluationService;
+  private final NvcSummaryService summaryService;
+  private final NvcScenarioRepository scenarioRepository;
+  private final NvcPracticeMessageRepository messageRepository;
 
   /**
    * 创建练习会话
@@ -99,7 +112,7 @@ public class NvcPracticeController {
   @PostMapping(
       value = "/sessions/{sessionId}/messages/stream",
       produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-  public Flux<String> sendMessageStream(
+  public Flux<ServerSentEvent<String>> sendMessageStream(
       @PathVariable Long sessionId,
       @RequestBody SendMessageRequest request) {
     return dialogueService.sendMessageStream(
@@ -117,6 +130,27 @@ public class NvcPracticeController {
   }
 
   /**
+   * 获取最新实时评估结果
+   */
+  @GetMapping("/sessions/{sessionId}/evaluation")
+  public Result<NvcEvaluationEntity> getLatestEvaluation(
+      @PathVariable Long sessionId) {
+    NvcEvaluationEntity evaluation =
+        evaluationService.getLatestRealtimeEvaluation(sessionId);
+    return Result.success(evaluation);
+  }
+
+  /**
+   * 获取 NVC 四要素摘要
+   */
+  @GetMapping("/sessions/{sessionId}/summary")
+  public Result<NvcSummaryEntity> getSummary(
+      @PathVariable Long sessionId) {
+    NvcSummaryEntity summary = summaryService.getSummary(sessionId);
+    return Result.success(summary);
+  }
+
+  /**
    * 结束会话
    */
   @PostMapping("/sessions/{sessionId}/complete")
@@ -125,13 +159,17 @@ public class NvcPracticeController {
     NvcPracticeSessionEntity session =
         sessionService.completeSession(sessionId);
 
-    // 推送异步最终评估任务
+    // 同步执行最终评估（阻塞直到完成，确保报告页有数据）
     try {
-      evaluateStreamProducer.sendEvaluateTask(
-          sessionId, session.getUserId());
+      List<NvcPracticeMessageEntity> messages =
+          messageRepository.findBySessionIdOrderBySequenceNumAsc(sessionId);
+      if (!messages.isEmpty()) {
+        evaluationService.evaluateFinal(
+            sessionId, session.getUserId(), messages);
+        log.info("Final evaluation completed: sessionId={}", sessionId);
+      }
     } catch (Exception e) {
-      log.warn("Failed to send final evaluation task: sessionId={}",
-          sessionId, e);
+      log.error("Final evaluation failed: sessionId={}", sessionId, e);
     }
 
     return Result.success(toSessionResponse(session));
@@ -174,6 +212,19 @@ public class NvcPracticeController {
 
   private PracticeSessionResponse toSessionResponse(
       NvcPracticeSessionEntity session) {
+    // 加载场景信息（场景驱动模式）
+    Long scenarioId = session.getScenarioId();
+    String scenarioTitle = null;
+    String scenarioDescription = null;
+    if (scenarioId != null) {
+      NvcScenarioEntity scenario =
+          scenarioRepository.findById(scenarioId).orElse(null);
+      if (scenario != null) {
+        scenarioTitle = scenario.getTitle();
+        scenarioDescription = scenario.getDescription();
+      }
+    }
+
     return new PracticeSessionResponse(
         session.getId(),
         session.getUserId(),
@@ -183,6 +234,9 @@ public class NvcPracticeController {
         session.getAgentScene() != null
             ? session.getAgentScene().name() : null,
         session.getDifficulty(),
+        scenarioId,
+        scenarioTitle,
+        scenarioDescription,
         session.getStartedAt(),
         session.getCompletedAt(),
         session.getCreatedAt()

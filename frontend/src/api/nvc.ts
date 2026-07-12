@@ -49,6 +49,16 @@ export const practiceApi = {
       `/api/nvc/practice/sessions/${sessionId}/messages`
     ),
 
+  getEvaluation: (sessionId: number) =>
+    request.get<any>(
+      `/api/nvc/practice/sessions/${sessionId}/evaluation`
+    ),
+
+  getSummary: (sessionId: number) =>
+    request.get<any>(
+      `/api/nvc/practice/sessions/${sessionId}/summary`
+    ),
+
   completeSession: (sessionId: number) =>
     request.post<PracticeSession>(
       `/api/nvc/practice/sessions/${sessionId}/complete`

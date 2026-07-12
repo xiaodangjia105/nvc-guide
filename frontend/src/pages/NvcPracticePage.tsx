@@ -6,10 +6,10 @@ import {
 } from 'lucide-react';
 import { practiceApi } from '../api/nvc';
 import NvcChatPanel from '../components/nvc/NvcChatPanel';
-import NvcEvaluationCard from '../components/nvc/NvcEvaluationCard';
+import NvcSummaryPanel from '../components/nvc/NvcSummaryPanel';
 import NvcStepIndicator from '../components/nvc/NvcStepIndicator';
 import type {
-  PracticeSession, EvaluationCardData, StepProgress,
+  PracticeSession, StepProgress,
 } from '../types/nvc';
 
 const MODE_LABELS: Record<string, string> = {
@@ -24,11 +24,11 @@ export default function NvcPracticePage() {
   const sid = Number(sessionId);
 
   const [session, setSession] = useState<PracticeSession | null>(null);
-  const [evaluation, setEvaluation] = useState<EvaluationCardData | null>(null);
   const [stepProgress, setStepProgress] = useState<StepProgress | null>(null);
   const [loading, setLoading] = useState(true);
   const [completing, setCompleting] = useState(false);
   const [completingMessage, setCompletingMessage] = useState('');
+  const [summaryRefreshTrigger, setSummaryRefreshTrigger] = useState(0);
 
   const isStructured = session?.practiceMode === 'STRUCTURED_FOUR_STEP';
 
@@ -47,16 +47,12 @@ export default function NvcPracticePage() {
       .finally(() => setLoading(false));
   }, [sid, isStructured]);
 
-  const handleEvaluation = useCallback((data: EvaluationCardData) => {
-    setEvaluation(data);
+  const handleMessageSent = useCallback(() => {
+    // 延迟刷新摘要，等待后台 LLM 分析完成
+    setTimeout(() => {
+      setSummaryRefreshTrigger((prev) => prev + 1);
+    }, 2000);
   }, []);
-
-  const handleStepAdvance = useCallback(() => {
-    if (!sid) return;
-    practiceApi.getStepProgress(sid)
-      .then(setStepProgress)
-      .catch(console.error);
-  }, [sid]);
 
   const handleAdvanceStep = useCallback(async () => {
     if (!sid) return;
@@ -208,8 +204,7 @@ export default function NvcPracticePage() {
           <NvcChatPanel
             sessionId={sid}
             practiceMode={session.practiceMode}
-            onEvaluation={handleEvaluation}
-            onStepAdvance={handleStepAdvance}
+            onMessageSent={handleMessageSent}
           />
         </div>
 
@@ -224,17 +219,11 @@ export default function NvcPracticePage() {
             />
           )}
 
-          {/* 实时评估 */}
-          {evaluation && <NvcEvaluationCard data={evaluation} />}
-
-          {/* 无评估时的提示 */}
-          {!evaluation && (
-            <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700 text-center">
-              <p className="text-sm text-slate-400">
-                发送消息后将显示实时评估
-              </p>
-            </div>
-          )}
+          {/* NVC 四要素摘要 */}
+          <NvcSummaryPanel
+            sessionId={sid}
+            refreshTrigger={summaryRefreshTrigger}
+          />
         </div>
       </div>
     </div>
