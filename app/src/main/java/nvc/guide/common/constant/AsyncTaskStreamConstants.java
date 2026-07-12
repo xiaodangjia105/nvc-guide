@@ -131,4 +131,26 @@ public final class AsyncTaskStreamConstants {
      * 语音面试会话ID字段
      */
     public static final String FIELD_VOICE_SESSION_ID = "voiceSessionId";
+
+    // ========== NVC 语音评估 Stream 配置 ==========
+
+    /**
+     * NVC 语音评估 Stream Key
+     */
+    public static final String NVC_VOICE_EVALUATE_STREAM_KEY = "nvc:voice:evaluate:stream";
+
+    /**
+     * NVC 语音评估 Consumer Group 名称
+     */
+    public static final String NVC_VOICE_EVALUATE_GROUP_NAME = "nvc-voice-evaluate-group";
+
+    /**
+     * NVC 语音评估 Consumer 名称前缀
+     */
+    public static final String NVC_VOICE_EVALUATE_CONSUMER_PREFIX = "nvc-voice-evaluate-consumer-";
+
+    /**
+     * NVC 语音会话ID字段
+     */
+    public static final String FIELD_NVC_VOICE_SESSION_ID = "nvcVoiceSessionId";
 }
