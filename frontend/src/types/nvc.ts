@@ -24,6 +24,9 @@ export interface PracticeSession {
   currentStep: NvcPracticeStep | null;
   agentScene: string | null;
   difficulty: NvcDifficulty;
+  scenarioId: number | null;
+  scenarioTitle: string | null;
+  scenarioDescription: string | null;
   startedAt: string | null;
   completedAt: string | null;
   createdAt: string;

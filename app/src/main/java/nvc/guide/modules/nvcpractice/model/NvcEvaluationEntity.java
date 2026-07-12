@@ -55,6 +55,9 @@ public class NvcEvaluationEntity {
     @Column(name = "request_detail", columnDefinition = "TEXT")
     private String requestDetail;
 
+    @Column(name = "empathy_detail", columnDefinition = "TEXT")
+    private String empathyDetail;
+
     @Column(columnDefinition = "TEXT")
     private String strengths;
 

@@ -92,13 +92,21 @@ export default function NvcReportPage() {
   if (!report) {
     return (
       <div className="text-center py-20">
-        <p className="text-slate-500">报告不存在</p>
-        <button
-          onClick={() => navigate('/nvc/history')}
-          className="mt-4 text-primary-500 hover:underline"
-        >
-          返回练习历史
-        </button>
+        <p className="text-slate-500">报告加载失败</p>
+        <div className="flex items-center justify-center gap-4 mt-4">
+          <button
+            onClick={() => { setLoading(true); reportApi.getReport(sid).then(setReport).catch(console.error).finally(() => setLoading(false)); }}
+            className="text-primary-500 hover:underline"
+          >
+            重新加载
+          </button>
+          <button
+            onClick={() => navigate('/nvc/history')}
+            className="text-slate-500 hover:underline"
+          >
+            返回练习历史
+          </button>
+        </div>
       </div>
     );
   }

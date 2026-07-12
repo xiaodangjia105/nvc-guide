@@ -1,9 +1,0 @@
-﻿*** Begin Patch
-*** Update File: app/src/main/resources/application.yml
-@@
-         singleServerConfig:
-           address: \"redis://\:\\"
--          database: 0
-+          database: \
-           connectionMinimumIdleSize: 10
-*** End Patch

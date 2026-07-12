@@ -14,6 +14,9 @@ public record PracticeSessionResponse(
     NvcPracticeStep currentStep,
     String agentScene,
     NvcDifficulty difficulty,
+    Long scenarioId,
+    String scenarioTitle,
+    String scenarioDescription,
     LocalDateTime startedAt,
     LocalDateTime completedAt,
     LocalDateTime createdAt

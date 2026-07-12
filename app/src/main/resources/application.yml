@@ -146,9 +146,9 @@ app:
         supports-embedding: true
       # 小米 MiMo（OpenAI 兼容）
       mimo:
-        base-url: https://token-plan-cn.xiaomimimo.com/v1
-        api-key: ${PROVIDER_MIMO_API_KEY:sk-cgmf0ae7ifxn4kdqyi2qr94ony1womyri1qtom1ba2qhhkh2}
-        model: ${PROVIDER_MIMO_MODEL:mimo-2.5}
+        base-url: https://api.xiaomimimo.com/v1
+        api-key: ${PROVIDER_MIMO_API_KEY:sk-cqtgohrrudni9hrhlqun888fx9m8k2ulpqy5itgp6pahymph}
+        model: ${PROVIDER_MIMO_MODEL:mimo-v2.5}
         supports-embedding: false
     advisors:
       enabled: ${APP_AI_ADVISORS_ENABLED:true}

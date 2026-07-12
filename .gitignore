@@ -6,9 +6,11 @@ build
 /.claude
 /.idea
 /app/bin
+
 # Environment variables
 .env
 test-output.txt
+
 # IDEA code analysis
 qodana.yaml
 
@@ -20,3 +22,41 @@ GEMINI.md
 
 # Playwright MCP
 .playwright-mcp/
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*~
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Patch files
+*.patch
+patch*.txt
+
+# Frontend build output
+frontend/dist
+frontend/dist-ssr
+frontend/*.local
+
+# Frontend logs
+frontend/logs
+frontend/*.log
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/pnpm-debug.log*
+
+# Frontend node_modules (should not be tracked)
+frontend/node_modules
