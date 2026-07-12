@@ -1,6 +1,9 @@
 import {Link, Outlet, useLocation} from 'react-router-dom';
 import {motion} from 'framer-motion';
-import {Database, MessageSquare, Moon, Settings, Sun,} from 'lucide-react';
+import {
+  BarChart3, BookOpen, Bot, ClipboardList, Database,
+  MessageSquare, Moon, Settings, Sun, Target, User,
+} from 'lucide-react';
 import {useTheme} from '../hooks/useTheme';
 
 interface NavItem {
@@ -25,6 +28,18 @@ export default function Layout() {
   // 按业务模块组织的导航项
   const navGroups: NavGroup[] = [
     {
+      id: 'nvc',
+      title: 'NVC 练习',
+      items: [
+        { id: 'nvc-hub', path: '/nvc', label: '练习中心', icon: Target, description: '三种练习模式' },
+        { id: 'nvc-scenarios', path: '/nvc/scenarios', label: '场景库', icon: BookOpen, description: '浏览练习场景' },
+        { id: 'nvc-history', path: '/nvc/history', label: '练习历史', icon: ClipboardList, description: '查看历史记录' },
+        { id: 'nvc-dashboard', path: '/nvc/dashboard', label: '数据仪表盘', icon: BarChart3, description: '能力数据分析' },
+        { id: 'nvc-profile', path: '/nvc/profile', label: '个人档案', icon: User, description: '编辑个人信息' },
+        { id: 'nvc-agents', path: '/nvc/agents', label: 'Agent配置', icon: Bot, description: '管理AI角色' },
+      ],
+    },
+    {
       id: 'knowledge',
       title: '知识库',
       items: [
@@ -44,8 +59,12 @@ export default function Layout() {
   // 判断当前页面是否匹配导航项
   const isActive = (path: string) => {
     if (path.startsWith('#')) return false;
+    if (path === '/nvc') {
+      return currentPath === '/nvc';
+    }
     if (path === '/knowledgebase') {
-      return currentPath === '/knowledgebase' || currentPath === '/knowledgebase/upload';
+      return currentPath === '/knowledgebase'
+        || currentPath === '/knowledgebase/upload';
     }
     return currentPath.startsWith(path);
   };
@@ -56,7 +75,7 @@ export default function Layout() {
       <aside className="w-64 bg-white dark:bg-slate-900 border-r border-slate-100 dark:border-slate-700 fixed h-screen left-0 top-0 z-50 flex flex-col">
         {/* Logo */}
         <div className="p-6 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
-          <Link to="/knowledgebase" className="flex items-center gap-3">
+          <Link to="/nvc" className="flex items-center gap-3">
             <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-primary-500/30">
               <MessageSquare className="w-5 h-5" />
             </div>

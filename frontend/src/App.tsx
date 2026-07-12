@@ -4,11 +4,22 @@ import { Suspense, lazy } from 'react';
 import type { UploadKnowledgeBaseResponse } from './api/knowledgebase';
 import { ROUTES } from './constants/routes';
 
-// Lazy load components
+// Lazy load - 知识库页面
 const KnowledgeBaseQueryPage = lazy(() => import('./pages/KnowledgeBaseQueryPage'));
 const KnowledgeBaseUploadPage = lazy(() => import('./pages/KnowledgeBaseUploadPage'));
 const KnowledgeBaseManagePage = lazy(() => import('./pages/KnowledgeBaseManagePage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+
+// Lazy load - NVC 页面
+const NvcPracticeHubPage = lazy(() => import('./pages/NvcPracticeHubPage'));
+const NvcPracticePage = lazy(() => import('./pages/NvcPracticePage'));
+const NvcVoicePage = lazy(() => import('./pages/NvcVoicePage'));
+const NvcHistoryPage = lazy(() => import('./pages/NvcHistoryPage'));
+const NvcReportPage = lazy(() => import('./pages/NvcReportPage'));
+const NvcProfilePage = lazy(() => import('./pages/NvcProfilePage'));
+const NvcDashboardPage = lazy(() => import('./pages/NvcDashboardPage'));
+const NvcScenarioLibraryPage = lazy(() => import('./pages/NvcScenarioLibraryPage'));
+const NvcAgentConfigPage = lazy(() => import('./pages/NvcAgentConfigPage'));
 
 // Loading component
 const Loading = () => (
@@ -23,8 +34,19 @@ function App() {
       <Suspense fallback={<Loading />}>
         <Routes>
           <Route path="/" element={<Layout />}>
-            {/* 默认重定向到知识库管理页面 */}
-            <Route index element={<Navigate to="/knowledgebase" replace />} />
+            {/* 默认重定向到 NVC 练习中心 */}
+            <Route index element={<Navigate to="/nvc" replace />} />
+
+            {/* NVC 练习 */}
+            <Route path="nvc" element={<NvcPracticeHubPage />} />
+            <Route path="nvc/practice/:sessionId" element={<NvcPracticePage />} />
+            <Route path="nvc/voice/:sessionId" element={<NvcVoicePage />} />
+            <Route path="nvc/history" element={<NvcHistoryPage />} />
+            <Route path="nvc/history/:sessionId/report" element={<NvcReportPage />} />
+            <Route path="nvc/profile" element={<NvcProfilePage />} />
+            <Route path="nvc/dashboard" element={<NvcDashboardPage />} />
+            <Route path="nvc/scenarios" element={<NvcScenarioLibraryPage />} />
+            <Route path="nvc/agents" element={<NvcAgentConfigPage />} />
 
             {/* 知识库管理 */}
             <Route path="knowledgebase" element={<KnowledgeBaseManagePageWrapper />} />
@@ -37,8 +59,6 @@ function App() {
 
             {/* 设置 */}
             <Route path="settings" element={<SettingsPage />} />
-
-            {/* 后续会添加 NVC 相关路由 */}
           </Route>
         </Routes>
       </Suspense>
