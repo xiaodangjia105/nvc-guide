@@ -8,11 +8,13 @@ import nvc.guide.modules.nvcpractice.dto.PracticeContext;
 import nvc.guide.modules.nvcpractice.dto.StreamMetadata;
 import nvc.guide.modules.nvcpractice.model.NvcAgentScene;
 import nvc.guide.modules.nvcpractice.model.NvcMessageRole;
+import org.springframework.http.codec.ServerSentEvent;
 import nvc.guide.modules.nvcpractice.model.NvcPracticeMessageEntity;
 import nvc.guide.modules.nvcpractice.model.NvcPracticeMode;
 import nvc.guide.modules.nvcpractice.model.NvcPracticeSessionEntity;
 import nvc.guide.modules.nvcpractice.model.NvcSessionPhase;
 import nvc.guide.modules.nvcpractice.repository.NvcPracticeMessageRepository;
+import nvc.guide.modules.nvcpractice.util.AiResponseCleaner;
 import nvc.guide.modules.nvcscenario.service.NvcScenarioService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -43,13 +45,7 @@ public class NvcPracticeDialogueService {
     NvcPracticeSessionEntity session =
         sessionService.getSession(sessionId);
 
-    // 2. 如果会话是 CREATED 状态，自动切换到 IN_PROGRESS
-    if (session.getCurrentPhase() == NvcSessionPhase.CREATED) {
-      session = sessionService.updatePhase(
-          sessionId, NvcSessionPhase.IN_PROGRESS);
-    }
-
-    // 3. 保存用户消息
+    // 2. 保存用户消息
     int nextSeq = getNextSequenceNum(sessionId);
     NvcPracticeMessageEntity userMsg =
         NvcPracticeMessageEntity.builder()
@@ -61,18 +57,24 @@ public class NvcPracticeDialogueService {
             .build();
     messageRepository.save(userMsg);
 
-    // 3.5 场景驱动模式：增加场景使用次数
+    // 2.5 场景驱动模式：增加场景使用次数
     if (session.getScenarioId() != null) {
       scenarioService.incrementUsage(session.getScenarioId());
     }
 
-    // 4. 构建练习上下文
+    // 3. 构建练习上下文
     PracticeContext context = orchestrator.buildPracticeContext(
         sessionId, session.getUserId());
 
-    // 5. Agent 调度决策
+    // 4. Agent 调度决策（在状态转换之前，确保 SCENARIO_GENERATOR 可以被选中）
     AgentDecision decision =
         orchestrator.decideNextAgent(context);
+
+    // 5. 如果会话是 CREATED 状态，自动切换到 IN_PROGRESS
+    if (session.getCurrentPhase() == NvcSessionPhase.CREATED) {
+      session = sessionService.updatePhase(
+          sessionId, NvcSessionPhase.IN_PROGRESS);
+    }
     log.info("Agent decision: session={}, scene={}, reason={}",
         sessionId, decision.scene(), decision.reason());
 
@@ -81,7 +83,10 @@ public class NvcPracticeDialogueService {
 
     // 7. 执行 Agent 对话
     String aiReply = orchestrator.executeAgent(
-        decision.scene(), context, userMessage);
+        decision, context, userMessage);
+
+    // 7.5 清理 AI 回复中的 JSON/代码块
+    aiReply = AiResponseCleaner.clean(aiReply);
 
     // 8. 保存 AI 回复
     NvcPracticeMessageEntity aiMsg =
@@ -136,19 +141,15 @@ public class NvcPracticeDialogueService {
    * <p>事件格式：
    * <ul>
    *   <li>event: metadata  -> StreamMetadata JSON</li>
-   *   <li>event: message   -> 纯文本 token</li>
+   *   <li>event: message   -> 纯文本 token（换行符转义为 \\n）</li>
    *   <li>event: done      -> {"length": N}</li>
    * </ul>
    */
-  public Flux<String> sendMessageStream(Long sessionId,
+  public Flux<ServerSentEvent<String>> sendMessageStream(Long sessionId,
       String userMessage) {
-    // 1. 获取会话 + 自动切换状态
+    // 1. 获取会话
     NvcPracticeSessionEntity session =
         sessionService.getSession(sessionId);
-    if (session.getCurrentPhase() == NvcSessionPhase.CREATED) {
-      session = sessionService.updatePhase(
-          sessionId, NvcSessionPhase.IN_PROGRESS);
-    }
 
     // 2. 保存用户消息
     int nextSeq = getNextSequenceNum(sessionId);
@@ -167,7 +168,7 @@ public class NvcPracticeDialogueService {
       scenarioService.incrementUsage(session.getScenarioId());
     }
 
-    // 3. 构建上下文 + Agent 调度
+    // 3. 构建上下文 + Agent 调度（在状态转换之前，确保 SCENARIO_GENERATOR 可以被选中）
     var currentStep = session.getCurrentStep();
     var practiceMode = session.getPracticeMode();
     Long userId = session.getUserId();
@@ -175,6 +176,13 @@ public class NvcPracticeDialogueService {
         sessionId, userId);
     AgentDecision decision =
         orchestrator.decideNextAgent(context);
+
+    // 3.5 状态转换：CREATED → IN_PROGRESS
+    if (session.getCurrentPhase() == NvcSessionPhase.CREATED) {
+      session = sessionService.updatePhase(
+          sessionId, NvcSessionPhase.IN_PROGRESS);
+    }
+
     sessionService.updateAgentScene(sessionId, decision.scene());
 
     // 4. 构建 metadata 事件
@@ -194,28 +202,41 @@ public class NvcPracticeDialogueService {
 
     // 5. 流式获取 AI 回复
     Flux<String> tokenStream = orchestrator.executeAgentStream(
-        decision.scene(), context, userMessage);
+        decision, context, userMessage);
 
-    // 6. 组装 SSE 事件流
+    // 6. 组装 SSE 事件流（使用 ServerSentEvent 正确设置 event 类型）
     StringBuilder fullReply = new StringBuilder();
-    Flux<String> metadataEvent = Flux.just(
-        "event: metadata\ndata: " + metadataJson + "\n\n");
-    Flux<String> messageEvents = tokenStream
+
+    Flux<ServerSentEvent<String>> metadataEvent = Flux.just(
+        ServerSentEvent.<String>builder()
+            .event("metadata")
+            .data(metadataJson)
+            .build());
+
+    Flux<ServerSentEvent<String>> messageEvents = tokenStream
         .doOnNext(fullReply::append)
-        .map(token ->
-            "event: message\ndata: " + token + "\n\n");
-    Flux<String> doneEvent = Flux.defer(() -> Flux.just(
-        "event: done\ndata: {\"length\":"
-        + fullReply.length() + "}\n\n"));
+        .map(token -> ServerSentEvent.<String>builder()
+            .event("message")
+            .data(token.replace("\n", "\\n").replace("\r", "\\r"))
+            .build());
+
+    Flux<ServerSentEvent<String>> doneEvent = Flux.defer(() -> Flux.just(
+        ServerSentEvent.<String>builder()
+            .event("done")
+            .data("{\"length\":" + fullReply.length() + "}")
+            .build()));
 
     return Flux.concat(metadataEvent, messageEvents, doneEvent)
         .doOnComplete(() -> {
+          // 清理 AI 回复中的 JSON/代码块
+          String cleanedReply = AiResponseCleaner.clean(fullReply.toString());
+
           NvcPracticeMessageEntity aiMsg =
               NvcPracticeMessageEntity.builder()
                   .sessionId(sessionId)
                   .role(NvcMessageRole.ASSISTANT)
                   .agentScene(decision.scene())
-                  .content(fullReply.toString())
+                  .content(cleanedReply)
                   .sequenceNum(nextSeq + 1)
                   .step(currentStep)
                   .build();
@@ -229,7 +250,7 @@ public class NvcPracticeDialogueService {
                 sessionId,
                 userId,
                 userMessage,
-                fullReply.toString(),
+                cleanedReply,
                 currentStep);
           } catch (Exception e) {
             log.warn("Realtime evaluation failed in stream (non-blocking): sessionId={}",

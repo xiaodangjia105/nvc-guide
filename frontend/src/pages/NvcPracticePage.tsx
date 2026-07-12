@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
-  ArrowLeft, CheckCircle, Clock, Loader2, StopCircle,
+  ArrowLeft, CheckCircle, Clock, Loader2, StopCircle, BookOpen,
 } from 'lucide-react';
 import { practiceApi } from '../api/nvc';
 import NvcChatPanel from '../components/nvc/NvcChatPanel';
@@ -28,6 +28,7 @@ export default function NvcPracticePage() {
   const [stepProgress, setStepProgress] = useState<StepProgress | null>(null);
   const [loading, setLoading] = useState(true);
   const [completing, setCompleting] = useState(false);
+  const [completingMessage, setCompletingMessage] = useState('');
 
   const isStructured = session?.practiceMode === 'STRUCTURED_FOUR_STEP';
 
@@ -80,11 +81,13 @@ export default function NvcPracticePage() {
   const handleComplete = useCallback(async () => {
     if (!sid) return;
     setCompleting(true);
+    setCompletingMessage('正在生成评估报告...');
     try {
       await practiceApi.completeSession(sid);
       navigate(`/nvc/history/${sid}/report`);
     } catch (err) {
       console.error('Failed to complete session:', err);
+      setCompletingMessage('');
     } finally {
       setCompleting(false);
     }
@@ -163,7 +166,7 @@ export default function NvcPracticePage() {
             ) : (
               <StopCircle className="w-4 h-4" />
             )}
-            结束练习
+            {completing ? completingMessage || '结束练习' : '结束练习'}
           </button>
         )}
 
@@ -175,12 +178,36 @@ export default function NvcPracticePage() {
         )}
       </motion.div>
 
+      {/* 场景信息卡片（场景驱动模式） */}
+      {session.practiceMode === 'SCENARIO' && session.scenarioTitle && (
+        <motion.div
+          initial={{ opacity: 0, y: -5 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex-shrink-0 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-4 border border-blue-100 dark:border-blue-900/30"
+        >
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center flex-shrink-0">
+              <BookOpen className="w-4 h-4 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-sm font-semibold text-slate-800 dark:text-white">
+                {session.scenarioTitle}
+              </h3>
+              <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
+                {session.scenarioDescription}
+              </p>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
       {/* 主体区域 */}
       <div className="flex-1 flex gap-4 min-h-0">
         {/* 对话面板 */}
         <div className="flex-1 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
           <NvcChatPanel
             sessionId={sid}
+            practiceMode={session.practiceMode}
             onEvaluation={handleEvaluation}
             onStepAdvance={handleStepAdvance}
           />

@@ -328,7 +328,7 @@ public class NvcVoiceService {
    * 执行 Agent
    */
   public String executeAgent(AgentDecision decision, PracticeContext context, String userText) {
-    return orchestrator.executeAgent(decision.scene(), context, userText);
+    return orchestrator.executeAgent(decision, context, userText);
   }
 
   // ==================== 评估 ====================

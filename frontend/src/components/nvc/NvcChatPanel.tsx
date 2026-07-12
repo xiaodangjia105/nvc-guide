@@ -8,9 +8,16 @@ import type { EvaluationCardData } from '../../types/nvc';
 
 interface NvcChatPanelProps {
   sessionId: number;
+  practiceMode?: 'SCENARIO' | 'FREE_DIALOG' | 'STRUCTURED_FOUR_STEP';
   onEvaluation?: (data: EvaluationCardData) => void;
   onStepAdvance?: () => void;
 }
+
+const PLACEHOLDER_MAP: Record<string, string> = {
+  FREE_DIALOG: '描述你遇到的沟通问题，我来帮你梳理...',
+  SCENARIO: '用 NVC 的方式回应对方...',
+  STRUCTURED_FOUR_STEP: '试着用 NVC 的方式表达...',
+};
 
 interface DisplayMessage {
   id: string;
@@ -20,20 +27,40 @@ interface DisplayMessage {
   isStreaming?: boolean;
 }
 
-function parseEvaluationFromSSE(text: string): EvaluationCardData | null {
-  try {
-    const match = text.match(/<evaluation>([\s\S]*?)<\/evaluation>/);
-    if (match) {
-      return JSON.parse(match[1]);
-    }
-  } catch {
-    // ignore
-  }
-  return null;
+function mapEvaluationToCardData(raw: any): EvaluationCardData | null {
+  if (!raw) return null;
+  const dim = (score: number | null, detail: string | null) => ({
+    score: score ?? 0,
+    passed: (score ?? 0) >= 60,
+    detail: detail ?? '',
+  });
+  return {
+    observation: dim(raw.observationScore, raw.observationDetail),
+    feeling: dim(raw.feelingScore, raw.feelingDetail),
+    need: dim(raw.needScore, raw.needDetail),
+    request: dim(raw.requestScore, raw.requestDetail),
+    empathy: dim(raw.empathyScore, raw.empathyDetail),
+    overall: raw.overallScore ?? 0,
+  };
+}
+
+/**
+ * 清理 AI 回复中的 JSON/代码块（前端兜底）
+ */
+function cleanAiResponse(raw: string): string {
+  let result = raw;
+  // 去除 ```json ... ``` 代码块
+  result = result.replace(/```[a-zA-Z]*\s*\n[\s\S]*?```/g, '');
+  // 去除独立的 JSON 对象段落（以 { 开头，以 } 结尾的段落）
+  result = result.replace(/^\s*\{[\s\S]*?\}\s*$/gm, '');
+  // 压缩多余空行
+  result = result.replace(/\n{3,}/g, '\n\n');
+  return result.trim();
 }
 
 export default function NvcChatPanel({
   sessionId,
+  practiceMode = 'FREE_DIALOG',
   onEvaluation,
   onStepAdvance,
 }: NvcChatPanelProps) {
@@ -53,7 +80,7 @@ export default function NvcChatPanel({
           .map((m) => ({
             id: String(m.id),
             role: m.role as 'USER' | 'ASSISTANT',
-            content: m.content,
+            content: m.role === 'ASSISTANT' ? cleanAiResponse(m.content) : m.content,
             agentScene: m.agentScene ?? undefined,
           }));
         setMessages(display);
@@ -104,6 +131,7 @@ export default function NvcChatPanel({
       const decoder = new TextDecoder();
       let buffer = '';
       let fullContent = '';
+      let currentEvent = '';
 
       while (true) {
         const { done, value } = await reader.read();
@@ -114,38 +142,52 @@ export default function NvcChatPanel({
         buffer = lines.pop() || '';
 
         for (const line of lines) {
-          if (line.startsWith('data:')) {
+          if (line.startsWith('event:')) {
+            currentEvent = line.slice(6).trim();
+          } else if (line.startsWith('data:')) {
             const data = line.slice(5).trim();
             if (data === '[DONE]') continue;
 
-            fullContent += data;
-            setMessages((prev) =>
-              prev.map((m) =>
-                m.id === aiMsgId
-                  ? { ...m, content: fullContent }
-                  : m
-              )
-            );
+            // 只处理 message 事件的内容
+            if (currentEvent === 'message') {
+              // 后端转义了换行符，还原回来
+              const token = data.replace(/\\n/g, '\n').replace(/\\r/g, '\r');
+              fullContent += token;
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === aiMsgId
+                    ? { ...m, content: fullContent }
+                    : m
+                )
+              );
+            }
+            currentEvent = '';
           }
         }
       }
 
-      // 解析评估数据
-      const evaluation = parseEvaluationFromSSE(fullContent);
-      if (evaluation) {
-        onEvaluation?.(evaluation);
+      // 从 API 获取最新实时评估（带重试，等待异步评估完成）
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          if (attempt > 0) {
+            await new Promise((r) => setTimeout(r, 1500));
+          }
+          const rawEval = await practiceApi.getEvaluation(sessionId);
+          const evaluation = mapEvaluationToCardData(rawEval);
+          if (evaluation && evaluation.overall > 0) {
+            onEvaluation?.(evaluation);
+            break;
+          }
+        } catch {
+          // 评估可能尚未完成，重试
+        }
       }
 
-      // 检查步骤推进
-      if (fullContent.includes('STEP_ADVANCE')) {
-        onStepAdvance?.();
-      }
-
-      // 标记流式结束
+      // 标记流式结束，应用前端兜底清理
       setMessages((prev) =>
         prev.map((m) =>
           m.id === aiMsgId
-            ? { ...m, isStreaming: false }
+            ? { ...m, content: cleanAiResponse(m.content), isStreaming: false }
             : m
         )
       );
@@ -192,7 +234,13 @@ export default function NvcChatPanel({
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-slate-400">
             <Bot className="w-12 h-12 mb-3" />
-            <p className="text-sm">开始你的 NVC 练习吧</p>
+            <p className="text-sm">
+              {practiceMode === 'FREE_DIALOG'
+                ? '描述你遇到的沟通问题，我来帮你梳理'
+                : practiceMode === 'SCENARIO'
+                ? '准备好了吗？开始场景对话'
+                : '开始你的 NVC 四要素练习'}
+            </p>
           </div>
         )}
 
@@ -254,7 +302,7 @@ export default function NvcChatPanel({
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="输入你的 NVC 表达..."
+            placeholder={PLACEHOLDER_MAP[practiceMode] || '输入你的 NVC 表达...'}
             disabled={isStreaming}
             className="flex-1 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm bg-white dark:bg-slate-800 text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:opacity-50"
           />

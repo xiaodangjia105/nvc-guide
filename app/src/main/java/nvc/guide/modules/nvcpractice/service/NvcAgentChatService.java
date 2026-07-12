@@ -17,6 +17,7 @@ import reactor.core.publisher.Flux;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @Slf4j
@@ -29,9 +30,10 @@ public class NvcAgentChatService {
    * 执行 Agent 对话（非流式）
    */
   public String chat(
-      NvcAgentConfigEntity config, PracticeContext context, String userMessage) {
+      NvcAgentConfigEntity config, PracticeContext context,
+      String userMessage, Map<String, String> promptVariables) {
     ChatClient client = getChatClient(config);
-    List<Message> messages = buildMessages(config, context, userMessage);
+    List<Message> messages = buildMessages(config, context, userMessage, promptVariables);
 
     return client.prompt()
         .options(buildChatOptions(config))
@@ -44,9 +46,10 @@ public class NvcAgentChatService {
    * 执行 Agent 对话（流式）
    */
   public Flux<String> chatStream(
-      NvcAgentConfigEntity config, PracticeContext context, String userMessage) {
+      NvcAgentConfigEntity config, PracticeContext context,
+      String userMessage, Map<String, String> promptVariables) {
     ChatClient client = getChatClient(config);
-    List<Message> messages = buildMessages(config, context, userMessage);
+    List<Message> messages = buildMessages(config, context, userMessage, promptVariables);
 
     return client.prompt()
         .options(buildChatOptions(config))
@@ -92,10 +95,11 @@ public class NvcAgentChatService {
 
   /**
    * 组装对话消息列表
-   * 包含：系统提示词 + 用户档案摘要 + 场景信息 + RAG 知识 + 对话历史 + 当前消息
+   * 包含：系统提示词 + 用户档案摘要 + 场景信息 + RAG 知识 + promptVariables + 对话历史 + 当前消息
    */
   private List<Message> buildMessages(
-      NvcAgentConfigEntity config, PracticeContext context, String userMessage) {
+      NvcAgentConfigEntity config, PracticeContext context,
+      String userMessage, Map<String, String> promptVariables) {
     List<Message> messages = new ArrayList<>();
 
     // 1. 系统提示词
@@ -116,9 +120,17 @@ public class NvcAgentChatService {
       systemPrompt += "\n\n[参考资料]\n" + context.getRagContext();
     }
 
+    // 5. 注入路由变量（mode、covered_elements 等）
+    if (promptVariables != null && !promptVariables.isEmpty()) {
+      StringBuilder sb = new StringBuilder("\n\n[当前配置]");
+      promptVariables.forEach((key, value) ->
+          sb.append("\n").append(key).append("=").append(value));
+      systemPrompt += sb;
+    }
+
     messages.add(new SystemMessage(systemPrompt));
 
-    // 5. 对话历史
+    // 6. 对话历史
     if (context.getRecentMessages() != null) {
       for (var msg : context.getRecentMessages()) {
         if (msg.getRole() == NvcMessageRole.USER) {
@@ -129,7 +141,7 @@ public class NvcAgentChatService {
       }
     }
 
-    // 6. 当前用户消息
+    // 7. 当前用户消息
     messages.add(new UserMessage(userMessage));
 
     return messages;
