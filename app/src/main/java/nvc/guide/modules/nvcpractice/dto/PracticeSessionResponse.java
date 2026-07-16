@@ -19,5 +19,6 @@ public record PracticeSessionResponse(
     String scenarioDescription,
     LocalDateTime startedAt,
     LocalDateTime completedAt,
-    LocalDateTime createdAt
+    LocalDateTime createdAt,
+    boolean evaluationFailed
 ) {}

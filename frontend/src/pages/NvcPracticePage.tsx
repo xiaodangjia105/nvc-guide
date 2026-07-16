@@ -79,7 +79,11 @@ export default function NvcPracticePage() {
     setCompleting(true);
     setCompletingMessage('正在生成评估报告...');
     try {
-      await practiceApi.completeSession(sid);
+      const result = await practiceApi.completeSession(sid);
+      if (result.evaluationFailed) {
+        setCompletingMessage('评估生成失败，将显示默认报告...');
+        await new Promise((r) => setTimeout(r, 1500));
+      }
       navigate(`/nvc/history/${sid}/report`);
     } catch (err) {
       console.error('Failed to complete session:', err);

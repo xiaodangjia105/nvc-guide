@@ -160,6 +160,7 @@ public class NvcPracticeController {
         sessionService.completeSession(sessionId);
 
     // 同步执行最终评估（阻塞直到完成，确保报告页有数据）
+    boolean evaluationFailed = false;
     try {
       List<NvcPracticeMessageEntity> messages =
           messageRepository.findBySessionIdOrderBySequenceNumAsc(sessionId);
@@ -171,9 +172,10 @@ public class NvcPracticeController {
       }
     } catch (Exception e) {
       log.error("Final evaluation failed: sessionId={}", sessionId, e);
+      evaluationFailed = true;
     }
 
-    return Result.success(toSessionResponse(session));
+    return Result.success(toSessionResponse(session, evaluationFailed));
   }
 
   /**
@@ -213,6 +215,11 @@ public class NvcPracticeController {
 
   private PracticeSessionResponse toSessionResponse(
       NvcPracticeSessionEntity session) {
+    return toSessionResponse(session, false);
+  }
+
+  private PracticeSessionResponse toSessionResponse(
+      NvcPracticeSessionEntity session, boolean evaluationFailed) {
     // 加载场景信息（场景驱动模式）
     Long scenarioId = session.getScenarioId();
     String scenarioTitle = null;
@@ -240,7 +247,8 @@ public class NvcPracticeController {
         scenarioDescription,
         session.getStartedAt(),
         session.getCompletedAt(),
-        session.getCreatedAt()
+        session.getCreatedAt(),
+        evaluationFailed
     );
   }
 }

@@ -36,6 +36,44 @@ public final class AiResponseCleaner {
       "\\n{3,}");
 
   /**
+   * 流式增量清理：累积原始 token，返回本次应发送的新内容。
+   * <p>
+   * 工作原理：将新 token 追加到内部缓冲区，清理整个缓冲区后，
+   * 返回与上次清理结果的差值。JSON 块在缓冲区中被过滤，
+   * 永远不会出现在输出中。
+   */
+  public static class StreamingCleaner {
+    private final StringBuilder rawBuffer = new StringBuilder();
+    private String lastCleaned = "";
+
+    /**
+     * 追加新 token 并返回本次应发送的清理后文本。
+     *
+     * @param token LLM 输出的新 token
+     * @return 应发送给前端的文本片段；可能为空字符串（JSON 块正在累积中）
+     */
+    public String appendAndClean(String token) {
+      rawBuffer.append(token);
+      String currentCleaned = AiResponseCleaner.clean(rawBuffer.toString());
+      if (currentCleaned.length() > lastCleaned.length()) {
+        String delta = currentCleaned.substring(lastCleaned.length());
+        lastCleaned = currentCleaned;
+        return delta;
+      }
+      // 清理后文本没有增长（说明当前 token 是 JSON 的一部分），跳过
+      lastCleaned = currentCleaned;
+      return "";
+    }
+
+    /**
+     * 获取最终清理后的完整文本（用于持久化到数据库）
+     */
+    public String getFinalCleaned() {
+      return lastCleaned;
+    }
+  }
+
+  /**
    * 清理 AI 回复
    *
    * @param raw AI 原始回复

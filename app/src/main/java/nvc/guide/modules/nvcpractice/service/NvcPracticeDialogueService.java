@@ -201,7 +201,8 @@ public class NvcPracticeDialogueService {
         decision, context, userMessage);
 
     // 6. 组装 SSE 事件流（使用 ServerSentEvent 正确设置 event 类型）
-    StringBuilder fullReply = new StringBuilder();
+    AiResponseCleaner.StreamingCleaner streamingCleaner =
+        new AiResponseCleaner.StreamingCleaner();
 
     Flux<ServerSentEvent<String>> metadataEvent = Flux.just(
         ServerSentEvent.<String>builder()
@@ -210,22 +211,27 @@ public class NvcPracticeDialogueService {
             .build());
 
     Flux<ServerSentEvent<String>> messageEvents = tokenStream
-        .doOnNext(fullReply::append)
-        .map(token -> ServerSentEvent.<String>builder()
-            .event("message")
-            .data(token.replace("\n", "\\n").replace("\r", "\\r"))
-            .build());
+        .mapNotNull(token -> {
+          String cleaned = streamingCleaner.appendAndClean(token);
+          if (cleaned.isEmpty()) {
+            return null;
+          }
+          return ServerSentEvent.<String>builder()
+              .event("message")
+              .data(cleaned.replace("\n", "\\n").replace("\r", "\\r"))
+              .build();
+        });
 
     Flux<ServerSentEvent<String>> doneEvent = Flux.defer(() -> Flux.just(
         ServerSentEvent.<String>builder()
             .event("done")
-            .data("{\"length\":" + fullReply.length() + "}")
+            .data("{\"length\":" + streamingCleaner.getFinalCleaned().length() + "}")
             .build()));
 
     return Flux.concat(metadataEvent, messageEvents, doneEvent)
         .doOnComplete(() -> {
-          // 清理 AI 回复中的 JSON/代码块
-          String cleanedReply = AiResponseCleaner.clean(fullReply.toString());
+          // 流式清理已完成，直接获取最终结果
+          String cleanedReply = streamingCleaner.getFinalCleaned();
 
           NvcPracticeMessageEntity aiMsg =
               NvcPracticeMessageEntity.builder()
@@ -238,7 +244,7 @@ public class NvcPracticeDialogueService {
                   .build();
           messageRepository.save(aiMsg);
           log.info("Stream reply saved: sessionId={}, length={}",
-              sessionId, fullReply.length());
+              sessionId, cleanedReply.length());
 
           // 异步触发摘要更新（不阻塞流式输出）
           try {

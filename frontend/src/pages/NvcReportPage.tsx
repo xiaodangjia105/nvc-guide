@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
-  ArrowLeft, Download, Lightbulb, Loader2,
+  AlertTriangle, ArrowLeft, Download, Lightbulb, Loader2,
   Sparkles, Star, Target,
 } from 'lucide-react';
 import { reportApi } from '../api/nvc';
@@ -127,6 +127,10 @@ export default function NvcReportPage() {
     { label: '共情', score: report.empathyScore, detail: report.empathyDetail },
   ];
 
+  const isDefaultReport = report.overallScore === 0
+    && report.observationScore === 0
+    && report.feelingScore === 0;
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       {/* 顶部 */}
@@ -155,6 +159,14 @@ export default function NvcReportPage() {
           下载 PDF
         </a>
       </div>
+
+      {/* 评估失败提示 */}
+      {isDefaultReport && (
+        <div className="flex items-center gap-3 px-4 py-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl text-sm text-amber-700 dark:text-amber-300">
+          <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+          <span>评估生成失败，以下为默认报告。你可以重新练习以获取详细评估。</span>
+        </div>
+      )}
 
       {/* 综合分数 + 雷达图 */}
       <motion.div

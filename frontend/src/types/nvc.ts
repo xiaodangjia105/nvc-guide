@@ -30,6 +30,7 @@ export interface PracticeSession {
   startedAt: string | null;
   completedAt: string | null;
   createdAt: string;
+  evaluationFailed: boolean;
 }
 
 export interface CreatePracticeSessionRequest {
