@@ -166,6 +166,7 @@ public class NvcPracticeController {
       if (!messages.isEmpty()) {
         evaluationService.evaluateFinal(
             sessionId, session.getUserId(), messages);
+        sessionService.updatePhase(sessionId, NvcSessionPhase.EVALUATED);
         log.info("Final evaluation completed: sessionId={}", sessionId);
       }
     } catch (Exception e) {
