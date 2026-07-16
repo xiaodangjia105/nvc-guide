@@ -33,14 +33,21 @@ public class AgentUtilsConfiguration {
         Resource skillsRootResource = resourceLoader.getResource(normalizedSkillsRoot);
 
         if (!skillsRootResource.exists()) {
-            throw new IllegalStateException("未找到 skills 根目录，请检查配置: " + normalizedSkillsRoot);
+            log.warn("SkillsTool 未启用：skills 根目录不存在，path={}", normalizedSkillsRoot);
+            return null;
         }
 
-        log.info("AgentUtils SkillsTool 已启用，skillsRoot={}, configured={}", normalizedSkillsRoot, configuredSkillsRoot);
-
-        return SkillsTool.builder()
-            .addSkillsResource(skillsRootResource)
-            .build();
+        try {
+            log.info("AgentUtils SkillsTool 已启用，skillsRoot={}, configured={}",
+                normalizedSkillsRoot, configuredSkillsRoot);
+            return SkillsTool.builder()
+                .addSkillsResource(skillsRootResource)
+                .build();
+        } catch (IllegalArgumentException e) {
+            log.warn("SkillsTool 未启用：目录存在但无有效 skill，path={}, error={}",
+                normalizedSkillsRoot, e.getMessage());
+            return null;
+        }
     }
 
     private String normalizeSkillsRoot(String raw) {
