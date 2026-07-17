@@ -20,7 +20,7 @@ import {
   Upload,
   X,
 } from 'lucide-react';
-import {knowledgeBaseApi, KnowledgeBaseItem, KnowledgeBaseStats, SortOption, VectorStatus,} from '../api/knowledgebase';
+import {knowledgeBaseApi, KnowledgeBaseItem, KnowledgeBaseStats, KnowledgeBaseType, SortOption, VectorStatus,} from '../api/knowledgebase';
 import DeleteConfirmDialog from '../components/DeleteConfirmDialog';
 
 interface KnowledgeBaseManagePageProps {
@@ -81,6 +81,31 @@ function getStatusText(status: VectorStatus): string {
   }
 }
 
+// 知识库类型显示文本
+const KB_TYPE_LABELS: Record<KnowledgeBaseType, string> = {
+  NVC_THEORY: 'NVC 理论',
+  SPEECH_TEMPLATE: '话术模板',
+  EMOTION_VOCAB: '情绪词汇',
+  USER_CASE: '用户案例',
+  PERSONAL_WIKI: '个人 Wiki',
+};
+
+function getTypeLabel(type: KnowledgeBaseType | null | undefined): string {
+  if (!type) return '未分类';
+  return KB_TYPE_LABELS[type] || type;
+}
+
+function getTypeBadgeColor(type: KnowledgeBaseType | null | undefined): string {
+  switch (type) {
+    case 'NVC_THEORY': return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300';
+    case 'SPEECH_TEMPLATE': return 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300';
+    case 'EMOTION_VOCAB': return 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300';
+    case 'USER_CASE': return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300';
+    case 'PERSONAL_WIKI': return 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300';
+    default: return 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400';
+  }
+}
+
 // 统计卡片组件
 function StatCard({
   icon: Icon,
@@ -119,6 +144,7 @@ export default function KnowledgeBaseManagePage({ onUpload, onChat }: KnowledgeB
   const [searchKeyword, setSearchKeyword] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('time');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedType, setSelectedType] = useState<KnowledgeBaseType | null>(null);
   const [categories, setCategories] = useState<string[]>([]);
   const [deleteItem, setDeleteItem] = useState<KnowledgeBaseItem | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -129,19 +155,34 @@ export default function KnowledgeBaseManagePage({ onUpload, onChat }: KnowledgeB
   const [savingCategory, setSavingCategory] = useState(false);
   const categoryInputRef = useRef<HTMLInputElement>(null);
 
+  // 类型编辑状态
+  const [editingTypeId, setEditingTypeId] = useState<number | null>(null);
+  const [editingTypeValue, setEditingTypeValue] = useState<KnowledgeBaseType | ''>('');
+  const [savingType, setSavingType] = useState(false);
+
   // 重新向量化状态
   const [revectorizing, setRevectorizing] = useState<number | null>(null);
+
+  // 根据当前筛选条件获取知识库列表
+  const fetchKnowledgeBases = useCallback(async () => {
+    if (searchKeyword) {
+      return knowledgeBaseApi.search(searchKeyword);
+    }
+    if (selectedType) {
+      return knowledgeBaseApi.getByType(selectedType);
+    }
+    if (selectedCategory) {
+      return knowledgeBaseApi.getByCategory(selectedCategory);
+    }
+    return knowledgeBaseApi.getAllKnowledgeBases(sortBy);
+  }, [searchKeyword, sortBy, selectedCategory, selectedType]);
 
   // 加载数据（不显示loading状态，用于轮询）
   const loadDataSilent = useCallback(async () => {
     try {
       const [statsData, kbList, categoryList] = await Promise.all([
         knowledgeBaseApi.getStatistics(),
-        searchKeyword
-          ? knowledgeBaseApi.search(searchKeyword)
-          : selectedCategory
-          ? knowledgeBaseApi.getByCategory(selectedCategory)
-          : knowledgeBaseApi.getAllKnowledgeBases(sortBy),
+        fetchKnowledgeBases(),
         knowledgeBaseApi.getAllCategories(),
       ]);
       setStats(statsData);
@@ -150,7 +191,7 @@ export default function KnowledgeBaseManagePage({ onUpload, onChat }: KnowledgeB
     } catch (error) {
       console.error('加载数据失败:', error);
     }
-  }, [searchKeyword, sortBy, selectedCategory]);
+  }, [fetchKnowledgeBases]);
 
   // 加载数据
   const loadData = useCallback(async () => {
@@ -158,11 +199,7 @@ export default function KnowledgeBaseManagePage({ onUpload, onChat }: KnowledgeB
       setLoading(true);
       const [statsData, kbList, categoryList] = await Promise.all([
         knowledgeBaseApi.getStatistics(),
-        searchKeyword
-          ? knowledgeBaseApi.search(searchKeyword)
-          : selectedCategory
-          ? knowledgeBaseApi.getByCategory(selectedCategory)
-          : knowledgeBaseApi.getAllKnowledgeBases(sortBy),
+        fetchKnowledgeBases(),
         knowledgeBaseApi.getAllCategories(),
       ]);
       setStats(statsData);
@@ -173,7 +210,7 @@ export default function KnowledgeBaseManagePage({ onUpload, onChat }: KnowledgeB
     } finally {
       setLoading(false);
     }
-  }, [searchKeyword, sortBy, selectedCategory]);
+  }, [fetchKnowledgeBases]);
 
   useEffect(() => {
     loadData();
@@ -280,6 +317,32 @@ export default function KnowledgeBaseManagePage({ onUpload, onChat }: KnowledgeB
     }
   };
 
+  // ========== 类型编辑 ==========
+
+  const handleStartEditType = (kb: KnowledgeBaseItem) => {
+    setEditingTypeId(kb.id);
+    setEditingTypeValue(kb.type || '');
+  };
+
+  const handleCancelEditType = () => {
+    setEditingTypeId(null);
+    setEditingTypeValue('');
+  };
+
+  const handleSaveType = async (id: number) => {
+    try {
+      setSavingType(true);
+      await knowledgeBaseApi.updateType(id, editingTypeValue || null);
+      setEditingTypeId(null);
+      setEditingTypeValue('');
+      await loadData();
+    } catch (error) {
+      console.error('更新类型失败:', error);
+    } finally {
+      setSavingType(false);
+    }
+  };
+
   // 搜索处理
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -364,6 +427,7 @@ export default function KnowledgeBaseManagePage({ onUpload, onChat }: KnowledgeB
                 setSortBy(e.target.value as SortOption);
                 setSearchKeyword('');
                 setSelectedCategory(null);
+                setSelectedType(null);
               }}
               className="appearance-none pl-4 pr-10 py-2 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white cursor-pointer"
             >
@@ -375,6 +439,27 @@ export default function KnowledgeBaseManagePage({ onUpload, onChat }: KnowledgeB
             <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
           </div>
 
+          {/* 类型筛选 */}
+          <div className="relative">
+            <select
+              value={selectedType || ''}
+              onChange={(e) => {
+                setSelectedType((e.target.value || null) as KnowledgeBaseType | null);
+                setSearchKeyword('');
+                setSelectedCategory(null);
+              }}
+              className="appearance-none pl-4 pr-10 py-2 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white cursor-pointer"
+            >
+              <option value="">全部类型</option>
+              <option value="NVC_THEORY">NVC 理论</option>
+              <option value="SPEECH_TEMPLATE">话术模板</option>
+              <option value="EMOTION_VOCAB">情绪词汇</option>
+              <option value="USER_CASE">用户案例</option>
+              <option value="PERSONAL_WIKI">个人 Wiki</option>
+            </select>
+            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+          </div>
+
           {/* 分类筛选 */}
           <div className="relative">
             <select
@@ -382,6 +467,7 @@ export default function KnowledgeBaseManagePage({ onUpload, onChat }: KnowledgeB
               onChange={(e) => {
                 setSelectedCategory(e.target.value || null);
                 setSearchKeyword('');
+                setSelectedType(null);
               }}
               className="appearance-none pl-4 pr-10 py-2 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white cursor-pointer"
             >
@@ -423,6 +509,9 @@ export default function KnowledgeBaseManagePage({ onUpload, onChat }: KnowledgeB
                   名称
                 </th>
                   <th className="text-left px-6 py-4 text-sm font-medium text-slate-600 dark:text-slate-300">
+                  类型
+                </th>
+                  <th className="text-left px-6 py-4 text-sm font-medium text-slate-600 dark:text-slate-300">
                   分类
                 </th>
                   <th className="text-left px-6 py-4 text-sm font-medium text-slate-600 dark:text-slate-300">
@@ -459,6 +548,72 @@ export default function KnowledgeBaseManagePage({ onUpload, onChat }: KnowledgeB
                           <p className="text-xs text-slate-400 dark:text-slate-500">{kb.originalFilename}</p>
                       </div>
                     </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <AnimatePresence mode="wait">
+                      {editingTypeId === kb.id ? (
+                        <motion.div
+                          key="editing-type"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          className="flex items-center gap-2"
+                        >
+                          <select
+                            value={editingTypeValue}
+                            onChange={(e) => setEditingTypeValue(e.target.value as KnowledgeBaseType | '')}
+                            className="w-28 px-2 py-1 text-sm border border-primary-300 dark:border-primary-600 rounded focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+                            disabled={savingType}
+                          >
+                            <option value="">未分类</option>
+                            <option value="NVC_THEORY">NVC 理论</option>
+                            <option value="SPEECH_TEMPLATE">话术模板</option>
+                            <option value="EMOTION_VOCAB">情绪词汇</option>
+                            <option value="USER_CASE">用户案例</option>
+                            <option value="PERSONAL_WIKI">个人 Wiki</option>
+                          </select>
+                          <button
+                            onClick={() => handleSaveType(kb.id)}
+                            disabled={savingType}
+                            className="p-1 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded transition-colors disabled:opacity-50"
+                            title="保存"
+                          >
+                            {savingType ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Check className="w-4 h-4" />
+                            )}
+                          </button>
+                          <button
+                            onClick={handleCancelEditType}
+                            disabled={savingType}
+                            className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-600 rounded transition-colors disabled:opacity-50"
+                            title="取消"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </motion.div>
+                      ) : (
+                        <motion.div
+                          key="display-type"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          className="flex items-center gap-2 group/type"
+                        >
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${getTypeBadgeColor(kb.type)}`}>
+                            {getTypeLabel(kb.type)}
+                          </span>
+                          <button
+                            onClick={() => handleStartEditType(kb)}
+                            className="p-1 text-slate-400 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded opacity-0 group-hover/type:opacity-100 transition-all"
+                            title="编辑类型"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                          </button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </td>
                   <td className="px-6 py-4">
                     <AnimatePresence mode="wait">

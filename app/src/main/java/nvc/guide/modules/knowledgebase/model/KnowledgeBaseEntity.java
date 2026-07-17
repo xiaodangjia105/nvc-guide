@@ -30,6 +30,11 @@ public class KnowledgeBaseEntity {
     @Column(length = 100)
     private String category;
 
+    // 知识库类型（NVC 理论、话术模板、情绪词汇等）
+    @Enumerated(EnumType.STRING)
+    @Column(length = 30)
+    private KnowledgeBaseType type;
+
     // 原始文件名
     @Column(nullable = false)
     private String originalFilename;
@@ -178,12 +183,12 @@ public class KnowledgeBaseEntity {
     }
     
     public void incrementAccessCount() {
-        this.accessCount++;
+        this.accessCount = (this.accessCount != null ? this.accessCount : 0) + 1;
         this.lastAccessedAt = LocalDateTime.now();
     }
-    
+
     public void incrementQuestionCount() {
-        this.questionCount++;
+        this.questionCount = (this.questionCount != null ? this.questionCount : 0) + 1;
         this.lastAccessedAt = LocalDateTime.now();
     }
 
@@ -217,6 +222,14 @@ public class KnowledgeBaseEntity {
 
     public void setChunkCount(Integer chunkCount) {
         this.chunkCount = chunkCount;
+    }
+
+    public KnowledgeBaseType getType() {
+        return type;
+    }
+
+    public void setType(KnowledgeBaseType type) {
+        this.type = type;
     }
 }
 

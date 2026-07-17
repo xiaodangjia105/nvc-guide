@@ -11,8 +11,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
- * AI Interview Platform - Main Application
- * 智能AI面试官平台 - 主启动类
+ * NVC 非暴力沟通练习助手 - 主启动类
+ * NVC Nonviolent Communication Practice Platform
  */
 @EnableScheduling
 @SpringBootApplication(exclude = {

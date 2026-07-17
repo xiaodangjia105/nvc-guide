@@ -7,6 +7,7 @@ import nvc.guide.infrastructure.mapper.KnowledgeBaseMapper;
 import nvc.guide.modules.knowledgebase.model.KnowledgeBaseEntity;
 import nvc.guide.modules.knowledgebase.model.KnowledgeBaseListItemDTO;
 import nvc.guide.modules.knowledgebase.model.KnowledgeBaseStatsDTO;
+import nvc.guide.modules.knowledgebase.model.KnowledgeBaseType;
 import nvc.guide.modules.knowledgebase.model.RagChatMessageEntity.MessageType;
 import nvc.guide.modules.knowledgebase.model.VectorStatus;
 import nvc.guide.modules.knowledgebase.repository.KnowledgeBaseRepository;
@@ -133,6 +134,29 @@ public class KnowledgeBaseListService {
         log.info("更新知识库分类: id={}, category={}", id, category);
     }
 
+    // ========== 类型管理 ==========
+
+    /**
+     * 按类型获取知识库列表
+     */
+    public List<KnowledgeBaseListItemDTO> listByType(KnowledgeBaseType type) {
+        List<KnowledgeBaseEntity> entities =
+            knowledgeBaseRepository.findByTypeOrderByUploadedAtDesc(type);
+        return knowledgeBaseMapper.toListItemDTOList(entities);
+    }
+
+    /**
+     * 更新知识库类型
+     */
+    @Transactional
+    public void updateType(Long id, KnowledgeBaseType type) {
+        KnowledgeBaseEntity entity = knowledgeBaseRepository.findById(id)
+            .orElseThrow(() -> new BusinessException(ErrorCode.KNOWLEDGE_BASE_NOT_FOUND, "知识库不存在"));
+        entity.setType(type);
+        knowledgeBaseRepository.save(entity);
+        log.info("更新知识库类型: id={}, type={}", id, type);
+    }
+
     // ========== 搜索功能 ==========
 
     /**
@@ -162,13 +186,19 @@ public class KnowledgeBaseListService {
     private List<KnowledgeBaseEntity> sortEntities(List<KnowledgeBaseEntity> entities, String sortBy) {
         return switch (sortBy.toLowerCase()) {
             case "size" -> entities.stream()
-                .sorted((a, b) -> Long.compare(b.getFileSize(), a.getFileSize()))
+                .sorted((a, b) -> Long.compare(
+                    b.getFileSize() != null ? b.getFileSize() : 0L,
+                    a.getFileSize() != null ? a.getFileSize() : 0L))
                 .toList();
             case "access" -> entities.stream()
-                .sorted((a, b) -> Integer.compare(b.getAccessCount(), a.getAccessCount()))
+                .sorted((a, b) -> Integer.compare(
+                    b.getAccessCount() != null ? b.getAccessCount() : 0,
+                    a.getAccessCount() != null ? a.getAccessCount() : 0))
                 .toList();
             case "question" -> entities.stream()
-                .sorted((a, b) -> Integer.compare(b.getQuestionCount(), a.getQuestionCount()))
+                .sorted((a, b) -> Integer.compare(
+                    b.getQuestionCount() != null ? b.getQuestionCount() : 0,
+                    a.getQuestionCount() != null ? a.getQuestionCount() : 0))
                 .toList();
             default -> entities; // time 已经在数据库层面排序了
         };

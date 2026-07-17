@@ -7,10 +7,12 @@ import nvc.guide.infrastructure.redis.RedisService;
 import nvc.guide.modules.nvcpractice.dto.CreatePracticeSessionRequest;
 import nvc.guide.modules.nvcpractice.model.NvcAgentScene;
 import nvc.guide.modules.nvcpractice.model.NvcDifficulty;
+import nvc.guide.modules.nvcpractice.model.NvcPracticeMessageEntity;
 import nvc.guide.modules.nvcpractice.model.NvcPracticeMode;
 import nvc.guide.modules.nvcpractice.model.NvcPracticeSessionEntity;
 import nvc.guide.modules.nvcpractice.model.NvcPracticeStep;
 import nvc.guide.modules.nvcpractice.model.NvcSessionPhase;
+import nvc.guide.modules.nvcpractice.repository.NvcPracticeMessageRepository;
 import nvc.guide.modules.nvcpractice.repository.NvcPracticeSessionRepository;
 import nvc.guide.modules.nvcscenario.model.NvcScenarioEntity;
 import nvc.guide.modules.nvcscenario.repository.NvcScenarioRepository;
@@ -29,6 +31,8 @@ import java.util.concurrent.ThreadLocalRandom;
 public class NvcPracticeSessionService {
 
   private final NvcPracticeSessionRepository sessionRepository;
+  private final NvcPracticeMessageRepository messageRepository;
+  private final NvcEvaluationService evaluationService;
   private final NvcScenarioRepository scenarioRepository;
   private final RedisService redisService;
   private final ObjectMapper objectMapper;
@@ -161,6 +165,46 @@ public class NvcPracticeSessionService {
   public NvcPracticeSessionEntity completeSession(Long sessionId) {
     return updatePhase(sessionId, NvcSessionPhase.COMPLETED);
   }
+
+  /**
+   * 结束会话并执行最终评估
+   * 从 Controller 上移的业务逻辑
+   *
+   * @return 包含评估状态的会话实体
+   */
+  public CompleteResult completeAndEvaluate(Long sessionId) {
+    NvcPracticeSessionEntity session = completeSession(sessionId);
+    Long userId = session.getUserId();
+
+    // 已评估则跳过
+    if (session.getCurrentPhase() == NvcSessionPhase.EVALUATED) {
+      return new CompleteResult(session, false);
+    }
+
+    boolean evaluationFailed = false;
+    try {
+      List<NvcPracticeMessageEntity> messages =
+          messageRepository.findBySessionIdOrderBySequenceNumAsc(sessionId);
+      if (!messages.isEmpty()) {
+        evaluationService.evaluateFinal(sessionId, userId, messages);
+        session = updatePhase(sessionId, NvcSessionPhase.EVALUATED);
+        log.info("Final evaluation completed: sessionId={}", sessionId);
+      }
+    } catch (Exception e) {
+      log.error("Final evaluation failed: sessionId={}", sessionId, e);
+      evaluationFailed = true;
+    }
+
+    return new CompleteResult(session, evaluationFailed);
+  }
+
+  /**
+   * 结束会话并执行最终评估的结果
+   */
+  public record CompleteResult(
+      NvcPracticeSessionEntity session,
+      boolean evaluationFailed
+  ) {}
 
   /**
    * 从 DB 中按难度随机分配一个场景
