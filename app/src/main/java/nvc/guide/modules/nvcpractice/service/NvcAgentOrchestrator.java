@@ -20,6 +20,7 @@ import nvc.guide.modules.nvcpractice.router.ScenarioRouter;
 import nvc.guide.modules.nvcpractice.router.StructuredRouter;
 import nvc.guide.modules.knowledgebase.model.KnowledgeBaseType;
 import nvc.guide.modules.nvcpractice.dto.RagResult;
+import nvc.guide.modules.nvcprofile.dto.AbilityRadarDTO;
 import nvc.guide.modules.nvcprofile.model.NvcUserProfileEntity;
 import nvc.guide.modules.nvcprofile.service.NvcProfileService;
 import nvc.guide.modules.nvcscenario.model.NvcScenarioEntity;
@@ -130,13 +131,27 @@ public class NvcAgentOrchestrator {
       userProfileSummary = formatProfile(profile);
     }
 
-    // RAG 知识检索
+    // RAG 知识检索（全模式支持）
     String ragContext = null;
-    if (scenarioDescription != null) {
-      List<RagResult> ragResults = ragService.retrieve(
-          scenarioDescription,
-          List.of(KnowledgeBaseType.NVC_THEORY, KnowledgeBaseType.SPEECH_TEMPLATE),
-          3);
+    String ragQuery = buildRagQuery(session, scenarioDescription, recentMessages);
+    if (ragQuery != null) {
+      // 尝试个性化检索（基于用户薄弱要素）
+      String weakKeyword = findWeakElementKeyword(profile);
+
+      List<RagResult> ragResults;
+      if (weakKeyword != null) {
+        ragResults = ragService.retrievePersonalized(ragQuery, weakKeyword, 3);
+        log.info("Personalized RAG: query='{}', weakElement='{}', results={}",
+            ragQuery, weakKeyword, ragResults.size());
+      } else {
+        ragResults = ragService.retrieve(
+            ragQuery,
+            List.of(KnowledgeBaseType.NVC_THEORY,
+                    KnowledgeBaseType.SPEECH_TEMPLATE,
+                    KnowledgeBaseType.EMOTION_VOCAB),
+            3);
+        log.info("Standard RAG: query='{}', results={}", ragQuery, ragResults.size());
+      }
       ragContext = ragService.formatForPrompt(ragResults);
     }
 
@@ -267,6 +282,80 @@ public class NvcAgentOrchestrator {
     }
     sb.append("\n练习次数: ").append(profile.getTotalPracticeCount());
     return sb.toString();
+  }
+
+  /**
+   * 根据练习模式构建 RAG 检索查询
+   *
+   * 优先级策略：
+   * 1. 场景描述（场景驱动模式）
+   * 2. 用户最新消息（自由对话模式）
+   * 3. 练习模式 + 当前步骤（结构化四步模式）
+   */
+  private String buildRagQuery(
+      NvcPracticeSessionEntity session,
+      String scenarioDescription,
+      List<NvcPracticeMessageEntity> recentMessages) {
+
+    // 优先级 1：场景描述（场景驱动模式）
+    if (scenarioDescription != null) {
+      return scenarioDescription;
+    }
+
+    // 优先级 2：用户最新消息（自由对话模式）
+    if (recentMessages != null && !recentMessages.isEmpty()) {
+      NvcPracticeMessageEntity lastUserMsg = recentMessages.stream()
+          .filter(m -> m.getRole() == NvcMessageRole.USER)
+          .reduce((a, b) -> b)
+          .orElse(null);
+      if (lastUserMsg != null && lastUserMsg.getContent() != null
+          && !lastUserMsg.getContent().isBlank()) {
+        return lastUserMsg.getContent();
+      }
+    }
+
+    // 优先级 3：练习模式 + 当前步骤（结构化四步模式）
+    NvcPracticeMode mode = session.getPracticeMode();
+    if (mode == NvcPracticeMode.STRUCTURED_FOUR_STEP
+        && session.getCurrentStep() != null) {
+      return "NVC " + session.getCurrentStep().name() + " 练习";
+    }
+
+    return null;
+  }
+
+  /**
+   * 从用户能力雷达中找最低分的 NVC 要素关键词
+   * 用于个性化 RAG 检索加权
+   */
+  private String findWeakElementKeyword(NvcUserProfileEntity profile) {
+    if (profile == null) {
+      return null;
+    }
+
+    try {
+      AbilityRadarDTO radar = profileService.getAbilityRadar(profile.getUserId());
+      if (radar == null) {
+        return null;
+      }
+
+      Map<String, Integer> scores = Map.of(
+          "observation", radar.observation() != null ? radar.observation() : 0,
+          "feeling", radar.feeling() != null ? radar.feeling() : 0,
+          "need", radar.need() != null ? radar.need() : 0,
+          "request", radar.request() != null ? radar.request() : 0
+      );
+
+      // 找最低分的要素（排除 0 分，表示没有数据）
+      return scores.entrySet().stream()
+          .filter(e -> e.getValue() > 0)
+          .min(Map.Entry.comparingByValue())
+          .map(Map.Entry::getKey)
+          .orElse(null);
+    } catch (Exception e) {
+      log.warn("Failed to get ability radar for user {}: {}", profile.getUserId(), e.getMessage());
+      return null;
+    }
   }
 
 }
