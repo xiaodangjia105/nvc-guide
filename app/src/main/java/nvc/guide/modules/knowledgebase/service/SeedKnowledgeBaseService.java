@@ -65,16 +65,115 @@ public class SeedKnowledgeBaseService {
             List<KnowledgeBaseEntity> existingDocs = knowledgeBaseRepository
                 .findByTypeInOrderByUploadedAtDesc(NVC_TYPES);
 
-            if (!existingDocs.isEmpty()) {
-                log.info("NVC knowledge base already seeded ({} docs), skipping", existingDocs.size());
+            if (existingDocs.isEmpty()) {
+                log.info("NVC knowledge base not found, starting seed...");
+                seedKnowledgeDocuments();
                 return;
             }
 
-            log.info("NVC knowledge base not found, starting seed...");
-            seedKnowledgeDocuments();
+            // 检查是否有向量化失败的文档，自动重试
+            List<KnowledgeBaseEntity> failedDocs = existingDocs.stream()
+                .filter(doc -> doc.getVectorStatus() == VectorStatus.FAILED)
+                .toList();
+
+            if (!failedDocs.isEmpty()) {
+                log.info("Found {} failed vectorization docs, retrying...", failedDocs.size());
+                retryFailedVectorization(failedDocs);
+            } else {
+                log.info("NVC knowledge base already seeded ({} docs), all vectorized", existingDocs.size());
+            }
         } catch (Exception e) {
             log.error("Failed to seed NVC knowledge base", e);
         }
+    }
+
+    /**
+     * 重试向量化失败的种子文档
+     * 从 classpath 重新读取内容并发送向量化任务
+     */
+    private void retryFailedVectorization(List<KnowledgeBaseEntity> failedDocs) {
+        PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
+        int retryCount = 0;
+        int skipCount = 0;
+
+        // 构建 filename → type 的映射
+        Map<String, KnowledgeBaseType> filenameToType = new java.util.HashMap<>();
+        for (Map.Entry<String, KnowledgeBaseType> entry : FOLDER_TO_TYPE.entrySet()) {
+            try {
+                Resource[] resources = resolver.getResources("classpath:knowledge/" + entry.getKey() + "/*.md");
+                for (Resource resource : resources) {
+                    String filename = resource.getFilename();
+                    if (filename != null) {
+                        filenameToType.put(filename, entry.getValue());
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("Failed to scan folder for retry: {}", entry.getKey(), e);
+            }
+        }
+
+        for (KnowledgeBaseEntity doc : failedDocs) {
+            String filename = doc.getOriginalFilename();
+            KnowledgeBaseType type = filenameToType.get(filename);
+
+            if (type == null) {
+                log.warn("Cannot retry vectorization: unknown type for {}", filename);
+                skipCount++;
+                continue;
+            }
+
+            try {
+                // 从 classpath 读取内容
+                String resourcePath = "classpath:knowledge/" + getTypeFolder(type) + "/" + filename;
+                Resource resource = resolver.getResource(resourcePath);
+
+                if (!resource.exists()) {
+                    log.warn("Cannot retry vectorization: resource not found: {}", resourcePath);
+                    skipCount++;
+                    continue;
+                }
+
+                String content;
+                try (BufferedReader reader = new BufferedReader(
+                        new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8))) {
+                    content = reader.lines().collect(Collectors.joining("\n"));
+                }
+
+                if (content.isBlank()) {
+                    log.warn("Cannot retry vectorization: empty content: {}", filename);
+                    skipCount++;
+                    continue;
+                }
+
+                // 重置向量化状态
+                doc.setVectorStatus(VectorStatus.PENDING);
+                doc.setVectorError(null);
+                knowledgeBaseRepository.save(doc);
+
+                // 重新发送向量化任务
+                vectorizeStreamProducer.sendVectorizeTask(doc.getId(), content);
+                log.info("Retried vectorization: kbId={}, name={}", doc.getId(), doc.getName());
+                retryCount++;
+            } catch (Exception e) {
+                log.error("Failed to retry vectorization: kbId={}, name={}", doc.getId(), doc.getName(), e);
+                skipCount++;
+            }
+        }
+
+        log.info("Vectorization retry completed: retried={}, skipped={}", retryCount, skipCount);
+    }
+
+    /**
+     * 获取知识库类型对应的文件夹名称
+     */
+    private String getTypeFolder(KnowledgeBaseType type) {
+        return switch (type) {
+            case NVC_THEORY -> "theory";
+            case EMOTION_VOCAB -> "vocabulary";
+            case SPEECH_TEMPLATE -> "templates";
+            case USER_CASE -> "cases";
+            case PERSONAL_WIKI -> "personal";
+        };
     }
 
     /**
