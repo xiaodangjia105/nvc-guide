@@ -48,7 +48,6 @@ public class NvcPracticeController {
   private final NvcEvaluationService evaluationService;
   private final NvcSummaryService summaryService;
   private final NvcScenarioRepository scenarioRepository;
-  private final NvcPracticeMessageRepository messageRepository;
 
   /**
    * 创建练习会话

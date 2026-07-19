@@ -1,6 +1,5 @@
 package nvc.guide.modules.knowledgebase.service;
 
-import nvc.guide.infrastructure.file.FileHashService;
 import nvc.guide.modules.knowledgebase.listener.VectorizeStreamProducer;
 import nvc.guide.modules.knowledgebase.model.KnowledgeBaseEntity;
 import nvc.guide.modules.knowledgebase.model.KnowledgeBaseType;
