@@ -1,6 +1,7 @@
 package nvc.guide.modules.knowledgebase.repository;
 
 import nvc.guide.modules.knowledgebase.model.KnowledgeBaseEntity;
+import nvc.guide.modules.knowledgebase.model.KnowledgeBaseType;
 import nvc.guide.modules.knowledgebase.model.VectorStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -103,5 +104,17 @@ public interface KnowledgeBaseRepository extends JpaRepository<KnowledgeBaseEnti
      * 按向量化状态查找知识库（按上传时间倒序）
      */
     List<KnowledgeBaseEntity> findByVectorStatusOrderByUploadedAtDesc(VectorStatus vectorStatus);
+
+    // ==================== 类型查询 ====================
+
+    /**
+     * 按类型查找知识库
+     */
+    List<KnowledgeBaseEntity> findByTypeOrderByUploadedAtDesc(KnowledgeBaseType type);
+
+    /**
+     * 按类型列表查找知识库
+     */
+    List<KnowledgeBaseEntity> findByTypeInOrderByUploadedAtDesc(List<KnowledgeBaseType> types);
 }
 

@@ -6,10 +6,14 @@ const API_BASE_URL = import.meta.env.PROD ? '' : 'http://localhost:8080';
 // 向量化状态
 export type VectorStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
 
+// 知识库类型
+export type KnowledgeBaseType = 'NVC_THEORY' | 'SPEECH_TEMPLATE' | 'EMOTION_VOCAB' | 'USER_CASE' | 'PERSONAL_WIKI';
+
 export interface KnowledgeBaseItem {
   id: number;
   name: string;
   category: string | null;
+  type: KnowledgeBaseType | null;
   originalFilename: string;
   fileSize: number;
   contentType: string;
@@ -142,6 +146,22 @@ export const knowledgeBaseApi = {
    */
   async updateCategory(id: number, category: string | null): Promise<void> {
     return request.put(`/api/knowledgebase/${id}/category`, { category });
+  },
+
+  // ========== 类型管理 ==========
+
+  /**
+   * 根据类型获取知识库
+   */
+  async getByType(type: KnowledgeBaseType): Promise<KnowledgeBaseItem[]> {
+    return request.get<KnowledgeBaseItem[]>(`/api/knowledgebase/type/${type}`);
+  },
+
+  /**
+   * 更新知识库类型
+   */
+  async updateType(id: number, type: KnowledgeBaseType | null): Promise<void> {
+    return request.put(`/api/knowledgebase/${id}/type`, { type });
   },
 
   // ========== 搜索 ==========

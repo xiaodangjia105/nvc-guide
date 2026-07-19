@@ -224,7 +224,7 @@ public class NvcProfileService {
             sb.append("- 沟通背景：").append(profile.getCommunicationBackground()).append("\n");
         }
         if (profile.getCommunicationStyle() != null) {
-            sb.append("- 沟通风格：").append(profile.getCommunicationStyle()).append("\n");
+            sb.append("- 沟通风格：").append(profile.getCommunicationStyle().getDisplayName()).append("\n");
         }
         if (profile.getPersonalityTraits() != null) {
             sb.append("- 性格特征：").append(profile.getPersonalityTraits()).append("\n");

@@ -11,8 +11,6 @@ import nvc.guide.modules.nvcpractice.model.NvcMessageRole;
 import nvc.guide.modules.nvcpractice.model.NvcPracticeMessageEntity;
 import nvc.guide.modules.nvcpractice.model.NvcPracticeMode;
 import nvc.guide.modules.nvcpractice.model.NvcPracticeSessionEntity;
-import nvc.guide.modules.nvcpractice.model.NvcPracticeStep;
-import nvc.guide.modules.nvcpractice.model.NvcSessionPhase;
 import nvc.guide.modules.nvcpractice.repository.NvcEvaluationRepository;
 import nvc.guide.modules.nvcpractice.repository.NvcPracticeMessageRepository;
 import nvc.guide.modules.nvcpractice.repository.NvcPracticeSessionRepository;
@@ -20,6 +18,10 @@ import nvc.guide.modules.nvcpractice.router.FreeDialogRouter;
 import nvc.guide.modules.nvcpractice.router.ModeRouter;
 import nvc.guide.modules.nvcpractice.router.ScenarioRouter;
 import nvc.guide.modules.nvcpractice.router.StructuredRouter;
+import nvc.guide.modules.knowledgebase.model.KnowledgeBaseType;
+import nvc.guide.modules.nvcpractice.dto.RagResult;
+import nvc.guide.modules.nvcprofile.model.NvcUserProfileEntity;
+import nvc.guide.modules.nvcprofile.service.NvcProfileService;
 import nvc.guide.modules.nvcscenario.model.NvcScenarioEntity;
 import nvc.guide.modules.nvcscenario.repository.NvcScenarioRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -29,6 +31,7 @@ import reactor.core.publisher.Flux;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * NVC Agent 调度中心
@@ -46,6 +49,8 @@ public class NvcAgentOrchestrator {
   private final NvcPracticeMessageRepository messageRepository;
   private final NvcEvaluationRepository evaluationRepository;
   private final NvcScenarioRepository scenarioRepository;
+  private final NvcProfileService profileService;
+  private final NvcRagService ragService;
   private final Map<NvcPracticeMode, ModeRouter> routers;
 
   public NvcAgentOrchestrator(
@@ -55,6 +60,8 @@ public class NvcAgentOrchestrator {
       NvcPracticeMessageRepository messageRepository,
       NvcEvaluationRepository evaluationRepository,
       NvcScenarioRepository scenarioRepository,
+      NvcProfileService profileService,
+      NvcRagService ragService,
       FreeDialogRouter freeDialogRouter,
       ScenarioRouter scenarioRouter,
       StructuredRouter structuredRouter) {
@@ -64,6 +71,8 @@ public class NvcAgentOrchestrator {
     this.messageRepository = messageRepository;
     this.evaluationRepository = evaluationRepository;
     this.scenarioRepository = scenarioRepository;
+    this.profileService = profileService;
+    this.ragService = ragService;
 
     this.routers = new EnumMap<>(NvcPracticeMode.class);
     this.routers.put(NvcPracticeMode.FREE_DIALOG, freeDialogRouter);
@@ -114,6 +123,23 @@ public class NvcAgentOrchestrator {
       }
     }
 
+    // 用户档案摘要
+    String userProfileSummary = null;
+    NvcUserProfileEntity profile = profileService.getOrCreateProfile(userId);
+    if (profile != null) {
+      userProfileSummary = formatProfile(profile);
+    }
+
+    // RAG 知识检索
+    String ragContext = null;
+    if (scenarioDescription != null) {
+      List<RagResult> ragResults = ragService.retrieve(
+          scenarioDescription,
+          List.of(KnowledgeBaseType.NVC_THEORY, KnowledgeBaseType.SPEECH_TEMPLATE),
+          3);
+      ragContext = ragService.formatForPrompt(ragResults);
+    }
+
     return PracticeContext.builder()
         .session(session)
         .recentMessages(recentMessages)
@@ -121,6 +147,8 @@ public class NvcAgentOrchestrator {
         .roundCount((int) userMessageCount)
         .scenarioDescription(scenarioDescription)
         .scenario(scenario)
+        .userProfileSummary(userProfileSummary)
+        .ragContext(ragContext)
         .build();
   }
 
@@ -215,6 +243,30 @@ public class NvcAgentOrchestrator {
         eval.getOverallScore());
 
     return agentChatService.chatPlain(evaluatorConfig, reflectPrompt, "");
+  }
+
+  // ==================== 内部工具方法 ====================
+
+  /**
+   * 格式化用户档案为 Prompt 注入文本
+   */
+  private String formatProfile(NvcUserProfileEntity profile) {
+    StringBuilder sb = new StringBuilder();
+    sb.append("NVC等级: ").append(profile.getNvcLevel());
+    if (profile.getCommunicationBackground() != null) {
+      sb.append("\n沟通背景: ").append(profile.getCommunicationBackground());
+    }
+    if (profile.getPersonalityTraits() != null) {
+      sb.append("\n性格特征: ").append(profile.getPersonalityTraits());
+    }
+    if (profile.getCommunicationStyle() != null) {
+      sb.append("\n沟通风格: ").append(profile.getCommunicationStyle().getDisplayName());
+    }
+    if (profile.getEmotionalTriggers() != null) {
+      sb.append("\n情绪触发器: ").append(profile.getEmotionalTriggers());
+    }
+    sb.append("\n练习次数: ").append(profile.getTotalPracticeCount());
+    return sb.toString();
   }
 
 }

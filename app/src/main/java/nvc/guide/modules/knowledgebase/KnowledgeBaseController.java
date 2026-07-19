@@ -4,6 +4,7 @@ import nvc.guide.common.annotation.RateLimit;
 import nvc.guide.common.result.Result;
 import nvc.guide.modules.knowledgebase.model.KnowledgeBaseListItemDTO;
 import nvc.guide.modules.knowledgebase.model.KnowledgeBaseStatsDTO;
+import nvc.guide.modules.knowledgebase.model.KnowledgeBaseType;
 import nvc.guide.modules.knowledgebase.model.QueryRequest;
 import nvc.guide.modules.knowledgebase.model.QueryResponse;
 import nvc.guide.modules.knowledgebase.model.VectorStatus;
@@ -141,6 +142,40 @@ public class KnowledgeBaseController {
     @PutMapping("/api/knowledgebase/{id}/category")
     public Result<Void> updateCategory(@PathVariable Long id, @RequestBody Map<String, String> body) {
         listService.updateCategory(id, body.get("category"));
+        return Result.success(null);
+    }
+
+    // ========== 类型管理 API ==========
+
+    /**
+     * 根据类型获取知识库列表
+     */
+    @GetMapping("/api/knowledgebase/type/{type}")
+    public Result<List<KnowledgeBaseListItemDTO>> getByType(@PathVariable String type) {
+        try {
+            KnowledgeBaseType kbType = KnowledgeBaseType.valueOf(type.toUpperCase());
+            return Result.success(listService.listByType(kbType));
+        } catch (IllegalArgumentException e) {
+            return Result.error("无效的知识库类型: " + type);
+        }
+    }
+
+    /**
+     * 更新知识库类型
+     */
+    @PutMapping("/api/knowledgebase/{id}/type")
+    public Result<Void> updateType(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        String typeStr = body.get("type");
+        if (typeStr == null || typeStr.isBlank()) {
+            listService.updateType(id, null);
+        } else {
+            try {
+                KnowledgeBaseType kbType = KnowledgeBaseType.valueOf(typeStr.toUpperCase());
+                listService.updateType(id, kbType);
+            } catch (IllegalArgumentException e) {
+                return Result.error("无效的知识库类型: " + typeStr);
+            }
+        }
         return Result.success(null);
     }
 

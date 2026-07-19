@@ -9,12 +9,10 @@ import nvc.guide.modules.nvcpractice.dto.PracticeSessionResponse;
 import nvc.guide.modules.nvcpractice.dto.SendMessageRequest;
 import nvc.guide.modules.nvcpractice.dto.StepProgressDTO;
 import nvc.guide.modules.nvcpractice.model.NvcEvaluationEntity;
-import nvc.guide.modules.nvcpractice.model.NvcPracticeMessageEntity;
 import nvc.guide.modules.nvcpractice.model.NvcPracticeSessionEntity;
 import nvc.guide.modules.nvcpractice.model.NvcSessionPhase;
-import nvc.guide.modules.nvcpractice.listener.NvcEvaluateStreamProducer;
-import nvc.guide.modules.nvcpractice.repository.NvcPracticeMessageRepository;
 import nvc.guide.modules.nvcpractice.service.NvcEvaluationService;
+import nvc.guide.modules.nvcpractice.service.NvcPracticeSessionService.CompleteResult;
 import nvc.guide.modules.nvcpractice.service.NvcPracticeDialogueService;
 import nvc.guide.modules.nvcpractice.service.NvcPracticeSessionService;
 import nvc.guide.modules.nvcpractice.service.NvcStructuredPracticeService;
@@ -46,7 +44,6 @@ public class NvcPracticeController {
 
   private final NvcPracticeSessionService sessionService;
   private final NvcPracticeDialogueService dialogueService;
-  private final NvcEvaluateStreamProducer evaluateStreamProducer;
   private final NvcStructuredPracticeService structuredPracticeService;
   private final NvcEvaluationService evaluationService;
   private final NvcSummaryService summaryService;
@@ -151,31 +148,14 @@ public class NvcPracticeController {
   }
 
   /**
-   * 结束会话
+   * 结束会话（含最终评估）
    */
   @PostMapping("/sessions/{sessionId}/complete")
   public Result<PracticeSessionResponse> completeSession(
       @PathVariable Long sessionId) {
-    NvcPracticeSessionEntity session =
-        sessionService.completeSession(sessionId);
-
-    // 同步执行最终评估（阻塞直到完成，确保报告页有数据）
-    boolean evaluationFailed = false;
-    try {
-      List<NvcPracticeMessageEntity> messages =
-          messageRepository.findBySessionIdOrderBySequenceNumAsc(sessionId);
-      if (!messages.isEmpty()) {
-        evaluationService.evaluateFinal(
-            sessionId, session.getUserId(), messages);
-        sessionService.updatePhase(sessionId, NvcSessionPhase.EVALUATED);
-        log.info("Final evaluation completed: sessionId={}", sessionId);
-      }
-    } catch (Exception e) {
-      log.error("Final evaluation failed: sessionId={}", sessionId, e);
-      evaluationFailed = true;
-    }
-
-    return Result.success(toSessionResponse(session, evaluationFailed));
+    CompleteResult result = sessionService.completeAndEvaluate(sessionId);
+    return Result.success(
+        toSessionResponse(result.session(), result.evaluationFailed()));
   }
 
   /**
