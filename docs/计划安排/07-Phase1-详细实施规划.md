@@ -813,18 +813,19 @@ app/src/main/java/nvc/guide/modules/nvcpractice/
 ### 4.6 验收标准（修正后）
 
 ```
-□ Skill 层
-  □ NvcEvaluationService 已有，可直接使用
-  □ NvcScenarioService 已有，可直接使用
-  □ 无需新建 NvcSkill 接口
+✅ Skill 层
+  ✅ NvcEvaluationService 已有，可直接使用
+  ✅ NvcScenarioService 已有，可直接使用
+  ✅ 无需新建 NvcSkill 接口（Service 即 Skill）
 
-□ Skill + Tool 组合
-  □ @Tool 方法内部调用 @Service 方法
-  □ Skill 可在 Service 中直接调用，也可通过 @Tool 间接调用
+✅ NvcTool 层保留决策
+  ✅ 保留 NvcTool 接口 + NvcToolRegistry（场景过滤是核心价值）
+  ✅ 不做 Tool 层重构，迁移成本 > 收益
 
-□ 场景推荐
-  □ NvcScenarioRecommendService 实现完成
-  □ 基于用户薄弱维度推荐场景
+✅ 场景推荐
+  ✅ NvcScenarioRecommendService 实现完成（2026-07-19）
+  ✅ 基于 4 维度加权排序（observation/feeling/need/request）
+  ✅ 编译通过
 ```
 
 ---
