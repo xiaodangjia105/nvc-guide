@@ -2,6 +2,7 @@ package nvc.guide.modules.nvcpractice.service;
 
 import nvc.guide.common.exception.BusinessException;
 import nvc.guide.modules.nvcpractice.dto.AgentDecision;
+import java.util.Map;
 import nvc.guide.modules.nvcpractice.dto.PracticeContext;
 import nvc.guide.modules.nvcpractice.model.NvcAgentConfigEntity;
 import nvc.guide.modules.nvcpractice.model.NvcAgentScene;
@@ -15,6 +16,10 @@ import nvc.guide.modules.nvcpractice.model.NvcSessionPhase;
 import nvc.guide.modules.nvcpractice.repository.NvcEvaluationRepository;
 import nvc.guide.modules.nvcpractice.repository.NvcPracticeMessageRepository;
 import nvc.guide.modules.nvcpractice.repository.NvcPracticeSessionRepository;
+import nvc.guide.modules.nvcpractice.router.FreeDialogRouter;
+import nvc.guide.modules.nvcpractice.router.ScenarioRouter;
+import nvc.guide.modules.nvcpractice.router.StructuredRouter;
+import nvc.guide.modules.nvcprofile.service.NvcProfileService;
 import nvc.guide.modules.nvcscenario.model.NvcScenarioEntity;
 import nvc.guide.modules.nvcscenario.repository.NvcScenarioRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -50,6 +55,11 @@ class NvcAgentOrchestratorTest {
   @Mock private NvcPracticeMessageRepository messageRepository;
   @Mock private NvcEvaluationRepository evaluationRepository;
   @Mock private NvcScenarioRepository scenarioRepository;
+  @Mock private NvcProfileService profileService;
+  @Mock private NvcRagService ragService;
+  @Mock private FreeDialogRouter freeDialogRouter;
+  @Mock private ScenarioRouter scenarioRouter;
+  @Mock private StructuredRouter structuredRouter;
 
   private NvcAgentOrchestrator orchestrator;
 
@@ -58,7 +68,9 @@ class NvcAgentOrchestratorTest {
     orchestrator = new NvcAgentOrchestrator(
         agentConfigService, agentChatService,
         sessionRepository, messageRepository,
-        evaluationRepository, scenarioRepository);
+        evaluationRepository, scenarioRepository,
+        profileService, ragService,
+        freeDialogRouter, scenarioRouter, structuredRouter);
   }
 
   private NvcPracticeSessionEntity buildSession(
@@ -327,11 +339,11 @@ class NvcAgentOrchestratorTest {
               NvcPracticeMode.FREE_DIALOG, null))
           .roundCount(1).build();
 
-      when(agentChatService.chat(config, context, "你好"))
+      when(agentChatService.chat(config, context, "你好", Map.of()))
           .thenReturn("你好！我是引导官。");
 
-      String result = orchestrator.executeAgent(
-          NvcAgentScene.DIALOGUE_GUIDE, context, "你好");
+      AgentDecision decision = new AgentDecision(NvcAgentScene.DIALOGUE_GUIDE, "test", null);
+      String result = orchestrator.executeAgent(decision, context, "你好");
 
       assertEquals("你好！我是引导官。", result);
     }
@@ -361,11 +373,11 @@ class NvcAgentOrchestratorTest {
               NvcPracticeMode.FREE_DIALOG, null))
           .roundCount(1).build();
 
-      when(agentChatService.chat(fallbackConfig, context, "hello"))
+      when(agentChatService.chat(fallbackConfig, context, "hello", Map.of()))
           .thenReturn("fallback response");
 
-      String result = orchestrator.executeAgent(
-          NvcAgentScene.DIFFICULT_PARTNER, context, "hello");
+      AgentDecision decision = new AgentDecision(NvcAgentScene.DIFFICULT_PARTNER, "test", "DIFFICULT_UPGRADE");
+      String result = orchestrator.executeAgent(decision, context, "hello");
 
       assertEquals("fallback response", result);
     }

@@ -7,6 +7,7 @@ import nvc.guide.modules.nvcpractice.model.NvcAgentScene;
 import nvc.guide.modules.nvcpractice.model.NvcPracticeMode;
 import nvc.guide.modules.nvcpractice.model.NvcPracticeSessionEntity;
 import nvc.guide.modules.nvcpractice.model.NvcSessionPhase;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -77,7 +78,7 @@ class NvcAgentChatServiceTest {
     when(mockClient.prompt().options(any()).messages(anyList()).call().content())
         .thenReturn("AI 回复");
 
-    String result = service.chat(config, context, "你好");
+    String result = service.chat(config, context, "你好", Map.of());
 
     assertEquals("AI 回复", result);
     verify(llmProviderRegistry).getChatClientOrDefault("mimo");
@@ -111,7 +112,7 @@ class NvcAgentChatServiceTest {
     when(llmProviderRegistry.getChatClientOrDefault("mimo")).thenReturn(mockClient);
 
     // chatStream 返回 Flux，此处验证方法可调用且使用正确的 ChatClient
-    assertDoesNotThrow(() -> service.chatStream(config, context, "你好"));
+    assertDoesNotThrow(() -> service.chatStream(config, context, "你好", Map.of()));
     verify(llmProviderRegistry).getChatClientOrDefault("mimo");
   }
 }
