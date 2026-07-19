@@ -683,189 +683,82 @@ app/src/main/java/nvc/guide/modules/knowledgebase/
 
 ---
 
-## 四、Phase 1.3：Skill 标准化（1 天）
+## 四、Phase 1.3：Skill 标准化（1 天）— 设计修正
 
-> 目标：将评估、场景生成、对话引导封装为标准化 Skill
-> 简历关键词：可扩展 Skill 体系、泛型接口、Skill+Tool 组合模式
+> **原方案：** 自定义 `NvcSkill<T>` 接口 + `SkillInput` + `SkillContext`
+> **修正后：** Skill = 普通 `@Service`，Tool = Spring AI `@Tool` 注解
+> **理由：** Spring AI 原生 `@Tool` 注解已覆盖 Function Calling 需求，无需自定义接口
 
-### 4.1 NvcSkill 接口
+### 4.1 设计变更说明
 
-**新建文件**：`nvcpractice/skill/NvcSkill.java`
+**原方案问题：**
+- `NvcSkill<T>` 接口与 Spring AI 的 `@Tool` 注解功能重叠
+- `SkillInput` / `SkillContext` 与 Spring AI 的 `ToolContext` 功能重叠
+- 增加了不必要的抽象层，违反 YAGNI 原则
 
-```java
-/**
- * NVC Skill 标准化接口
- * Skill = 业务逻辑封装（面向代码复用）
- * Tool = Agent 可调用的外部能力（面向 LLM Function Calling）
- * 关系：一个 Skill 可以被包装为 Tool，也可以直接在 Service 中调用
- *
- * @param <T> Skill 输出类型
- */
-public interface NvcSkill<T> {
+**修正方案：**
+- **Skill = 普通 `@Service`**，封装业务逻辑，不需要框架接口
+- **Tool = `@Tool` 注解方法**，暴露给 LLM 调用
+- **组合关系：** `@Tool` 方法内部调用 `@Service` 方法
 
-    /** Skill 名称 */
-    String name();
-
-    /** Skill 描述 */
-    String description();
-
-    /** 执行 Skill */
-    T execute(SkillInput input, SkillContext context);
-}
-```
-
-### 4.2 SkillInput / SkillContext
-
-**新建文件**：`nvcpractice/skill/SkillInput.java`
+### 4.2 核心 Skill（3 个）— 修正后
 
 ```java
-@Data
-@Builder
-public class SkillInput {
-    private String userMessage;
-    private String scenarioDescription;
-    private Map<String, Object> extraData;
-}
-```
-
-**新建文件**：`nvcpractice/skill/SkillContext.java`
-
-```java
-@Data
-@Builder
-public class SkillContext {
-    private Long userId;
-    private Long sessionId;
-    private PracticeContext practiceContext;
-    private NvcAgentConfigEntity agentConfig;
-}
-```
-
-### 4.3 三个核心 Skill
-
-#### NvcEvaluationSkill
-
-**新建文件**：`nvcpractice/skill/NvcEvaluationSkill.java`
-
-```java
-@Component
+// Skill 就是普通的 @Service — 不需要 NvcSkill 接口
+@Service
 @Slf4j
 @RequiredArgsConstructor
-public class NvcEvaluationSkill implements NvcSkill<NvcEvaluationResult> {
+public class NvcEvaluationService {
+    // 已有实现，封装评估 Prompt + StructuredOutputInvoker
+    public NvcEvaluationEntity evaluateRealtime(Long sessionId, Long userId,
+                                                 String userMessage, String aiContext,
+                                                 NvcPracticeStep currentStep) { ... }
+    public NvcEvaluationEntity evaluateFinal(Long sessionId, Long userId,
+                                              List<NvcPracticeMessageEntity> messages) { ... }
+}
 
-    private final StructuredOutputInvoker structuredOutputInvoker;
-    private final LlmProviderRegistry llmProviderRegistry;
-
-    @Override
-    public String name() { return "nvc_evaluation"; }
-
-    @Override
-    public String description() { return "评估用户的 NVC 表达质量"; }
-
-    @Override
-    public NvcEvaluationResult execute(SkillInput input, SkillContext context) {
-        // 封装现有 NvcEvaluationService 的评估逻辑
-        ChatClient client = llmProviderRegistry.getPlainChatClient(
-            context.getAgentConfig().getModelProvider());
-
-        String prompt = buildEvaluationPrompt(input);
-        return structuredOutputInvoker.invokeStructuredOutput(
-            prompt, client, NvcEvaluationResult.class);
-    }
+@Service
+@RequiredArgsConstructor
+public class NvcScenarioService {
+    // 已有实现，封装场景生成逻辑
+    public NvcScenarioEntity generateScenario(ScenarioGenerateRequest request) { ... }
 }
 ```
 
-#### NvcScenarioGenerateSkill
-
-**新建文件**：`nvcpractice/skill/NvcScenarioGenerateSkill.java`
+### 4.3 Skill + Tool 组合模式 — 修正后
 
 ```java
+// Tool 直接调用 Service（Skill），无需中间接口
 @Component
 @RequiredArgsConstructor
-public class NvcScenarioGenerateSkill implements NvcSkill<NvcScenarioEntity> {
+public class NvcToolCallbacks {
+    private final NvcEvaluationService evaluationService;
+    private final NvcScenarioService scenarioService;
 
-    private final StructuredOutputInvoker structuredOutputInvoker;
-    private final LlmProviderRegistry llmProviderRegistry;
+    @Tool(description = "评估用户的 NVC 表达质量，返回四要素评分")
+    public String evaluateNvc(@ToolParam("用户表达") String expression, ToolContext ctx) {
+        Long sessionId = (Long) ctx.getContext().get("nvc.sessionId");
+        Long userId = (Long) ctx.getContext().get("nvc.userId");
+        var result = evaluationService.evaluateRealtime(sessionId, userId, expression, null, null);
+        return formatResult(result);
+    }
 
-    @Override
-    public String name() { return "scenario_generate"; }
-
-    @Override
-    public String description() { return "生成 NVC 练习场景"; }
-
-    @Override
-    public NvcScenarioEntity execute(SkillInput input, SkillContext context) {
-        ChatClient client = llmProviderRegistry.getPlainChatClient(
-            context.getAgentConfig().getModelProvider());
-
-        String prompt = buildScenarioPrompt(input);
-        return structuredOutputInvoker.invokeStructuredOutput(
-            prompt, client, NvcScenarioEntity.class);
+    @Tool(description = "AI 生成 NVC 练习场景")
+    public String scenarioGenerate(@ToolParam("情境描述") String situation, ToolContext ctx) {
+        var request = new ScenarioGenerateRequest();
+        request.setSituation(situation);
+        var scenario = scenarioService.generateScenario(request);
+        return scenario.toString();
     }
 }
 ```
 
-#### NvcDialogueGuideSkill
+**好处：**
+- Skill（Service）既可被 `@Tool` 方法调用，也可在其他 Service 中直接调用
+- 无需自定义接口，减少样板代码
+- 与 Spring AI 生态完全兼容
 
-**新建文件**：`nvcpractice/skill/NvcDialogueGuideSkill.java`
-
-```java
-@Component
-@RequiredArgsConstructor
-public class NvcDialogueGuideSkill implements NvcSkill<String> {
-
-    private final NvcAgentChatService agentChatService;
-
-    @Override
-    public String name() { return "dialogue_guide"; }
-
-    @Override
-    public String description() { return "NVC 对话引导"; }
-
-    @Override
-    public String execute(SkillInput input, SkillContext context) {
-        NvcAgentConfigEntity config = context.getAgentConfig();
-        return agentChatService.chat(
-            config, context.getPracticeContext(),
-            input.getUserMessage(), Map.of());
-    }
-}
-```
-
-### 4.4 Skill + Tool 组合
-
-**EvaluateNvcTool 改造**（使用 NvcEvaluationSkill）：
-
-```java
-@Component
-@RequiredArgsConstructor
-public class EvaluateNvcTool implements NvcTool {
-
-    private final NvcEvaluationSkill evaluationSkill;
-
-    @Override
-    public String name() { return "evaluate_nvc"; }
-
-    @Override
-    public NvcToolResult execute(JsonNode input, ToolContext context) {
-        SkillInput skillInput = SkillInput.builder()
-            .userMessage(input.get("expression").asText())
-            .build();
-        SkillContext skillContext = SkillContext.builder()
-            .userId(context.getUserId())
-            .sessionId(context.getSessionId())
-            .practiceContext(context.getPracticeContext())
-            .agentConfig(context.getPracticeContext().getSession()
-                .getCurrentAgentConfig()) // 需扩展
-            .build();
-
-        NvcEvaluationResult result = evaluationSkill.execute(skillInput, skillContext);
-        return NvcToolResult.success(formatResult(result));
-    }
-}
-```
-
-### 4.5 场景推荐服务
+### 4.4 场景推荐服务
 
 **新建文件**：`nvcpractice/service/NvcScenarioRecommendService.java`
 
@@ -878,17 +771,10 @@ public class NvcScenarioRecommendService {
     private final NvcScenarioRepository scenarioRepository;
 
     public List<NvcScenarioEntity> recommend(Long userId, int limit) {
-        // 1. 获取用户能力雷达
         AbilityRadarDTO radar = profileService.getAbilityRadar(userId);
-
-        // 2. 找出最弱维度
         String weakest = findWeakestDimension(radar);
-
-        // 3. 搜索该维度相关的场景
         List<NvcScenarioEntity> candidates = scenarioRepository
             .findByFocusElementsContaining(weakest);
-
-        // 4. 排除最近练习过的场景（简单实现：取前 N 个）
         return candidates.stream().limit(limit).toList();
     }
 
@@ -907,37 +793,38 @@ public class NvcScenarioRecommendService {
 }
 ```
 
-### 4.6 新建文件清单
+### 4.5 文件清单（修正后）
 
 ```
+# 不再需要新建：
+# - nvcpractice/skill/NvcSkill.java
+# - nvcpractice/skill/SkillInput.java
+# - nvcpractice/skill/SkillContext.java
+# - nvcpractice/skill/NvcEvaluationSkill.java
+# - nvcpractice/skill/NvcScenarioGenerateSkill.java
+# - nvcpractice/skill/NvcDialogueGuideSkill.java
+
+# 只需新建：
 app/src/main/java/nvc/guide/modules/nvcpractice/
-├── skill/
-│   ├── NvcSkill.java                    # Skill 接口
-│   ├── SkillInput.java                  # Skill 输入
-│   ├── SkillContext.java                # Skill 上下文
-│   ├── NvcEvaluationSkill.java          # 评估 Skill
-│   ├── NvcScenarioGenerateSkill.java    # 场景生成 Skill
-│   └── NvcDialogueGuideSkill.java       # 对话引导 Skill
 └── service/
-    └── NvcScenarioRecommendService.java # 场景推荐服务
+    └── NvcScenarioRecommendService.java  # 场景推荐服务
 ```
 
-### 验收标准
+### 4.6 验收标准（修正后）
 
 ```
-□ Skill 框架
-  □ NvcSkill<T> 接口定义完成
-  □ SkillInput / SkillContext 定义完成
-  □ 3 个 Skill 全部实现
+□ Skill 层
+  □ NvcEvaluationService 已有，可直接使用
+  □ NvcScenarioService 已有，可直接使用
+  □ 无需新建 NvcSkill 接口
 
 □ Skill + Tool 组合
-  □ EvaluateNvcTool 内部调用 NvcEvaluationSkill
-  □ ScenarioGenerateTool 内部调用 NvcScenarioGenerateSkill
-  □ Skill 可在 Service 中直接调用，也可通过 Tool 间接调用
+  □ @Tool 方法内部调用 @Service 方法
+  □ Skill 可在 Service 中直接调用，也可通过 @Tool 间接调用
 
 □ 场景推荐
+  □ NvcScenarioRecommendService 实现完成
   □ 基于用户薄弱维度推荐场景
-  □ 推荐结果与用户能力相关
 ```
 
 ---
@@ -1078,11 +965,10 @@ Day 5:  Phase 1.2 — 工具框架（下）
         ├── AgentDecision 扩展（availableTools）
         └── 工具选择策略
 
-Day 6:  Phase 1.3 — Skill 标准化
-        ├── NvcSkill 接口 + SkillInput/SkillContext
-        ├── 3 个 Skill 实现
-        ├── Skill + Tool 组合改造
-        └── NvcScenarioRecommendService
+Day 6:  Phase 1.3 — Skill 标准化（修正后）
+        ├── 确认现有 Service 可直接作为 Skill 使用
+        ├── @Tool 注解方法（如需要集中管理）
+        └── NvcScenarioRecommendService 实现
 
 Day 7:  联调 + 测试
         ├── 端到端测试：Agent 对话 + 工具调用

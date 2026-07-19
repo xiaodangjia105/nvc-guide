@@ -183,16 +183,17 @@ jobs:
 **面试话术：**
 > "我设计了一个三层存储的个人知识 Wiki：文件系统存储 Markdown 原文，数据库存储元数据，pgvector 存储向量化内容。Wiki 有三种来源：练习结束后 AI 自动生成、用户手动记录、以及通过主 Agent 对话时 AI 辅助生成。自动沉淀的流程是：练习结束 → AI 分析对话 → 生成 Markdown 笔记 → 写入文件 → 向量化。"
 
-#### 亮点 5：可扩展 Skill 体系
+#### 亮点 5：Spring AI @Tool 注解 + Skill 组合模式
 
 **技术要点：**
-- NvcSkill<T> 泛型接口
-- Skill + Tool 组合模式
-- Spring 自动注册（@Component）
+- Spring AI 原生 `@Tool` 注解定义工具
+- Skill = 普通 `@Service`，封装业务逻辑
+- Tool = `@Tool` 方法，内部调用 Service
+- `ToolCallbacks.from()` 自动扫描注册
 - 结构化输出（BeanOutputConverter）
 
 **面试话术：**
-> "我设计了一个 Skill 标准化框架。每个 Skill 实现 NvcSkill<T> 接口。Skill 和 Tool 是组合关系——EvaluateNvcTool 内部调用 NvcEvaluationSkill。这样 Skill 既可以直接调用，也可以通过 Agent 的 Function Calling 间接调用。框架设计上支持无感扩展——只需要实现接口并加上 @Component 注解就会自动注册。"
+> "我使用 Spring AI 的 `@Tool` 注解来定义 Agent 可调用的工具。Skill 就是普通的 Spring Service，封装业务逻辑；Tool 通过 `@Tool` 注解暴露给 LLM。两者是组合关系——`@Tool` 方法内部调用 Service 方法。这样 Skill 既可以直接调用，也可以通过 Agent 的 Function Calling 间接调用。新工具只需要加一个 `@Tool` 注解方法就行，Spring AI 自动处理 JSON Schema 生成和 Function Calling 协议。"
 
 #### 亮点 6：主 Agent 全能对话入口
 

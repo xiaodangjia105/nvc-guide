@@ -101,159 +101,142 @@ if (context.getScenarioDescription() != null) {
 
 ---
 
-## 二、Agent 工具调用框架（Day 5-6）
+## 二、Agent 工具调用框架（Day 5-6）— 已完成
 
-### 2.1 NvcTool 接口
+> **实现说明：** Phase 1.2 已完成，使用了自定义 NvcTool 接口 + NvcToolRegistry 的方案。
+> **后续新工具推荐使用 Spring AI 原生 `@Tool` 注解**，两种方式可共存。
+
+### 2.1 已实现架构（Phase 1.2）
+
+```
+NvcTool (自定义接口)
+    ↓ @Component 自动注册
+NvcToolRegistry (Map<name, NvcTool>)
+    ↓ toFunctionCallbacks()
+List<ToolCallback> (Spring AI 标准)
+    ↓ ChatClient.prompt().toolCallbacks()
+LLM Function Calling
+```
+
+**保留价值：**
+- `NvcToolSceneMapping` — 场景-工具映射，Spring AI 不提供
+- `NvcChatRequest` + `NvcToolCallConfig` — 解耦编排层
+
+### 2.2 后续新工具推荐方式：Spring AI @Tool 注解
 
 ```java
-public interface NvcTool {
-    /** 工具名称，用于 Function Calling */
-    String name();
+@Component
+@RequiredArgsConstructor
+public class NvcTools {
+    private final NvcRagService ragService;
+    private final NvcProfileService profileService;
 
-    /** 工具描述，告诉 LLM 这个工具能做什么 */
-    String description();
+    @Tool(description = "搜索 NVC 知识库，检索相关理论、话术模板、情绪词汇等信息")
+    public String ragSearch(@ToolParam("查询内容") String query, ToolContext ctx) {
+        Long userId = (Long) ctx.getContext().get("nvc.userId");
+        List<RagResult> results = ragService.retrieve(query, ...);
+        return results.stream().map(RagResult::text).collect(Collectors.joining("\n"));
+    }
 
-    /** 输入参数的 JSON Schema */
-    JsonSchema inputSchema();
-
-    /** 执行工具 */
-    NvcToolResult execute(JsonNode input, ToolContext context);
+    @Tool(description = "查询用户 NVC 档案信息")
+    public String profileQuery(ToolContext ctx) {
+        Long userId = (Long) ctx.getContext().get("nvc.userId");
+        return profileService.getUserProfilePrompt(userId);
+    }
 }
 ```
 
-### 2.2 NvcToolRegistry
-
-```java
-@Service
-public class NvcToolRegistry {
-    private final Map<String, NvcTool> tools;
-
-    // Spring 自动注入所有 NvcTool 实现
-    public NvcToolRegistry(List<NvcTool> toolList) {
-        this.tools = toolList.stream()
-            .collect(Collectors.toMap(NvcTool::name, t -> t));
-    }
-
-    public NvcTool getTool(String name) { return tools.get(name); }
-    public List<NvcTool> getAllTools() { return List.copyOf(tools.values()); }
-
-    /** 转换为 Spring AI Function Callback */
-    public List<FunctionCallback> toFunctionCallbacks() {
-        return tools.values().stream()
-            .map(this::toFunctionCallback)
-            .toList();
-    }
-}
-```
+**@Tool 注解优势：**
+- 零样板代码，无需自定义接口
+- JSON Schema 自动生成
+- `ToolContext` 原生支持上下文传递
+- `ToolCallbacks.from()` 自动扫描注册
 
 ### 2.3 核心工具（10 个）
 
-| 工具名 | 功能 | 调用的 Service |
-|--------|------|---------------|
-| rag_search | RAG 知识检索 | NvcRagService |
-| wiki_search | 个人 Wiki 检索 | NvcWikiService |
-| wiki_write | 个人 Wiki 写入 | NvcWikiService |
-| profile_query | 用户档案查询 | NvcProfileService |
-| profile_update | 用户档案更新 | NvcProfileService |
-| evaluate_nvc | NVC 表达评估 | NvcEvaluationSkill |
-| scenario_search | 场景搜索 | NvcScenarioService |
-| scenario_generate | 场景生成 | NvcScenarioGenerateSkill |
-| dashboard_query | 仪表盘数据 | NvcDashboardService |
-| practice_start | 启动练习 | NvcPracticeSessionService |
-
-### 2.4 Spring AI Function Calling 集成
-
-```java
-// NvcAgentChatService 升级
-public String chat(NvcAgentConfigEntity config, PracticeContext context,
-                   String userMessage, Map<String, String> promptVariables) {
-    ChatClient client = getChatClient(config);
-    List<Message> messages = buildMessages(config, context, userMessage, promptVariables);
-
-    return client.prompt()
-        .options(buildChatOptions(config))
-        .functions(toolRegistry.toFunctionCallbacks()) // 注入工具
-        .messages(messages)
-        .call()
-        .content();
-}
-```
-
-### 2.5 新建文件
-
-```
-modules/nvcpractice/tool/
-├── NvcTool.java
-├── NvcToolRegistry.java
-├── NvcToolResult.java
-├── ToolContext.java
-├── RagSearchTool.java
-├── WikiSearchTool.java
-├── WikiWriteTool.java
-├── ProfileQueryTool.java
-├── ProfileUpdateTool.java
-├── EvaluateNvcTool.java
-├── ScenarioSearchTool.java
-├── ScenarioGenerateTool.java
-├── DashboardQueryTool.java
-└── PracticeStartTool.java
-```
+| 工具名 | 功能 | 调用的 Service | 实现方式 |
+|--------|------|---------------|---------|
+| rag_search | RAG 知识检索 | NvcRagService | NvcTool |
+| wiki_search | 个人 Wiki 检索 | NvcWikiService | NvcTool（骨架） |
+| wiki_write | 个人 Wiki 写入 | NvcWikiService | NvcTool（骨架） |
+| profile_query | 用户档案查询 | NvcProfileService | NvcTool |
+| profile_update | 用户档案更新 | NvcProfileService | NvcTool |
+| evaluate_nvc | NVC 表达评估 | NvcEvaluationService | NvcTool |
+| scenario_search | 场景搜索 | NvcScenarioService | NvcTool |
+| scenario_generate | 场景生成 | NvcScenarioService | NvcTool |
+| dashboard_query | 仪表盘数据 | NvcDashboardService | NvcTool |
+| practice_start | 启动练习 | NvcPracticeSessionService | NvcTool |
 
 ---
 
-## 三、Skill 标准化（Day 7-8）
+## 三、Skill 标准化（Day 7-8）— 设计修正
 
-### 3.1 NvcSkill 接口
+> **原方案：** 自定义 `NvcSkill<T>` 接口 + `SkillInput` + `SkillContext`
+> **修正后：** 直接使用 `@Service` + Spring AI `@Tool` 注解，无需自定义 Skill 接口
+
+### 3.1 设计变更说明
+
+**原方案问题：**
+- `NvcSkill<T>` 接口与 Spring AI 的 `@Tool` 注解功能重叠
+- `SkillInput` / `SkillContext` 与 Spring AI 的 `ToolContext` 功能重叠
+- 增加了不必要的抽象层
+
+**修正方案：**
+- **Skill = 普通 `@Service`**，封装业务逻辑，不需要框架接口
+- **Tool = `@Tool` 注解方法**，暴露给 LLM 调用
+- **组合关系：** `@Tool` 方法内部调用 `@Service` 方法
+
+### 3.2 核心 Skill（3 个）— 修正后
 
 ```java
-public interface NvcSkill<T> {
-    /** Skill 名称 */
-    String name();
+// Skill 就是普通的 @Service — 不需要 NvcSkill 接口
+@Service
+@Slf4j
+@RequiredArgsConstructor
+public class NvcEvaluationService {
+    // 已有实现，封装评估 Prompt + StructuredOutputInvoker
+    public NvcEvaluationEntity evaluateRealtime(...) { ... }
+    public NvcEvaluationEntity evaluateFinal(...) { ... }
+}
 
-    /** Skill 描述 */
-    String description();
-
-    /** 执行 Skill */
-    T execute(SkillInput input, SkillContext context);
+@Service
+@RequiredArgsConstructor
+public class NvcScenarioService {
+    // 已有实现，封装场景生成逻辑
+    public NvcScenarioEntity generateScenario(...) { ... }
 }
 ```
 
-### 3.2 核心 Skill（3 个）
+### 3.3 Skill + Tool 组合模式 — 修正后
 
 ```java
+// Tool 直接调用 Service（Skill），无需中间接口
 @Component
-public class NvcEvaluationSkill implements NvcSkill<NvcEvaluationResult> {
-    // 封装评估 Prompt + StructuredOutputInvoker + 后处理
-}
+@RequiredArgsConstructor
+public class NvcTools {
+    private final NvcEvaluationService evaluationService;
+    private final NvcScenarioService scenarioService;
 
-@Component
-public class NvcScenarioGenerateSkill implements NvcSkill<NvcScenarioEntity> {
-    // 封装场景生成 Prompt + JSON 解析
-}
+    @Tool(description = "评估用户的 NVC 表达质量")
+    public String evaluateNvc(@ToolParam("用户表达") String expression, ToolContext ctx) {
+        Long sessionId = (Long) ctx.getContext().get("nvc.sessionId");
+        Long userId = (Long) ctx.getContext().get("nvc.userId");
+        var result = evaluationService.evaluateRealtime(sessionId, userId, expression, ...);
+        return formatResult(result);
+    }
 
-@Component
-public class NvcDialogueGuideSkill implements NvcSkill<String> {
-    // 封装对话引导 Prompt + 上下文注入
-}
-```
-
-### 3.3 Skill + Tool 组合模式
-
-```java
-// EvaluateNvcTool 内部调用 NvcEvaluationSkill
-@Component
-public class EvaluateNvcTool implements NvcTool {
-    private final NvcEvaluationSkill evaluationSkill;
-
-    @Override
-    public NvcToolResult execute(JsonNode input, ToolContext context) {
-        NvcEvaluationResult result = evaluationSkill.execute(...);
-        return NvcToolResult.success(result);
+    @Tool(description = "生成 NVC 练习场景")
+    public String scenarioGenerate(@ToolParam("情境") String situation, ToolContext ctx) {
+        var scenario = scenarioService.generateScenario(...);
+        return scenario.toString();
     }
 }
 ```
 
-**好处：** Skill 既可被主 Agent 通过 Tool 调用，也可在 Service 中直接调用。
+**好处：**
+- Skill（Service）既可被 `@Tool` 方法调用，也可在其他 Service 中直接调用
+- 无需自定义接口，减少样板代码
+- 与 Spring AI 生态完全兼容
 
 ### 3.4 场景推荐服务
 
@@ -278,20 +261,15 @@ public class NvcScenarioRecommendService {
 }
 ```
 
-### 3.5 新建文件
+### 3.5 新建文件（修正后）
 
 ```
-modules/nvcpractice/skill/
-├── NvcSkill.java
-├── SkillInput.java
-├── SkillContext.java
-├── NvcEvaluationSkill.java
-├── NvcScenarioGenerateSkill.java
-└── NvcDialogueGuideSkill.java
+# 不再需要 NvcSkill 接口和 SkillInput/SkillContext
+# Skill 就是现有的 @Service 类
 
 modules/nvcpractice/service/
-├── NvcRagService.java
-└── NvcScenarioRecommendService.java
+├── NvcRagService.java          # 已有
+└── NvcScenarioRecommendService.java  # 新增
 ```
 
 ---
