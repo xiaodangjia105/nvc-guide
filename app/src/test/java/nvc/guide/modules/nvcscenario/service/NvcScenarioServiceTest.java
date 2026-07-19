@@ -115,13 +115,13 @@ class NvcScenarioServiceTest {
         }
 
         @Test
-        @DisplayName("无条件查询返回系统场景")
-        void queryNoConditions_returnsSystemScenarios() {
+        @DisplayName("无条件查询返回所有场景")
+        void queryNoConditions_returnsAllScenarios() {
             ScenarioQueryRequest query = new ScenarioQueryRequest(null, null);
             NvcScenarioEntity scenario = buildScenario(
                 1L, "系统场景", NvcScenarioType.WORKPLACE, NvcDifficulty.MEDIUM);
 
-            when(scenarioRepository.findByIsSystemTrueOrderByUsageCountDesc())
+            when(scenarioRepository.findAllByOrderByUsageCountDesc())
                 .thenReturn(List.of(scenario));
 
             List<NvcScenarioEntity> result = service.queryScenarios(query);

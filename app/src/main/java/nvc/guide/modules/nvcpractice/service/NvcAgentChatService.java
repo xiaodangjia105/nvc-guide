@@ -1,9 +1,12 @@
 package nvc.guide.modules.nvcpractice.service;
 
 import nvc.guide.common.ai.LlmProviderRegistry;
+import nvc.guide.modules.nvcpractice.dto.NvcChatRequest;
+import nvc.guide.modules.nvcpractice.dto.NvcToolCallConfig;
 import nvc.guide.modules.nvcpractice.dto.PracticeContext;
 import nvc.guide.modules.nvcpractice.model.NvcAgentConfigEntity;
 import nvc.guide.modules.nvcpractice.model.NvcMessageRole;
+import nvc.guide.modules.nvcpractice.tool.NvcToolRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
@@ -16,6 +19,7 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -25,6 +29,9 @@ import java.util.Map;
 public class NvcAgentChatService {
 
   private final LlmProviderRegistry llmProviderRegistry;
+  private final NvcToolRegistry toolRegistry;
+
+  // ═══ 原有方法 — 保持不变，向后兼容 ═══
 
   /**
    * 执行 Agent 对话（非流式）
@@ -32,14 +39,12 @@ public class NvcAgentChatService {
   public String chat(
       NvcAgentConfigEntity config, PracticeContext context,
       String userMessage, Map<String, String> promptVariables) {
-    ChatClient client = getChatClient(config);
-    List<Message> messages = buildMessages(config, context, userMessage, promptVariables);
-
-    return client.prompt()
-        .options(buildChatOptions(config))
-        .messages(messages)
-        .call()
-        .content();
+    return chat(NvcChatRequest.builder()
+        .agentConfig(config)
+        .practiceContext(context)
+        .userMessage(userMessage)
+        .promptVariables(promptVariables)
+        .build());
   }
 
   /**
@@ -48,14 +53,12 @@ public class NvcAgentChatService {
   public Flux<String> chatStream(
       NvcAgentConfigEntity config, PracticeContext context,
       String userMessage, Map<String, String> promptVariables) {
-    ChatClient client = getChatClient(config);
-    List<Message> messages = buildMessages(config, context, userMessage, promptVariables);
-
-    return client.prompt()
-        .options(buildChatOptions(config))
-        .messages(messages)
-        .stream()
-        .content();
+    return chatStream(NvcChatRequest.builder()
+        .agentConfig(config)
+        .practiceContext(context)
+        .userMessage(userMessage)
+        .promptVariables(promptVariables)
+        .build());
   }
 
   /**
@@ -75,16 +78,58 @@ public class NvcAgentChatService {
         .content();
   }
 
+  // ═══ 新方法 — 统一入口 ═══
+
   /**
-   * 根据 Agent 配置获取 ChatClient
+   * 执行 Agent 对话（非流式）— 统一入口，支持工具调用
    */
+  public String chat(NvcChatRequest request) {
+    ChatClient client = getChatClient(request.getAgentConfig());
+    List<Message> messages = buildMessages(
+        request.getAgentConfig(), request.getPracticeContext(),
+        request.getUserMessage(), request.getPromptVariables());
+
+    var spec = client.prompt()
+        .options(buildChatOptions(request.getAgentConfig()))
+        .messages(messages);
+
+    if (request.getToolConfig().isEnabled()) {
+      spec = spec.toolContext(buildToolContextMap(request));
+      spec = spec.toolCallbacks(
+          toolRegistry.toFunctionCallbacks(request.getToolConfig().getToolNames()));
+    }
+
+    return spec.call().content();
+  }
+
+  /**
+   * 执行 Agent 对话（流式）— 统一入口，支持工具调用
+   */
+  public Flux<String> chatStream(NvcChatRequest request) {
+    ChatClient client = getChatClient(request.getAgentConfig());
+    List<Message> messages = buildMessages(
+        request.getAgentConfig(), request.getPracticeContext(),
+        request.getUserMessage(), request.getPromptVariables());
+
+    var spec = client.prompt()
+        .options(buildChatOptions(request.getAgentConfig()))
+        .messages(messages);
+
+    if (request.getToolConfig().isEnabled()) {
+      spec = spec.toolContext(buildToolContextMap(request));
+      spec = spec.toolCallbacks(
+          toolRegistry.toFunctionCallbacks(request.getToolConfig().getToolNames()));
+    }
+
+    return spec.stream().content();
+  }
+
+  // ═══ 内部方法 ═══
+
   private ChatClient getChatClient(NvcAgentConfigEntity config) {
     return llmProviderRegistry.getChatClientOrDefault(config.getModelProvider());
   }
 
-  /**
-   * 构建 per-call ChatOptions，覆盖 Agent 级别的模型参数
-   */
   private OpenAiChatOptions buildChatOptions(NvcAgentConfigEntity config) {
     return OpenAiChatOptions.builder()
         .temperature(config.getTemperature())
@@ -94,9 +139,20 @@ public class NvcAgentChatService {
   }
 
   /**
-   * 组装对话消息列表
-   * 包含：系统提示词 + 用户档案摘要 + 场景信息 + RAG 知识 + promptVariables + 对话历史 + 当前消息
+   * 构建 Spring AI ToolContext Map — 将 NVC 上下文注入工具执行环境
    */
+  private Map<String, Object> buildToolContextMap(NvcChatRequest request) {
+    Map<String, Object> map = new HashMap<>();
+    PracticeContext ctx = request.getPracticeContext();
+    if (ctx != null && ctx.getSession() != null) {
+      map.put("nvc.userId", ctx.getSession().getUserId());
+      map.put("nvc.sessionId", ctx.getSession().getId());
+      map.put("nvc.practiceContext", ctx);
+    }
+    map.putAll(request.getToolConfig().getExtraContext());
+    return map;
+  }
+
   private List<Message> buildMessages(
       NvcAgentConfigEntity config, PracticeContext context,
       String userMessage, Map<String, String> promptVariables) {
@@ -141,7 +197,7 @@ public class NvcAgentChatService {
       }
     }
 
-    // 7. 当前用户消息（防御性去重：recentMessages 已在 DB 保存后构建，可能已包含当前消息）
+    // 7. 当前用户消息（防御性去重）
     boolean alreadyIncluded = context.getRecentMessages() != null
         && !context.getRecentMessages().isEmpty()
         && context.getRecentMessages().getLast().getRole() == NvcMessageRole.USER

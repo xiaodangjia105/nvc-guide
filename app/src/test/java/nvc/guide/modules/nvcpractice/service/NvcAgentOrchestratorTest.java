@@ -2,6 +2,8 @@ package nvc.guide.modules.nvcpractice.service;
 
 import nvc.guide.common.exception.BusinessException;
 import nvc.guide.modules.nvcpractice.dto.AgentDecision;
+import nvc.guide.modules.nvcpractice.dto.NvcChatRequest;
+import java.util.Map;
 import nvc.guide.modules.nvcpractice.dto.PracticeContext;
 import nvc.guide.modules.nvcpractice.model.NvcAgentConfigEntity;
 import nvc.guide.modules.nvcpractice.model.NvcAgentScene;
@@ -15,6 +17,10 @@ import nvc.guide.modules.nvcpractice.model.NvcSessionPhase;
 import nvc.guide.modules.nvcpractice.repository.NvcEvaluationRepository;
 import nvc.guide.modules.nvcpractice.repository.NvcPracticeMessageRepository;
 import nvc.guide.modules.nvcpractice.repository.NvcPracticeSessionRepository;
+import nvc.guide.modules.nvcpractice.router.FreeDialogRouter;
+import nvc.guide.modules.nvcpractice.router.ScenarioRouter;
+import nvc.guide.modules.nvcpractice.router.StructuredRouter;
+import nvc.guide.modules.nvcprofile.service.NvcProfileService;
 import nvc.guide.modules.nvcscenario.model.NvcScenarioEntity;
 import nvc.guide.modules.nvcscenario.repository.NvcScenarioRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -50,6 +56,11 @@ class NvcAgentOrchestratorTest {
   @Mock private NvcPracticeMessageRepository messageRepository;
   @Mock private NvcEvaluationRepository evaluationRepository;
   @Mock private NvcScenarioRepository scenarioRepository;
+  @Mock private NvcProfileService profileService;
+  @Mock private NvcRagService ragService;
+  @Mock private FreeDialogRouter freeDialogRouter;
+  @Mock private ScenarioRouter scenarioRouter;
+  @Mock private StructuredRouter structuredRouter;
 
   private NvcAgentOrchestrator orchestrator;
 
@@ -58,7 +69,9 @@ class NvcAgentOrchestratorTest {
     orchestrator = new NvcAgentOrchestrator(
         agentConfigService, agentChatService,
         sessionRepository, messageRepository,
-        evaluationRepository, scenarioRepository);
+        evaluationRepository, scenarioRepository,
+        profileService, ragService,
+        freeDialogRouter, scenarioRouter, structuredRouter);
   }
 
   private NvcPracticeSessionEntity buildSession(
@@ -153,17 +166,21 @@ class NvcAgentOrchestratorTest {
   class DecideNextAgentTests {
 
     @Test
-    @DisplayName("CREATED 阶段返回 SCENARIO_GENERATOR")
-    void created_returnsScenarioGenerator() {
+    @DisplayName("FREE_DIALOG 模式委托给 FreeDialogRouter")
+    void freeDialog_delegatesToRouter() {
       NvcPracticeSessionEntity session = buildSession(
-          NvcSessionPhase.CREATED, NvcPracticeMode.FREE_DIALOG, null);
+          NvcSessionPhase.IN_PROGRESS, NvcPracticeMode.FREE_DIALOG, null);
       PracticeContext context = PracticeContext.builder()
           .session(session).roundCount(0).build();
 
+      AgentDecision expected = new AgentDecision(
+          NvcAgentScene.DIALOGUE_GUIDE, "free dialog", null);
+      when(freeDialogRouter.route(context)).thenReturn(expected);
+
       AgentDecision decision = orchestrator.decideNextAgent(context);
 
-      assertEquals(NvcAgentScene.SCENARIO_GENERATOR, decision.scene());
-      assertNull(decision.action());
+      assertEquals(expected, decision);
+      assertEquals(NvcAgentScene.DIALOGUE_GUIDE, decision.scene());
     }
 
     @Nested
@@ -171,8 +188,8 @@ class NvcAgentOrchestratorTest {
     class StructuredFourStepTests {
 
       @Test
-      @DisplayName("无评估结果时返回当前步骤教练")
-      void noEvaluation_returnsCurrentStepCoach() {
+      @DisplayName("STRUCTURED_FOUR_STEP 委托给 StructuredRouter")
+      void structured_delegatesToRouter() {
         NvcPracticeSessionEntity session = buildSession(
             NvcSessionPhase.IN_PROGRESS,
             NvcPracticeMode.STRUCTURED_FOUR_STEP,
@@ -180,128 +197,38 @@ class NvcAgentOrchestratorTest {
         PracticeContext context = PracticeContext.builder()
             .session(session).lastEvaluation(null).build();
 
-        AgentDecision decision = orchestrator.decideNextAgent(context);
-
-        assertEquals(NvcAgentScene.STEP_OBSERVE_COACH, decision.scene());
-      }
-
-      @Test
-      @DisplayName("评分 >= 70 时推进到下一步")
-      void scoreAbove70_advancesToNextStep() {
-        NvcPracticeSessionEntity session = buildSession(
-            NvcSessionPhase.IN_PROGRESS,
-            NvcPracticeMode.STRUCTURED_FOUR_STEP,
-            NvcPracticeStep.OBSERVE);
-        NvcEvaluationEntity eval = buildEvaluation(80, 70, 60, 65, 70);
-        PracticeContext context = PracticeContext.builder()
-            .session(session).lastEvaluation(eval).build();
+        AgentDecision expected = new AgentDecision(
+            NvcAgentScene.DIALOGUE_GUIDE, "structured", null);
+        when(structuredRouter.route(context)).thenReturn(expected);
 
         AgentDecision decision = orchestrator.decideNextAgent(context);
 
-        assertEquals(NvcAgentScene.STEP_FEELING_COACH, decision.scene());
-        assertEquals("STEP_ADVANCE", decision.action());
-      }
-
-      @Test
-      @DisplayName("评分 < 70 时保持当前步骤")
-      void scoreBelow70_staysOnCurrentStep() {
-        NvcPracticeSessionEntity session = buildSession(
-            NvcSessionPhase.IN_PROGRESS,
-            NvcPracticeMode.STRUCTURED_FOUR_STEP,
-            NvcPracticeStep.FEELING);
-        NvcEvaluationEntity eval = buildEvaluation(80, 50, 60, 65, 60);
-        PracticeContext context = PracticeContext.builder()
-            .session(session).lastEvaluation(eval).build();
-
-        AgentDecision decision = orchestrator.decideNextAgent(context);
-
-        assertEquals(NvcAgentScene.STEP_FEELING_COACH, decision.scene());
-        assertEquals("STEP_RETRY", decision.action());
-      }
-
-      @Test
-      @DisplayName("REQUEST 步骤通过后返回 COMPLETED_ALL_STEPS")
-      void requestStepPass_returnsCompleted() {
-        NvcPracticeSessionEntity session = buildSession(
-            NvcSessionPhase.IN_PROGRESS,
-            NvcPracticeMode.STRUCTURED_FOUR_STEP,
-            NvcPracticeStep.REQUEST);
-        NvcEvaluationEntity eval = buildEvaluation(80, 80, 80, 80, 80);
-        PracticeContext context = PracticeContext.builder()
-            .session(session).lastEvaluation(eval).build();
-
-        AgentDecision decision = orchestrator.decideNextAgent(context);
-
+        assertEquals(expected, decision);
         assertEquals(NvcAgentScene.DIALOGUE_GUIDE, decision.scene());
-        assertEquals("COMPLETED_ALL_STEPS", decision.action());
       }
     }
 
     @Nested
-    @DisplayName("自由对话/场景驱动模式")
-    class FreeDialogTests {
+    @DisplayName("场景驱动模式")
+    class ScenarioTests {
 
       @Test
-      @DisplayName("无评估结果时返回 DIALOGUE_GUIDE")
-      void noEvaluation_returnsDialogueGuide() {
+      @DisplayName("SCENARIO 模式委托给 ScenarioRouter")
+      void scenario_delegatesToRouter() {
         NvcPracticeSessionEntity session = buildSession(
             NvcSessionPhase.IN_PROGRESS,
-            NvcPracticeMode.FREE_DIALOG, null);
+            NvcPracticeMode.SCENARIO, null);
         PracticeContext context = PracticeContext.builder()
             .session(session).lastEvaluation(null).build();
 
-        AgentDecision decision = orchestrator.decideNextAgent(context);
-
-        assertEquals(NvcAgentScene.DIALOGUE_GUIDE, decision.scene());
-      }
-
-      @Test
-      @DisplayName("评分 < 50 时切换到引导模式")
-      void lowScore_switchesToGuide() {
-        NvcPracticeSessionEntity session = buildSession(
-            NvcSessionPhase.IN_PROGRESS,
-            NvcPracticeMode.SCENARIO, null);
-        NvcEvaluationEntity eval = buildEvaluation(40, 40, 40, 40, 40);
-        PracticeContext context = PracticeContext.builder()
-            .session(session).lastEvaluation(eval).roundCount(2).build();
+        AgentDecision expected = new AgentDecision(
+            NvcAgentScene.DIFFICULT_PARTNER, "scenario", null);
+        when(scenarioRouter.route(context)).thenReturn(expected);
 
         AgentDecision decision = orchestrator.decideNextAgent(context);
 
-        assertEquals(NvcAgentScene.DIALOGUE_GUIDE, decision.scene());
-        assertEquals("LOW_SCORE_GUIDE", decision.action());
-      }
-
-      @Test
-      @DisplayName("评分 < 70 且有薄弱要素时聚焦薄弱要素")
-      void lowScore_withWeakElement_focusesWeakElement() {
-        NvcPracticeSessionEntity session = buildSession(
-            NvcSessionPhase.IN_PROGRESS,
-            NvcPracticeMode.SCENARIO, null);
-        // feeling is weakest (50), overall < 70
-        NvcEvaluationEntity eval = buildEvaluation(70, 50, 60, 65, 60);
-        PracticeContext context = PracticeContext.builder()
-            .session(session).lastEvaluation(eval).roundCount(2).build();
-
-        AgentDecision decision = orchestrator.decideNextAgent(context);
-
-        assertEquals(NvcAgentScene.STEP_FEELING_COACH, decision.scene());
-        assertEquals("WEAK_ELEMENT_FOCUS", decision.action());
-      }
-
-      @Test
-      @DisplayName("评分 >= 60 且轮次 > 3 时偶尔切换困难搭档")
-      void goodScore_switchesToDifficultPartner() {
-        NvcPracticeSessionEntity session = buildSession(
-            NvcSessionPhase.IN_PROGRESS,
-            NvcPracticeMode.SCENARIO, null);
-        NvcEvaluationEntity eval = buildEvaluation(70, 70, 70, 70, 70);
-        PracticeContext context = PracticeContext.builder()
-            .session(session).lastEvaluation(eval).roundCount(6).build();
-
-        AgentDecision decision = orchestrator.decideNextAgent(context);
-
+        assertEquals(expected, decision);
         assertEquals(NvcAgentScene.DIFFICULT_PARTNER, decision.scene());
-        assertEquals("DIFFICULT_UPGRADE", decision.action());
       }
     }
   }
@@ -327,11 +254,11 @@ class NvcAgentOrchestratorTest {
               NvcPracticeMode.FREE_DIALOG, null))
           .roundCount(1).build();
 
-      when(agentChatService.chat(config, context, "你好"))
+      when(agentChatService.chat(any(NvcChatRequest.class)))
           .thenReturn("你好！我是引导官。");
 
-      String result = orchestrator.executeAgent(
-          NvcAgentScene.DIALOGUE_GUIDE, context, "你好");
+      AgentDecision decision = new AgentDecision(NvcAgentScene.DIALOGUE_GUIDE, "test", null);
+      String result = orchestrator.executeAgent(decision, context, "你好");
 
       assertEquals("你好！我是引导官。", result);
     }
@@ -361,11 +288,11 @@ class NvcAgentOrchestratorTest {
               NvcPracticeMode.FREE_DIALOG, null))
           .roundCount(1).build();
 
-      when(agentChatService.chat(fallbackConfig, context, "hello"))
+      when(agentChatService.chat(any(NvcChatRequest.class)))
           .thenReturn("fallback response");
 
-      String result = orchestrator.executeAgent(
-          NvcAgentScene.DIFFICULT_PARTNER, context, "hello");
+      AgentDecision decision = new AgentDecision(NvcAgentScene.DIFFICULT_PARTNER, "test", "DIFFICULT_UPGRADE");
+      String result = orchestrator.executeAgent(decision, context, "hello");
 
       assertEquals("fallback response", result);
     }

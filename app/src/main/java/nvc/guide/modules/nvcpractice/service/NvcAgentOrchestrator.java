@@ -3,6 +3,8 @@ package nvc.guide.modules.nvcpractice.service;
 import nvc.guide.common.exception.BusinessException;
 import nvc.guide.common.exception.ErrorCode;
 import nvc.guide.modules.nvcpractice.dto.AgentDecision;
+import nvc.guide.modules.nvcpractice.dto.NvcChatRequest;
+import nvc.guide.modules.nvcpractice.dto.NvcToolCallConfig;
 import nvc.guide.modules.nvcpractice.dto.PracticeContext;
 import nvc.guide.modules.nvcpractice.model.NvcAgentConfigEntity;
 import nvc.guide.modules.nvcpractice.model.NvcAgentScene;
@@ -203,7 +205,16 @@ public class NvcAgentOrchestrator {
       config = agentConfigService.getConfig(NvcAgentScene.DIALOGUE_GUIDE);
     }
 
-    return agentChatService.chat(config, context, userMessage, decision.promptVariables());
+    NvcToolCallConfig toolConfig = NvcToolCallConfig.builder()
+        .toolNames(decision.availableTools())
+        .build();
+    return agentChatService.chat(NvcChatRequest.builder()
+        .agentConfig(config)
+        .practiceContext(context)
+        .userMessage(userMessage)
+        .promptVariables(decision.promptVariables())
+        .toolConfig(toolConfig)
+        .build());
   }
 
   /**
@@ -215,7 +226,16 @@ public class NvcAgentOrchestrator {
     if (!config.getIsEnabled()) {
       config = agentConfigService.getConfig(NvcAgentScene.DIALOGUE_GUIDE);
     }
-    return agentChatService.chatStream(config, context, userMessage, decision.promptVariables());
+    NvcToolCallConfig toolConfig = NvcToolCallConfig.builder()
+        .toolNames(decision.availableTools())
+        .build();
+    return agentChatService.chatStream(NvcChatRequest.builder()
+        .agentConfig(config)
+        .practiceContext(context)
+        .userMessage(userMessage)
+        .promptVariables(decision.promptVariables())
+        .toolConfig(toolConfig)
+        .build());
   }
 
   // ==================== REFLECT：反思与策略调整 ====================

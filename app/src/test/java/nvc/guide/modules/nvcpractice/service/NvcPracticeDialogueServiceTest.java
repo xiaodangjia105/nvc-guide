@@ -47,6 +47,8 @@ class NvcPracticeDialogueServiceTest {
   @Mock
   private NvcEvaluationService evaluationService;
   @Mock
+  private NvcSummaryService summaryService;
+  @Mock
   private NvcScenarioService scenarioService;
   @Mock
   private NvcStructuredPracticeService structuredPracticeService;
@@ -57,7 +59,7 @@ class NvcPracticeDialogueServiceTest {
   void setUp() {
     dialogueService = new NvcPracticeDialogueService(
         sessionService, messageRepository, orchestrator,
-        objectMapper, evaluationService, scenarioService,
+        objectMapper, evaluationService, summaryService, scenarioService,
         structuredPracticeService);
   }
 
