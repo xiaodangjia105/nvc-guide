@@ -1,13 +1,15 @@
 package nvc.guide.modules.nvcpractice.service;
 
 import nvc.guide.common.ai.LlmProviderRegistry;
+import nvc.guide.modules.nvcpractice.dto.NvcChatRequest;
+import nvc.guide.modules.nvcpractice.dto.NvcToolCallConfig;
 import nvc.guide.modules.nvcpractice.dto.PracticeContext;
 import nvc.guide.modules.nvcpractice.model.NvcAgentConfigEntity;
 import nvc.guide.modules.nvcpractice.model.NvcAgentScene;
 import nvc.guide.modules.nvcpractice.model.NvcPracticeMode;
 import nvc.guide.modules.nvcpractice.model.NvcPracticeSessionEntity;
 import nvc.guide.modules.nvcpractice.model.NvcSessionPhase;
-import java.util.Map;
+import nvc.guide.modules.nvcpractice.tool.NvcToolRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -15,6 +17,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.ai.chat.client.ChatClient;
+
+import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -33,11 +38,13 @@ class NvcAgentChatServiceTest {
 
   @Mock private LlmProviderRegistry llmProviderRegistry;
 
+  private NvcToolRegistry toolRegistry;
   private NvcAgentChatService service;
 
   @BeforeEach
   void setUp() {
-    service = new NvcAgentChatService(llmProviderRegistry);
+    toolRegistry = new NvcToolRegistry(List.of());
+    service = new NvcAgentChatService(llmProviderRegistry, toolRegistry);
   }
 
   private NvcAgentConfigEntity buildConfig() {
@@ -68,8 +75,8 @@ class NvcAgentChatServiceTest {
   }
 
   @Test
-  @DisplayName("chat() 使用 getChatClientOrDefault 获取 ChatClient")
-  void chat_usesChatClientOrDefault() {
+  @DisplayName("chat() 旧签名使用 getChatClientOrDefault 获取 ChatClient")
+  void chat_oldSignature_usesChatClientOrDefault() {
     NvcAgentConfigEntity config = buildConfig();
     PracticeContext context = buildContext();
 
@@ -83,6 +90,28 @@ class NvcAgentChatServiceTest {
     assertEquals("AI 回复", result);
     verify(llmProviderRegistry).getChatClientOrDefault("mimo");
     verify(llmProviderRegistry, never()).getPlainChatClient(any());
+  }
+
+  @Test
+  @DisplayName("chat(NvcChatRequest) 无工具配置时不注入工具")
+  void chatRequest_noTools() {
+    NvcAgentConfigEntity config = buildConfig();
+    PracticeContext context = buildContext();
+
+    ChatClient mockClient = mock(ChatClient.class, RETURNS_DEEP_STUBS);
+    when(llmProviderRegistry.getChatClientOrDefault("mimo")).thenReturn(mockClient);
+    when(mockClient.prompt().options(any()).messages(anyList()).call().content())
+        .thenReturn("AI 回复");
+
+    NvcChatRequest request = NvcChatRequest.builder()
+        .agentConfig(config)
+        .practiceContext(context)
+        .userMessage("你好")
+        .build();
+
+    String result = service.chat(request);
+
+    assertEquals("AI 回复", result);
   }
 
   @Test
@@ -103,15 +132,14 @@ class NvcAgentChatServiceTest {
   }
 
   @Test
-  @DisplayName("chatStream() 使用 getChatClientOrDefault 获取 ChatClient")
-  void chatStream_usesChatClientOrDefault() {
+  @DisplayName("chatStream() 旧签名使用 getChatClientOrDefault 获取 ChatClient")
+  void chatStream_oldSignature_usesChatClientOrDefault() {
     NvcAgentConfigEntity config = buildConfig();
     PracticeContext context = buildContext();
 
     ChatClient mockClient = mock(ChatClient.class, RETURNS_DEEP_STUBS);
     when(llmProviderRegistry.getChatClientOrDefault("mimo")).thenReturn(mockClient);
 
-    // chatStream 返回 Flux，此处验证方法可调用且使用正确的 ChatClient
     assertDoesNotThrow(() -> service.chatStream(config, context, "你好", Map.of()));
     verify(llmProviderRegistry).getChatClientOrDefault("mimo");
   }
