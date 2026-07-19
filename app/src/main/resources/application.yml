@@ -98,7 +98,7 @@ spring:
 app:
   ai:
     default-provider: ${APP_AI_DEFAULT_PROVIDER:mimo}
-    default-embedding-provider: dashscope
+    default-embedding-provider: qwen-embedding
     embedding-dimensions: ${APP_AI_EMBEDDING_DIMENSIONS:1024}
     security:
       api-key-encryption-key: ${APP_AI_CONFIG_ENCRYPTION_KEY:}
@@ -150,6 +150,14 @@ app:
         api-key: ${PROVIDER_MIMO_API_KEY:sk-cqtgohrrudni9hrhlqun888fx9m8k2ulpqy5itgp6pahymph}
         model: ${PROVIDER_MIMO_MODEL:mimo-v2.5}
         supports-embedding: false
+      # 千问向量模型（RAG 知识库向量化）
+      qwen-embedding:
+        base-url: ${QWEN_EMBEDDING_BASE_URL:https://ws-8xcxdf5zv9lfr92q.cn-beijing.maas.aliyuncs.com/compatible-mode/v1}
+        api-key: ${QWEN_EMBEDDING_API_KEY:}
+        model: text-embedding-v3
+        embedding-model: text-embedding-v3
+        embedding-dimensions: 1024
+        supports-embedding: true
     advisors:
       enabled: ${APP_AI_ADVISORS_ENABLED:true}
       tool-call-enabled: ${APP_AI_ADVISORS_TOOL_CALL_ENABLED:true}
@@ -180,6 +188,13 @@ app:
         topk-long: ${APP_AI_RAG_TOPK_LONG:8}
         min-score-short: ${APP_AI_RAG_MIN_SCORE_SHORT:0.18}
         min-score-default: ${APP_AI_RAG_MIN_SCORE_DEFAULT:0.28}
+      rerank:
+        enabled: ${APP_AI_RAG_RERANK_ENABLED:true}
+        provider: qwen
+        base-url: ${QWEN_RERANK_BASE_URL:https://ws-8xcxdf5zv9lfr92q.cn-beijing.maas.aliyuncs.com/compatible-mode/v1}
+        api-key: ${QWEN_RERANK_API_KEY:}
+        model: ${QWEN_RERANK_MODEL:qwen3-rerank}
+        top-n: ${APP_AI_RAG_RERANK_TOP_N:5}
 
   # RustFS (S3兼容) 存储配置
   storage:
