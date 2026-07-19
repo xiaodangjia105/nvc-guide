@@ -2,6 +2,7 @@ package nvc.guide.modules.nvcpractice.service;
 
 import nvc.guide.common.exception.BusinessException;
 import nvc.guide.modules.nvcpractice.dto.AgentDecision;
+import nvc.guide.modules.nvcpractice.dto.NvcChatRequest;
 import java.util.Map;
 import nvc.guide.modules.nvcpractice.dto.PracticeContext;
 import nvc.guide.modules.nvcpractice.model.NvcAgentConfigEntity;
@@ -253,7 +254,7 @@ class NvcAgentOrchestratorTest {
               NvcPracticeMode.FREE_DIALOG, null))
           .roundCount(1).build();
 
-      when(agentChatService.chat(config, context, "你好", Map.of()))
+      when(agentChatService.chat(any(NvcChatRequest.class)))
           .thenReturn("你好！我是引导官。");
 
       AgentDecision decision = new AgentDecision(NvcAgentScene.DIALOGUE_GUIDE, "test", null);
@@ -287,7 +288,7 @@ class NvcAgentOrchestratorTest {
               NvcPracticeMode.FREE_DIALOG, null))
           .roundCount(1).build();
 
-      when(agentChatService.chat(fallbackConfig, context, "hello", Map.of()))
+      when(agentChatService.chat(any(NvcChatRequest.class)))
           .thenReturn("fallback response");
 
       AgentDecision decision = new AgentDecision(NvcAgentScene.DIFFICULT_PARTNER, "test", "DIFFICULT_UPGRADE");

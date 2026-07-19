@@ -3,7 +3,6 @@ package nvc.guide.modules.nvcpractice.tool;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import nvc.guide.modules.nvcprofile.service.NvcProfileService;
-import org.springframework.ai.util.json.JsonParser;
 import org.springframework.ai.util.json.schema.JsonSchemaGenerator;
 import org.springframework.stereotype.Component;
 
@@ -32,10 +31,6 @@ public class ProfileQueryTool implements NvcTool {
         try {
             Long userId = context.getUserId();
             if (userId == null) {
-                ProfileQueryInput params = JsonParser.fromJson(input, ProfileQueryInput.class);
-                userId = params.userId();
-            }
-            if (userId == null) {
                 return NvcToolResult.failure("缺少用户ID");
             }
 
@@ -48,5 +43,6 @@ public class ProfileQueryTool implements NvcTool {
         }
     }
 
-    record ProfileQueryInput(Long userId) {}
+    /** No user-supplied parameters — userId comes from secure context */
+    record ProfileQueryInput() {}
 }
