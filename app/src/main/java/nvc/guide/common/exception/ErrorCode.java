@@ -42,6 +42,11 @@ public enum ErrorCode {
     KNOWLEDGE_BASE_DELETE_FAILED(6005, "知识库删除失败"),
     KNOWLEDGE_BASE_VECTORIZATION_FAILED(6006, "知识库向量化失败"),
 
+    // ========== Wiki 模块错误 68xx ==========
+    WIKI_NOT_FOUND(6801, "Wiki 条目不存在"),
+    WIKI_GENERATION_FAILED(6802, "Wiki 自动生成失败"),
+    WIKI_ACCESS_DENIED(6803, "无权访问该 Wiki 条目"),
+
     // ========== AI服务错误 7xxx ==========
     AI_SERVICE_UNAVAILABLE(7001, "AI服务暂时不可用，请稍后重试"),
     AI_SERVICE_TIMEOUT(7002, "AI服务响应超时"),
