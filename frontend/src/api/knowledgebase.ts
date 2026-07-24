@@ -1,5 +1,4 @@
 import {getErrorMessage, getAuthHeaders, request} from './request';
-import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.PROD ? '' : 'http://localhost:8080';
 
@@ -83,7 +82,7 @@ export const knowledgeBaseApi = {
      * 下载知识库文件
      */
     async downloadKnowledgeBase(id: number): Promise<Blob> {
-        const response = await axios.get(`${API_BASE_URL}/api/knowledgebase/${id}/download`, {
+        const response = await request.getInstance().get(`/api/knowledgebase/${id}/download`, {
             responseType: 'blob',
         });
         return response.data;
