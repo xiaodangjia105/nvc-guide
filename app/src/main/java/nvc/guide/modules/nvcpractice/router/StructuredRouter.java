@@ -32,6 +32,18 @@ public class StructuredRouter implements ModeRouter {
         NvcPracticeStep currentStep = context.getSession().getCurrentStep();
         String coveredElements = buildCoveredElements(context.getLastEvaluation());
 
+        // 四步全部完成 → 触发最终评估
+        if (currentStep == NvcPracticeStep.COMPLETED) {
+            return new AgentDecision(
+                NvcAgentScene.NVC_EXPRESSION_EVALUATOR,
+                "结构化四步模式：四步完成，触发最终评估",
+                null,
+                Map.of("mode", "structured", "trigger", "final_evaluation",
+                       "covered_elements", coveredElements),
+                toolSceneMapping.getDefaultTools(NvcAgentScene.NVC_EXPRESSION_EVALUATOR)
+            );
+        }
+
         // 根据当前步骤选择对应的教练 Agent
         NvcAgentScene coachScene = STEP_COACH_MAP.getOrDefault(
             currentStep, NvcAgentScene.DIALOGUE_GUIDE);

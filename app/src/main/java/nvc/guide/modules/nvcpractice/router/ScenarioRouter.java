@@ -37,16 +37,18 @@ public class ScenarioRouter implements ModeRouter {
             );
         }
 
-        // 每 5 轮检查评估分数，低分时触发评估教练
+        // 每 5 轮检查评估分数，无评估记录或低分时触发评估教练
         int roundCount = context.getRoundCount();
         if (roundCount > 0 && roundCount % EVALUATION_CHECK_INTERVAL == 0) {
             NvcEvaluationEntity lastEval = context.getLastEvaluation();
-            if (lastEval != null && isLowScore(lastEval)) {
+            if (lastEval == null || isLowScore(lastEval)) {
                 return new AgentDecision(
                     NvcAgentScene.NVC_EXPRESSION_EVALUATOR,
-                    "场景驱动模式：第 " + roundCount + " 轮，检测到低分，触发 NVC 表达评估",
+                    "场景驱动模式：第 " + roundCount + " 轮，"
+                        + (lastEval == null ? "首次评估" : "检测到低分"),
                     null,
-                    Map.of("mode", "scenario", "trigger", "low_score_evaluation"),
+                    Map.of("mode", "scenario", "trigger",
+                        lastEval == null ? "first_evaluation" : "low_score_evaluation"),
                     toolSceneMapping.getDefaultTools(NvcAgentScene.NVC_EXPRESSION_EVALUATOR)
                 );
             }
