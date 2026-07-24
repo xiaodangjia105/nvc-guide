@@ -3,6 +3,8 @@ package nvc.guide.modules.nvcvoice.service;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -59,6 +61,28 @@ public class NvcVoiceService {
   private static final String SESSION_CACHE_KEY_PREFIX = "nvc:voice:session:";
   private static final int CACHE_TTL_HOURS = 1;
 
+  /** 合法状态转换表 */
+  private static final Map<NvcVoiceSessionStatus, Set<NvcVoiceSessionStatus>> VALID_TRANSITIONS = Map.of(
+      NvcVoiceSessionStatus.IN_PROGRESS, Set.of(NvcVoiceSessionStatus.PAUSED, NvcVoiceSessionStatus.COMPLETED),
+      NvcVoiceSessionStatus.PAUSED,      Set.of(NvcVoiceSessionStatus.IN_PROGRESS, NvcVoiceSessionStatus.COMPLETED),
+      NvcVoiceSessionStatus.COMPLETED,   Set.of()  // 终态，不可转换
+  );
+
+  /**
+   * 校验状态转换是否合法
+   *
+   * @param current 当前状态
+   * @param target  目标状态
+   * @throws BusinessException 如果转换不合法
+   */
+  private void validateTransition(NvcVoiceSessionStatus current, NvcVoiceSessionStatus target) {
+    Set<NvcVoiceSessionStatus> allowed = VALID_TRANSITIONS.getOrDefault(current, Set.of());
+    if (!allowed.contains(target)) {
+      throw new BusinessException(ErrorCode.INVALID_OPERATION,
+          "非法状态转换: " + current + " → " + target);
+    }
+  }
+
   // ==================== 会话生命周期 ====================
 
   /**
@@ -101,8 +125,10 @@ public class NvcVoiceService {
     }
 
     if (session.getStatus() == NvcVoiceSessionStatus.COMPLETED) {
-      return buildSessionResponse(session);
+      return buildSessionResponse(session);  // 幂等
     }
+
+    validateTransition(session.getStatus(), NvcVoiceSessionStatus.COMPLETED);
 
     session.setEndTime(LocalDateTime.now());
     session.setCurrentPhase(NvcVoiceSessionPhase.WRAP_UP);
@@ -146,9 +172,7 @@ public class NvcVoiceService {
       throw new BusinessException(ErrorCode.NOT_FOUND, "会话不存在: " + sessionId);
     }
 
-    if (session.getStatus() != NvcVoiceSessionStatus.IN_PROGRESS) {
-      return buildSessionResponse(session);
-    }
+    validateTransition(session.getStatus(), NvcVoiceSessionStatus.PAUSED);
 
     session.setStatus(NvcVoiceSessionStatus.PAUSED);
     session.setPausedAt(LocalDateTime.now());
@@ -169,9 +193,7 @@ public class NvcVoiceService {
       throw new BusinessException(ErrorCode.NOT_FOUND, "会话不存在: " + sessionId);
     }
 
-    if (session.getStatus() != NvcVoiceSessionStatus.PAUSED) {
-      return buildSessionResponse(session);
-    }
+    validateTransition(session.getStatus(), NvcVoiceSessionStatus.IN_PROGRESS);
 
     session.setStatus(NvcVoiceSessionStatus.IN_PROGRESS);
     session.setResumedAt(LocalDateTime.now());
