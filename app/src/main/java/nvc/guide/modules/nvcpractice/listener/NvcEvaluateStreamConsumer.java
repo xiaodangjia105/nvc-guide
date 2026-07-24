@@ -7,7 +7,10 @@ import nvc.guide.modules.nvcpractice.model.NvcPracticeType;
 import nvc.guide.modules.nvcpractice.repository.NvcPracticeMessageRepository;
 import nvc.guide.modules.nvcpractice.service.NvcEvaluationService;
 import nvc.guide.modules.nvcpractice.model.NvcEvaluationEntity;
+import nvc.guide.modules.nvcprofile.model.NvcUserProfileEntity;
+import nvc.guide.modules.nvcprofile.repository.NvcUserProfileRepository;
 import nvc.guide.modules.nvcprofile.service.NvcProfileService;
+import nvc.guide.modules.nvcwiki.listener.WikiStreamProducer;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.stream.StreamMessageId;
 import org.springframework.stereotype.Component;
@@ -26,15 +29,21 @@ public class NvcEvaluateStreamConsumer extends AbstractStreamConsumer<NvcEvaluat
     private final NvcEvaluationService evaluationService;
     private final NvcPracticeMessageRepository messageRepository;
     private final NvcProfileService profileService;
+    private final WikiStreamProducer wikiStreamProducer;
+    private final NvcUserProfileRepository profileRepository;
 
     public NvcEvaluateStreamConsumer(RedisService redisService,
                                       NvcEvaluationService evaluationService,
                                       NvcPracticeMessageRepository messageRepository,
-                                      NvcProfileService profileService) {
+                                      NvcProfileService profileService,
+                                      WikiStreamProducer wikiStreamProducer,
+                                      NvcUserProfileRepository profileRepository) {
         super(redisService);
         this.evaluationService = evaluationService;
         this.messageRepository = messageRepository;
         this.profileService = profileService;
+        this.wikiStreamProducer = wikiStreamProducer;
+        this.profileRepository = profileRepository;
     }
 
     @Override
@@ -106,6 +115,24 @@ public class NvcEvaluateStreamConsumer extends AbstractStreamConsumer<NvcEvaluat
             NvcPracticeType.TEXT
         );
         log.info("User profile ability score updated: userId={}", task.userId());
+
+        // 检查用户是否开启自动 Wiki 生成偏好
+        if (isAutoGenerateWikiEnabled(task.userId())) {
+            wikiStreamProducer.sendWikiGenerateTask(task.sessionId(), task.userId());
+            log.info("Wiki auto-generate task triggered: sessionId={}", task.sessionId());
+        }
+    }
+
+    /**
+     * 检查用户是否开启自动 Wiki 生成
+     */
+    private boolean isAutoGenerateWikiEnabled(Long userId) {
+        return profileRepository.findByUserId(userId)
+                .map(profile -> {
+                    Map<String, Object> prefs = profile.getPreferences();
+                    return prefs != null && Boolean.TRUE.equals(prefs.get("autoGenerateWiki"));
+                })
+                .orElse(false);
     }
 
     @Override

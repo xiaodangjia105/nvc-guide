@@ -116,5 +116,41 @@ public interface KnowledgeBaseRepository extends JpaRepository<KnowledgeBaseEnti
      * 按类型列表查找知识库
      */
     List<KnowledgeBaseEntity> findByTypeInOrderByUploadedAtDesc(List<KnowledgeBaseType> types);
+
+    // ==================== 用户 Wiki 查询 ====================
+
+    /**
+     * 按类型 + 用户 ID 查找（PERSONAL_WIKI 专用）
+     */
+    List<KnowledgeBaseEntity> findByTypeAndUserIdOrderByUploadedAtDesc(
+            KnowledgeBaseType type, Long userId);
+
+    /**
+     * 按类型 + 用户 ID + 关键词搜索
+     */
+    @Query("SELECT k FROM KnowledgeBaseEntity k WHERE k.type = :type AND k.userId = :userId " +
+           "AND (LOWER(k.name) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "OR LOWER(k.category) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+    List<KnowledgeBaseEntity> searchByTypeAndUserIdAndKeyword(
+            @Param("type") KnowledgeBaseType type,
+            @Param("userId") Long userId,
+            @Param("keyword") String keyword);
+
+    /**
+     * 统计用户 Wiki 数量
+     */
+    long countByTypeAndUserId(KnowledgeBaseType type, Long userId);
+
+    /**
+     * 按类型 + 用户 ID 分页查询
+     */
+    org.springframework.data.domain.Page<KnowledgeBaseEntity> findByTypeAndUserIdOrderByUploadedAtDesc(
+            KnowledgeBaseType type, Long userId, org.springframework.data.domain.Pageable pageable);
+
+    /**
+     * 按类型 + 用户 ID + 分类筛选分页查询
+     */
+    org.springframework.data.domain.Page<KnowledgeBaseEntity> findByTypeAndUserIdAndCategoryOrderByUploadedAtDesc(
+            KnowledgeBaseType type, Long userId, String category, org.springframework.data.domain.Pageable pageable);
 }
 

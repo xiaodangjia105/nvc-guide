@@ -11,6 +11,9 @@ export const ROUTES = {
   nvcScenarios: '/nvc/scenarios',
   nvcAgents: '/nvc/agents',
 
+  // Wiki
+  nvcWiki: '/nvc/wiki',
+
   // 知识库
   knowledgebase: '/knowledgebase',
   knowledgebaseUpload: '/knowledgebase/upload',

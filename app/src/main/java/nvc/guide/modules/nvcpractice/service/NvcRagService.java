@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -56,6 +57,64 @@ public class NvcRagService {
     List<Document> docs = vectorService.similaritySearch(query, kbIds, topK, DEFAULT_MIN_SCORE);
 
     // 3. 转换为 RagResult
+    return docs.stream()
+        .map(doc -> new RagResult(
+            doc.getText(),
+            doc.getMetadata(),
+            extractScore(doc)
+        ))
+        .toList();
+  }
+
+  /**
+   * 带用户隔离的 RAG 检索
+   * 系统知识库 + 用户个人 Wiki 合并检索
+   *
+   * @param query          检索查询文本
+   * @param knowledgeTypes 检索的知识库类型
+   * @param topK           返回结果数量
+   * @param userId         用户 ID（null 时不检索个人 Wiki）
+   * @return 按相似度降序排列的检索结果
+   */
+  public List<RagResult> retrieve(String query, List<KnowledgeBaseType> knowledgeTypes,
+                                   int topK, Long userId) {
+    if (query == null || query.isBlank() || knowledgeTypes == null || knowledgeTypes.isEmpty()) {
+      return List.of();
+    }
+
+    List<Long> kbIds = new ArrayList<>();
+
+    // 1. 用户个人 Wiki（如果指定了 userId 且类型包含 PERSONAL_WIKI）
+    if (userId != null && knowledgeTypes.contains(KnowledgeBaseType.PERSONAL_WIKI)) {
+      List<Long> personalIds = knowledgeBaseRepository
+          .findByTypeAndUserIdOrderByUploadedAtDesc(KnowledgeBaseType.PERSONAL_WIKI, userId)
+          .stream()
+          .map(KnowledgeBaseEntity::getId)
+          .toList();
+      kbIds.addAll(personalIds);
+    }
+
+    // 2. 系统知识库（排除 PERSONAL_WIKI）
+    List<KnowledgeBaseType> systemTypes = knowledgeTypes.stream()
+        .filter(t -> t != KnowledgeBaseType.PERSONAL_WIKI)
+        .toList();
+    if (!systemTypes.isEmpty()) {
+      List<Long> systemIds = knowledgeBaseRepository.findByTypeInOrderByUploadedAtDesc(systemTypes)
+          .stream()
+          .map(KnowledgeBaseEntity::getId)
+          .toList();
+      kbIds.addAll(systemIds);
+    }
+
+    if (kbIds.isEmpty()) {
+      log.debug("No knowledge bases found for types: {}, userId: {}", knowledgeTypes, userId);
+      return List.of();
+    }
+
+    // 3. 向量检索
+    List<Document> docs = vectorService.similaritySearch(query, kbIds, topK, DEFAULT_MIN_SCORE);
+
+    // 4. 转换为 RagResult
     return docs.stream()
         .map(doc -> new RagResult(
             doc.getText(),

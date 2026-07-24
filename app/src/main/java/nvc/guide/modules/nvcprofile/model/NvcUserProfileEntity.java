@@ -59,6 +59,11 @@ public class NvcUserProfileEntity {
     @Column(name = "last_practice_at")
     private LocalDateTime lastPracticeAt;
 
+    @Column(name = "preferences", columnDefinition = "JSONB")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Builder.Default
+    private java.util.Map<String, Object> preferences = new java.util.HashMap<>();
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 

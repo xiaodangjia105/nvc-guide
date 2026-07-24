@@ -10,7 +10,8 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "knowledge_bases", indexes = {
     @Index(name = "idx_kb_hash", columnList = "fileHash", unique = true),
-    @Index(name = "idx_kb_category", columnList = "category")
+    @Index(name = "idx_kb_category", columnList = "category"),
+    @Index(name = "idx_kb_type_user", columnList = "type, userId")
 })
 public class KnowledgeBaseEntity {
 
@@ -34,6 +35,10 @@ public class KnowledgeBaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(length = 30)
     private KnowledgeBaseType type;
+
+    // 用户 ID（null = 系统知识库，非 null = 用户个人 Wiki）
+    @Column(name = "user_id")
+    private Long userId;
 
     // 原始文件名
     @Column(nullable = false)
@@ -230,6 +235,14 @@ public class KnowledgeBaseEntity {
 
     public void setType(KnowledgeBaseType type) {
         this.type = type;
+    }
+
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
     }
 }
 
