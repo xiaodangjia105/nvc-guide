@@ -92,40 +92,9 @@ app:
   cors:
     allowed-origins: http://localhost:5173,http://localhost:5174,http://localhost:80
 
-  voice-interview:
-    llm-provider: dashscope
-
-    phase:
-      intro:
-        min-duration: 3
-        suggested-duration: 5
-        max-duration: 8
-        min-questions: 2
-        max-questions: 5
-      tech:
-        min-duration: 8
-        suggested-duration: 10
-        max-duration: 15
-        min-questions: 3
-        max-questions: 8
-      project:
-        min-duration: 8
-        suggested-duration: 10
-        max-duration: 15
-        min-questions: 2
-        max-questions: 5
-      hr:
-        min-duration: 3
-        suggested-duration: 5
-        max-duration: 8
-        min-questions: 2
-        max-questions: 5
-
-    tts:
-      default-voice: siyue
-
-    qwen:
-      asr:
+  nvc:
+    voice:
+      qwen-asr:
         url: wss://dashscope.aliyuncs.com/api-ws/v1/realtime
         model: qwen3-asr-flash-realtime
         api-key: test-api-key
@@ -136,29 +105,14 @@ app:
         turn-detection-type: server_vad
         turn-detection-threshold: 0.0
         turn-detection-silence-duration-ms: 1000
-
-      tts:
-        url: wss://dashscope.aliyuncs.com/api-ws/v1/realtime
+      qwen-tts:
         model: qwen3-tts-flash-realtime
         api-key: test-api-key
         voice: Cherry
         format: pcm
-        sample-rate: 16000
-        mode: server_commit
+        sample-rate: 24000
+        mode: commit
         language-type: Chinese
         speech-rate: 1.0
         volume: 60
 
-    user-utterance-debounce-ms: 1600
-
-    rate-limit:
-      max-per-session: 10
-      max-per-ip: 3
-      max-concurrent: 50
-
-    audio:
-      codec: opus
-      sample-rate: 16000
-      bit-rate: 24000
-      channels: 1
-      chunk-duration: 2000

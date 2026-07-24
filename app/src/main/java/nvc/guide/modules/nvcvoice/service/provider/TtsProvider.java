@@ -4,7 +4,7 @@ package nvc.guide.modules.nvcvoice.service.provider;
  * TTS（语音合成）Provider 接口
  *
  * 抽象语音合成服务，允许不同实现（Qwen、讯飞、Azure 等）。
- * 当前实现：{@link QwenTtsProvider}
+ * 当前实现：{@link QwenTtsService}
  */
 public interface TtsProvider {
 

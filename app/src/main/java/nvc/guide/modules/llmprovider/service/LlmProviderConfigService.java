@@ -19,9 +19,9 @@ import nvc.guide.modules.llmprovider.model.LlmGlobalSettingEntity;
 import nvc.guide.modules.llmprovider.model.LlmProviderEntity;
 import nvc.guide.modules.llmprovider.repository.LlmGlobalSettingRepository;
 import nvc.guide.modules.llmprovider.repository.LlmProviderRepository;
-import nvc.guide.modules.voiceinterview.config.VoiceInterviewProperties;
-import nvc.guide.modules.voiceinterview.service.QwenAsrService;
-import nvc.guide.modules.voiceinterview.service.QwenTtsService;
+import nvc.guide.modules.nvcvoice.config.NvcVoiceProperties;
+import nvc.guide.modules.nvcvoice.service.provider.QwenAsrService;
+import nvc.guide.modules.nvcvoice.service.provider.QwenTtsService;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -61,7 +61,7 @@ public class LlmProviderConfigService {
   private final String yamlPath;
   private final String envPath;
   private final ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
-  private final VoiceInterviewProperties voiceProperties;
+  private final NvcVoiceProperties voiceProperties;
   private final QwenAsrService asrService;
   private final QwenTtsService ttsService;
 
@@ -80,7 +80,7 @@ public class LlmProviderConfigService {
       LlmProviderRepository providerRepository,
       LlmGlobalSettingRepository globalSettingRepository,
       ApiKeyEncryptionService encryptionService,
-      VoiceInterviewProperties voiceProperties,
+      NvcVoiceProperties voiceProperties,
       QwenAsrService asrService,
       QwenTtsService ttsService) {
     this.properties = properties;
@@ -98,7 +98,7 @@ public class LlmProviderConfigService {
   public LlmProviderConfigService(
       LlmProviderProperties properties,
       LlmProviderRegistry registry,
-      VoiceInterviewProperties voiceProperties,
+      NvcVoiceProperties voiceProperties,
       QwenAsrService asrService,
       QwenTtsService ttsService) {
     this(properties, registry, null, null, null, voiceProperties, asrService, ttsService);
@@ -232,7 +232,7 @@ public class LlmProviderConfigService {
   public AsrConfigDTO getAsrConfig() {
     rwLock.readLock().lock();
     try {
-      VoiceInterviewProperties.AsrConfig asr = voiceProperties.getQwen().getAsr();
+      NvcVoiceProperties.QwenAsrConfig asr = voiceProperties.getQwenAsr();
       return AsrConfigDTO.builder()
           .url(asr.getUrl())
           .model(asr.getModel())
@@ -253,7 +253,7 @@ public class LlmProviderConfigService {
   public TtsConfigDTO getTtsConfig() {
     rwLock.readLock().lock();
     try {
-      VoiceInterviewProperties.QwenTtsConfig tts = voiceProperties.getQwen().getTts();
+      NvcVoiceProperties.QwenTtsConfig tts = voiceProperties.getQwenTts();
       return TtsConfigDTO.builder()
           .model(tts.getModel())
           .maskedApiKey(maskApiKey(tts.getApiKey()))
@@ -285,7 +285,7 @@ public class LlmProviderConfigService {
   public ProviderTestResult testAsrConfig() {
     rwLock.readLock().lock();
     try {
-      VoiceInterviewProperties.AsrConfig asr = voiceProperties.getQwen().getAsr();
+      NvcVoiceProperties.QwenAsrConfig asr = voiceProperties.getQwenAsr();
       try {
         java.net.URI wsUri = java.net.URI.create(asr.getUrl());
         String host = wsUri.getHost();
@@ -491,8 +491,8 @@ public class LlmProviderConfigService {
   public void updateAsrConfig(AsrConfigRequest request) {
     rwLock.writeLock().lock();
     try {
-      VoiceInterviewProperties.AsrConfig asr = voiceProperties.getQwen().getAsr();
-      VoiceInterviewProperties.QwenTtsConfig tts = voiceProperties.getQwen().getTts();
+      NvcVoiceProperties.QwenAsrConfig asr = voiceProperties.getQwenAsr();
+      NvcVoiceProperties.QwenTtsConfig tts = voiceProperties.getQwenTts();
       if (request.url() != null) asr.setUrl(request.url());
       if (request.model() != null) asr.setModel(request.model());
       if (request.language() != null) asr.setLanguage(request.language());
@@ -522,8 +522,8 @@ public class LlmProviderConfigService {
   public void updateTtsConfig(TtsConfigRequest request) {
     rwLock.writeLock().lock();
     try {
-      VoiceInterviewProperties.AsrConfig asr = voiceProperties.getQwen().getAsr();
-      VoiceInterviewProperties.QwenTtsConfig tts = voiceProperties.getQwen().getTts();
+      NvcVoiceProperties.QwenAsrConfig asr = voiceProperties.getQwenAsr();
+      NvcVoiceProperties.QwenTtsConfig tts = voiceProperties.getQwenTts();
       if (request.model() != null) tts.setModel(request.model());
       if (request.voice() != null) tts.setVoice(request.voice());
       if (request.format() != null) tts.setFormat(request.format());
@@ -926,7 +926,7 @@ public class LlmProviderConfigService {
     });
   }
 
-  private void writeAsrConfigToYaml(VoiceInterviewProperties.AsrConfig asr) {
+  private void writeAsrConfigToYaml(NvcVoiceProperties.QwenAsrConfig asr) {
     mutateYamlText(ErrorCode.VOICE_CONFIG_WRITE_FAILED, "写入 ASR 配置失败", editor -> {
       LinkedHashMap<String, Object> values = new LinkedHashMap<>();
       values.put("url", asr.getUrl());
@@ -939,11 +939,11 @@ public class LlmProviderConfigService {
       values.put("turn-detection-type", asr.getTurnDetectionType());
       values.put("turn-detection-threshold", asr.getTurnDetectionThreshold());
       values.put("turn-detection-silence-duration-ms", asr.getTurnDetectionSilenceDurationMs());
-      editor.setBlock(new String[]{"app", "voice-interview", "qwen"}, "asr", values);
+      editor.setBlock(new String[]{"app", "nvc", "voice"}, "qwen-asr", values);
     });
   }
 
-  private void writeTtsConfigToYaml(VoiceInterviewProperties.QwenTtsConfig tts) {
+  private void writeTtsConfigToYaml(NvcVoiceProperties.QwenTtsConfig tts) {
     mutateYamlText(ErrorCode.VOICE_CONFIG_WRITE_FAILED, "写入 TTS 配置失败", editor -> {
       LinkedHashMap<String, Object> values = new LinkedHashMap<>();
       values.put("model", tts.getModel());
@@ -955,7 +955,7 @@ public class LlmProviderConfigService {
       values.put("language-type", tts.getLanguageType());
       values.put("speech-rate", tts.getSpeechRate());
       values.put("volume", tts.getVolume());
-      editor.setBlock(new String[]{"app", "voice-interview", "qwen"}, "tts", values);
+      editor.setBlock(new String[]{"app", "nvc", "voice"}, "qwen-tts", values);
     });
   }
 

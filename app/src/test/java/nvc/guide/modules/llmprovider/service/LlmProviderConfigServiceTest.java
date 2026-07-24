@@ -7,9 +7,9 @@ import nvc.guide.common.exception.ErrorCode;
 import nvc.guide.modules.llmprovider.dto.CreateProviderRequest;
 import nvc.guide.modules.llmprovider.dto.DefaultProviderDTO;
 import nvc.guide.modules.llmprovider.dto.UpdateProviderRequest;
-import nvc.guide.modules.voiceinterview.config.VoiceInterviewProperties;
-import nvc.guide.modules.voiceinterview.service.QwenAsrService;
-import nvc.guide.modules.voiceinterview.service.QwenTtsService;
+import nvc.guide.modules.nvcvoice.config.NvcVoiceProperties;
+import nvc.guide.modules.nvcvoice.service.provider.QwenAsrService;
+import nvc.guide.modules.nvcvoice.service.provider.QwenTtsService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -46,7 +46,7 @@ class LlmProviderConfigServiceTest {
 
     @Mock private LlmProviderProperties properties;
     @Mock private LlmProviderRegistry registry;
-    @Mock private VoiceInterviewProperties voiceProperties;
+    @Mock private NvcVoiceProperties voiceProperties;
     @Mock private QwenAsrService asrService;
     @Mock private QwenTtsService ttsService;
 
@@ -385,9 +385,9 @@ class LlmProviderConfigServiceTest {
                 app:
                   ai:
                     default-provider: dashscope
-                  voice-interview:
-                    qwen:
-                      asr:
+                  nvc:
+                    voice:
+                      qwen-asr:
                         model: qwen3-asr-flash-realtime
                 """);
 

@@ -4,7 +4,7 @@ package nvc.guide.modules.nvcvoice.service.provider;
  * ASR（语音识别）Provider 接口
  *
  * 抽象语音识别服务，允许不同实现（Qwen、讯飞、Azure 等）。
- * 当前实现：{@link QwenAsrProvider}
+ * 当前实现：{@link QwenAsrService}
  */
 public interface AsrProvider {
 
