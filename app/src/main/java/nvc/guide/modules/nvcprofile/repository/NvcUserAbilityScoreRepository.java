@@ -10,4 +10,6 @@ public interface NvcUserAbilityScoreRepository extends JpaRepository<NvcUserAbil
     List<NvcUserAbilityScoreEntity> findByUserIdOrderByScoredAtDesc(Long userId);
 
     List<NvcUserAbilityScoreEntity> findTop30ByUserIdOrderByScoredAtDesc(Long userId);
+
+    long countByUserId(Long userId);
 }

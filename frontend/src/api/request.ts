@@ -74,6 +74,22 @@ instance.interceptors.response.use(
   }
 );
 
+/**
+ * 获取通用请求头（用于原生 fetch 等非 axios 场景）
+ * 与 axios 拦截器保持一致的 header 来源
+ */
+export function getAuthHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  // 如果有 token，添加 Authorization header
+  const token = localStorage.getItem('token');
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+}
+
 export const request = {
   get<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
     return instance.get(url, config).then(res => res.data);

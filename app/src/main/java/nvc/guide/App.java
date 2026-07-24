@@ -8,12 +8,14 @@ import org.springframework.ai.model.openai.autoconfigure.OpenAiImageAutoConfigur
 import org.springframework.ai.model.openai.autoconfigure.OpenAiModerationAutoConfiguration;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * NVC 非暴力沟通练习助手 - 主启动类
  * NVC Nonviolent Communication Practice Platform
  */
+@EnableAsync
 @EnableScheduling
 @SpringBootApplication(exclude = {
     OpenAiAudioSpeechAutoConfiguration.class,

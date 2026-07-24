@@ -23,12 +23,26 @@ import org.springframework.stereotype.Service;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 @Slf4j
 @RequiredArgsConstructor
 public class NvcPracticeSessionService {
+
+  /**
+   * 合法的状态转换表
+   * key: 当前状态 → value: 可转移到的目标状态集合
+   */
+  private static final Map<NvcSessionPhase, Set<NvcSessionPhase>> VALID_TRANSITIONS = Map.of(
+      NvcSessionPhase.CREATED, Set.of(NvcSessionPhase.IN_PROGRESS, NvcSessionPhase.COMPLETED),
+      NvcSessionPhase.IN_PROGRESS, Set.of(NvcSessionPhase.PAUSED, NvcSessionPhase.COMPLETED),
+      NvcSessionPhase.PAUSED, Set.of(NvcSessionPhase.IN_PROGRESS, NvcSessionPhase.COMPLETED),
+      NvcSessionPhase.COMPLETED, Set.of(NvcSessionPhase.EVALUATED),
+      NvcSessionPhase.EVALUATED, Set.of()  // 终态，不可转移
+  );
 
   private final NvcPracticeSessionRepository sessionRepository;
   private final NvcPracticeMessageRepository messageRepository;
@@ -115,11 +129,23 @@ public class NvcPracticeSessionService {
   }
 
   /**
-   * 更新会话阶段
+   * 更新会话阶段（含状态转换校验）
    */
   public NvcPracticeSessionEntity updatePhase(
       Long sessionId, NvcSessionPhase newPhase) {
     NvcPracticeSessionEntity session = getSession(sessionId);
+    NvcSessionPhase currentPhase = session.getCurrentPhase();
+
+    // 状态转换校验
+    Set<NvcSessionPhase> allowed = VALID_TRANSITIONS.getOrDefault(currentPhase, Set.of());
+    if (!allowed.contains(newPhase)) {
+      log.warn("Invalid phase transition attempted: sessionId={}, {} -> {}",
+          sessionId, currentPhase, newPhase);
+      throw new BusinessException(
+          ErrorCode.INVALID_OPERATION,
+          "不允许从 " + currentPhase + " 转换到 " + newPhase);
+    }
+
     session.setCurrentPhase(newPhase);
 
     if (newPhase == NvcSessionPhase.IN_PROGRESS
@@ -160,9 +186,17 @@ public class NvcPracticeSessionService {
   }
 
   /**
-   * 结束会话
+   * 结束会话（含重复调用校验）
    */
   public NvcPracticeSessionEntity completeSession(Long sessionId) {
+    NvcPracticeSessionEntity session = getSession(sessionId);
+    // 已完成或已评估则直接返回，防止重复调用
+    if (session.getCurrentPhase() == NvcSessionPhase.COMPLETED
+        || session.getCurrentPhase() == NvcSessionPhase.EVALUATED) {
+      log.info("Session already completed/evaluated, skipping: sessionId={}, phase={}",
+          sessionId, session.getCurrentPhase());
+      return session;
+    }
     return updatePhase(sessionId, NvcSessionPhase.COMPLETED);
   }
 

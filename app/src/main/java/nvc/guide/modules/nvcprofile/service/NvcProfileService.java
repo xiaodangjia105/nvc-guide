@@ -134,7 +134,7 @@ public class NvcProfileService {
             .filter(s -> s.getEmpathy() != null)
             .mapToInt(NvcUserAbilityScoreEntity::getEmpathy)
             .average().orElse(0);
-        int overallAvg = (avgObservation + avgFeeling + avgNeed + avgRequest) / 4;
+        int overallAvg = (int) Math.round((avgObservation + avgFeeling + avgNeed + avgRequest) / 4.0);
 
         NvcUserProfileEntity profile = getOrCreateProfile(userId);
 
@@ -178,7 +178,7 @@ public class NvcProfileService {
 
         List<NvcUserAbilityScoreEntity> last10 = recent.subList(0, Math.min(10, recent.size()));
         double avgOverall = last10.stream()
-            .mapToInt(s -> (s.getObservation() + s.getFeeling() + s.getNeed() + s.getRequest()) / 4)
+            .mapToInt(s -> (int) Math.round((s.getObservation() + s.getFeeling() + s.getNeed() + s.getRequest()) / 4.0))
             .average()
             .orElse(0);
 
