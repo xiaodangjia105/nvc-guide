@@ -14,4 +14,6 @@ public interface NvcPracticeSessionRepository extends JpaRepository<NvcPracticeS
         Long userId, NvcSessionPhase phase);
 
     long countByUserId(Long userId);
+
+    long countByUserIdAndCurrentPhase(Long userId, NvcSessionPhase phase);
 }

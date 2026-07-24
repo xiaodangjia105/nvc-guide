@@ -27,13 +27,12 @@ public class NvcDashboardService {
         // 总练习次数
         long totalSessions = sessionRepository.countByUserId(userId);
 
-        // 已完成的练习次数
+        // 已完成的练习次数（使用 countBy 避免全量加载）
         long completedSessions = sessionRepository
-            .findByUserIdAndCurrentPhaseOrderByCreatedAtDesc(userId, NvcSessionPhase.COMPLETED)
-            .size();
+            .countByUserIdAndCurrentPhase(userId, NvcSessionPhase.COMPLETED);
 
-        // 能力评分记录数
-        long totalScores = abilityScoreRepository.findByUserIdOrderByScoredAtDesc(userId).size();
+        // 能力评分记录数（使用 countBy 避免全量加载）
+        long totalScores = abilityScoreRepository.countByUserId(userId);
 
         stats.put("totalSessions", totalSessions);
         stats.put("completedSessions", completedSessions);

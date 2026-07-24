@@ -4,6 +4,7 @@ import nvc.guide.modules.nvcpractice.dto.AgentDecision;
 import nvc.guide.modules.nvcpractice.dto.PracticeContext;
 import nvc.guide.modules.nvcpractice.model.NvcAgentScene;
 import nvc.guide.modules.nvcpractice.model.NvcEvaluationEntity;
+import nvc.guide.modules.nvcpractice.model.NvcPracticeStep;
 import nvc.guide.modules.nvcpractice.tool.NvcToolSceneMapping;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -16,16 +17,44 @@ public class StructuredRouter implements ModeRouter {
 
     private final NvcToolSceneMapping toolSceneMapping;
 
+    /**
+     * 步骤到教练 Agent 的映射
+     */
+    private static final Map<NvcPracticeStep, NvcAgentScene> STEP_COACH_MAP = Map.of(
+        NvcPracticeStep.OBSERVE, NvcAgentScene.STEP_OBSERVE_COACH,
+        NvcPracticeStep.FEELING, NvcAgentScene.STEP_FEELING_COACH,
+        NvcPracticeStep.NEED, NvcAgentScene.STEP_NEED_COACH,
+        NvcPracticeStep.REQUEST, NvcAgentScene.STEP_REQUEST_COACH
+    );
+
     @Override
     public AgentDecision route(PracticeContext context) {
+        NvcPracticeStep currentStep = context.getSession().getCurrentStep();
         String coveredElements = buildCoveredElements(context.getLastEvaluation());
 
+        // 四步全部完成 → 触发最终评估
+        if (currentStep == NvcPracticeStep.COMPLETED) {
+            return new AgentDecision(
+                NvcAgentScene.NVC_EXPRESSION_EVALUATOR,
+                "结构化四步模式：四步完成，触发最终评估",
+                null,
+                Map.of("mode", "structured", "trigger", "final_evaluation",
+                       "covered_elements", coveredElements),
+                toolSceneMapping.getDefaultTools(NvcAgentScene.NVC_EXPRESSION_EVALUATOR)
+            );
+        }
+
+        // 根据当前步骤选择对应的教练 Agent
+        NvcAgentScene coachScene = STEP_COACH_MAP.getOrDefault(
+            currentStep, NvcAgentScene.DIALOGUE_GUIDE);
+
         return new AgentDecision(
-            NvcAgentScene.DIALOGUE_GUIDE,
-            "结构化四步模式",
+            coachScene,
+            "结构化四步模式：" + (currentStep != null ? currentStep.name() : "默认"),
             null,
-            Map.of("mode", "structured", "covered_elements", coveredElements),
-            toolSceneMapping.getDefaultTools(NvcAgentScene.DIALOGUE_GUIDE)
+            Map.of("mode", "structured", "covered_elements", coveredElements,
+                   "current_step", currentStep != null ? currentStep.name() : ""),
+            toolSceneMapping.getDefaultTools(coachScene)
         );
     }
 

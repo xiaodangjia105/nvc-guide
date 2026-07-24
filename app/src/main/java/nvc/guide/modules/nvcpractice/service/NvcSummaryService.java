@@ -69,7 +69,7 @@ public class NvcSummaryService {
   /**
    * 异步更新摘要
    */
-  @Async
+  @Async("asyncExecutor")
   public void updateSummary(Long sessionId, String userMessage) {
     try {
       // 1. 获取对话历史（最近 10 条）

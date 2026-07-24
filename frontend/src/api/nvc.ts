@@ -1,4 +1,4 @@
-import { request } from './request';
+import { request, getAuthHeaders } from './request';
 import type {
   PracticeSession, CreatePracticeSessionRequest, DialogueResponse,
   PracticeMessage, NvcPracticeReport, UserProfile, UserProfileUpdateRequest,
@@ -39,7 +39,7 @@ export const practiceApi = {
       + `/api/nvc/practice/sessions/${sessionId}/messages/stream`,
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ content }),
       }
     ),

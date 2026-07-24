@@ -25,6 +25,7 @@ public enum ErrorCode {
     NVC_SCENARIO_NOT_FOUND(3004, "NVC 场景不存在"),
     NVC_PROFILE_NOT_FOUND(3005, "用户档案不存在"),
     NVC_AGENT_CONFIG_NOT_FOUND(3006, "Agent 配置不存在"),
+    INVALID_OPERATION(3007, "操作不允许"),
 
     // ========== 存储模块错误 4xxx ==========
     STORAGE_UPLOAD_FAILED(4001, "文件上传失败"),
