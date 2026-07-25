@@ -47,6 +47,13 @@ public enum ErrorCode {
     WIKI_GENERATION_FAILED(6802, "Wiki 自动生成失败"),
     WIKI_ACCESS_DENIED(6803, "无权访问该 Wiki 条目"),
 
+    // ========== 主 Agent 模块错误 69xx ==========
+    ASSISTANT_CONVERSATION_NOT_FOUND(6901, "对话会话不存在"),
+    ASSISTANT_CONVERSATION_ACCESS_DENIED(6902, "无权访问该对话会话"),
+    ASSISTANT_MESSAGE_NOT_FOUND(6903, "消息不存在"),
+    ASSISTANT_CHAT_FAILED(6904, "对话请求失败"),
+    ASSISTANT_TOOL_CALL_FAILED(6905, "工具调用失败"),
+
     // ========== AI服务错误 7xxx ==========
     AI_SERVICE_UNAVAILABLE(7001, "AI服务暂时不可用，请稍后重试"),
     AI_SERVICE_TIMEOUT(7002, "AI服务响应超时"),

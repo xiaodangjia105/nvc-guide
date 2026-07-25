@@ -21,6 +21,7 @@ const NvcDashboardPage = lazy(() => import('./pages/NvcDashboardPage'));
 const NvcScenarioLibraryPage = lazy(() => import('./pages/NvcScenarioLibraryPage'));
 const NvcAgentConfigPage = lazy(() => import('./pages/NvcAgentConfigPage'));
 const NvcWikiPage = lazy(() => import('./pages/NvcWikiPage'));
+const NvcAssistantPage = lazy(() => import('./pages/NvcAssistantPage'));
 
 // Loading component
 const Loading = () => (
@@ -49,6 +50,7 @@ function App() {
             <Route path="nvc/scenarios" element={<NvcScenarioLibraryPage />} />
             <Route path="nvc/agents" element={<NvcAgentConfigPage />} />
             <Route path="nvc/wiki" element={<NvcWikiPage />} />
+            <Route path="nvc/assistant" element={<NvcAssistantPage />} />
 
             {/* 知识库管理 */}
             <Route path="knowledgebase" element={<KnowledgeBaseManagePageWrapper />} />
