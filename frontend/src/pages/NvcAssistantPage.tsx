@@ -158,11 +158,14 @@ export default function NvcAssistantPage() {
             );
             break;
 
-          case 'tool_call':
-            // 开始一个新的工具调用
+          case 'tool_call': {
+            // 后端暂不支持此事件，预留处理
+            const toolData = typeof event.data === 'string'
+              ? JSON.parse(event.data) as Record<string, string>
+              : event.data as Record<string, string>;
             currentToolCall = {
-              toolName: (event.data.toolName as string) || 'unknown',
-              arguments: (event.data.arguments as string) || '{}',
+              toolName: toolData.toolName || 'unknown',
+              arguments: toolData.arguments || '{}',
               startTime: Date.now(),
             };
             setMessages((prev) =>
@@ -185,15 +188,20 @@ export default function NvcAssistantPage() {
               })
             );
             break;
+          }
 
           case 'tool_result': {
+            // 后端暂不支持此事件，预留处理
+            const resultData = typeof event.data === 'string'
+              ? JSON.parse(event.data) as Record<string, unknown>
+              : event.data as Record<string, unknown>;
             const duration = currentToolCall
               ? Date.now() - currentToolCall.startTime
-              : ((event.data.durationMs as number) || 0);
-            const resultStr = typeof event.data.result === 'string'
-              ? event.data.result
-              : JSON.stringify(event.data.result);
-            const success = event.data.success !== false;
+              : ((resultData.durationMs as number) || 0);
+            const resultStr = typeof resultData.result === 'string'
+              ? resultData.result
+              : JSON.stringify(resultData.result);
+            const success = resultData.success !== false;
 
             setMessages((prev) =>
               prev.map((m) => {
@@ -235,7 +243,8 @@ export default function NvcAssistantPage() {
           }
 
           case 'content': {
-            const token = (event.data.token as string) || (event.data.content as string) || '';
+            // 后端发送纯文本内容
+            const token = typeof event.data === 'string' ? event.data : String(event.data);
             streamContentRef.current += token;
             const content = streamContentRef.current;
             setMessages((prev) =>
@@ -248,7 +257,7 @@ export default function NvcAssistantPage() {
             break;
           }
 
-          case 'done':
+          case 'done': {
             setMessages((prev) =>
               prev.map((m) =>
                 m.id === aiMsgId
@@ -259,11 +268,22 @@ export default function NvcAssistantPage() {
             setIsStreaming(false);
             streamAbortRef.current = null;
 
+            // 解析 conversationId 并更新当前对话
+            try {
+              const doneData = typeof event.data === 'string'
+                ? JSON.parse(event.data)
+                : event.data;
+              if (doneData.conversationId && !activeConversationId) {
+                setActiveConversationId(doneData.conversationId as number);
+              }
+            } catch { /* ignore */ }
+
             // 刷新对话列表（可能创建了新对话）
             assistantApi.getConversations(userId)
               .then(setConversations)
               .catch(() => {});
             break;
+          }
 
           case 'error':
             setMessages((prev) =>

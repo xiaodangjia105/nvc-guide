@@ -34,10 +34,6 @@ interface NvcAssistantChatProps {
   onSend: (message: string) => void;
   onStopStream?: () => void;
   onRegenerate?: () => void;
-  /** 外部传入的 SSE 事件处理器，用于将流式事件转为消息更新 */
-  streamContent?: string;
-  streamToolCalls?: ToolCallRecord[];
-  streamThinking?: boolean;
 }
 
 export type { DisplayMessage, PracticePreviewData };

@@ -40,7 +40,7 @@ export interface AssistantMessageResponse {
 
 export interface StreamEvent {
   type: 'thinking' | 'tool_call' | 'tool_result' | 'content' | 'done' | 'error';
-  data: Record<string, unknown>;
+  data: string | Record<string, unknown>;
 }
 
 // ==================== API 方法 ====================
@@ -105,6 +105,8 @@ export function sendChatStream(
       const decoder = new TextDecoder();
       let buffer = '';
 
+      let currentEventType = '';
+
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -114,12 +116,24 @@ export function sendChatStream(
         buffer = lines.pop() || '';
 
         for (const line of lines) {
-          if (line.startsWith('data: ')) {
+          if (line.startsWith('event: ')) {
+            currentEventType = line.slice(7).trim();
+          } else if (line.startsWith('data: ')) {
             const raw = line.slice(6);
             if (raw === '[DONE]') continue;
             try {
-              const event = JSON.parse(raw) as StreamEvent;
-              onEvent(event);
+              // 后端格式: event: {type}\ndata: {text}
+              // 尝试 JSON 解析，如果不是 JSON 则作为纯文本
+              let parsedData: string | Record<string, unknown>;
+              try {
+                parsedData = JSON.parse(raw);
+              } catch {
+                parsedData = raw;
+              }
+              onEvent({
+                type: (currentEventType || 'content') as StreamEvent['type'],
+                data: parsedData,
+              });
             } catch {
               // ignore parse errors for malformed SSE lines
             }

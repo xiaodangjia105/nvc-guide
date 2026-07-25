@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * 主 Agent 消息管理服务
@@ -109,6 +110,18 @@ public class NvcAssistantMessageService {
     }
 
     /**
+     * 获取最后一条用户消息内容
+     */
+    @Transactional(readOnly = true)
+    public Optional<String> getLastUserMessageContent(Long conversationId) {
+        return messageRepository.findByConversationIdOrderBySequenceNumAsc(conversationId)
+            .stream()
+            .filter(m -> m.getRole() == NvcAssistantMessageRole.USER)
+            .reduce((a, b) -> b) // 获取最后一条
+            .map(NvcAssistantMessageEntity::getContent);
+    }
+
+    /**
      * 删除对话及其所有消息
      */
     @Transactional
@@ -145,23 +158,6 @@ public class NvcAssistantMessageService {
             .role(NvcAssistantMessageRole.ASSISTANT)
             .content(content)
             .toolCallsJson(toolCallsJson)
-            .sequenceNum(sequenceNum)
-            .build();
-    }
-
-    /**
-     * 构建工具结果消息实体
-     */
-    public NvcAssistantMessageEntity buildToolMessage(Long conversationId, Long userId,
-                                                       String content, String toolName,
-                                                       String toolCallId, int sequenceNum) {
-        return NvcAssistantMessageEntity.builder()
-            .conversationId(conversationId)
-            .userId(userId)
-            .role(NvcAssistantMessageRole.TOOL)
-            .content(content)
-            .toolName(toolName)
-            .toolCallId(toolCallId)
             .sequenceNum(sequenceNum)
             .build();
     }

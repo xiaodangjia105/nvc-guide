@@ -1,5 +1,7 @@
 package nvc.guide.modules.nvcassistant.dto;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 /**
@@ -12,5 +14,7 @@ public class AssistantRequest {
     private Long conversationId;
 
     /** 用户消息 */
+    @NotBlank(message = "消息内容不能为空")
+    @Size(max = 5000, message = "消息内容不能超过 5000 字")
     private String message;
 }
