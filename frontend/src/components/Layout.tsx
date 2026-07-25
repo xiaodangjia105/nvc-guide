@@ -2,7 +2,7 @@ import {Link, Outlet, useLocation} from 'react-router-dom';
 import {motion} from 'framer-motion';
 import {
   BarChart3, BookOpen, Bot, ClipboardList, Database,
-  FileText, MessageSquare, Moon, Settings, Sun, Target, User,
+  FileText, MessageSquare, Moon, Settings, Sun, Target, User, Sparkles,
 } from 'lucide-react';
 import {useTheme} from '../hooks/useTheme';
 
@@ -32,6 +32,7 @@ export default function Layout() {
       title: 'NVC 练习',
       items: [
         { id: 'nvc-hub', path: '/nvc', label: '练习中心', icon: Target, description: '三种练习模式' },
+        { id: 'nvc-assistant', path: '/nvc/assistant', label: 'AI 助手', icon: Sparkles, description: '智能对话练习' },
         { id: 'nvc-scenarios', path: '/nvc/scenarios', label: '场景库', icon: BookOpen, description: '浏览练习场景' },
         { id: 'nvc-history', path: '/nvc/history', label: '练习历史', icon: ClipboardList, description: '查看历史记录' },
         { id: 'nvc-dashboard', path: '/nvc/dashboard', label: '数据仪表盘', icon: BarChart3, description: '能力数据分析' },

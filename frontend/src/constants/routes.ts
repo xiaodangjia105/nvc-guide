@@ -14,6 +14,9 @@ export const ROUTES = {
   // Wiki
   nvcWiki: '/nvc/wiki',
 
+  // AI 助手
+  nvcAssistant: '/nvc/assistant',
+
   // 知识库
   knowledgebase: '/knowledgebase',
   knowledgebaseUpload: '/knowledgebase/upload',
