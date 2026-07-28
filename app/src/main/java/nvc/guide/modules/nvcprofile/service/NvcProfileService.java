@@ -50,6 +50,13 @@ public class NvcProfileService {
     }
 
     /**
+     * 保存用户档案（用于 preferences 等直接修改场景）
+     */
+    public NvcUserProfileEntity saveProfile(NvcUserProfileEntity profile) {
+        return profileRepository.save(profile);
+    }
+
+    /**
      * 更新用户档案
      */
     public NvcUserProfileEntity updateProfile(Long userId, UserProfileUpdateRequest request) {

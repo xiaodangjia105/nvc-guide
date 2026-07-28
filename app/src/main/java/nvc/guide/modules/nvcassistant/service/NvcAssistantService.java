@@ -121,11 +121,12 @@ public class NvcAssistantService {
 
     /**
      * 流式 SSE 对话
-     * 返回 Flux&lt;String&gt;，每个元素是一个 SSE 事件行
+     * 返回 {@link ChatStreamResult}，包含对话 ID、原始内容流和保存回调。
+     * Controller 负责 SSE 事件格式化。
      *
      * 注意：不在方法上加 @Transactional，而是在保存消息时使用独立事务
      */
-    public Flux<String> chatStream(Long userId, AssistantRequest request) {
+    public ChatStreamResult chatStreamRaw(Long userId, AssistantRequest request) {
         // 1. 获取或创建对话（在独立事务中保存用户消息）
         NvcAssistantConversationEntity conversation = getOrCreateConversation(userId, request.getConversationId());
         long convId = conversation.getId();
@@ -139,14 +140,10 @@ public class NvcAssistantService {
         // 3. 构建上下文
         List<Message> messages = buildContextMessages(convId, userId);
 
-        // 4. 流式调用
+        // 4. 流式调用——返回原始内容 chunk
         ChatClient client = llmProviderRegistry.getDefaultChatClient();
         AtomicReference<StringBuilder> contentAccumulator = new AtomicReference<>(new StringBuilder());
 
-        // 先发送 thinking 事件
-        Flux<String> thinking = Flux.just(formatSseEvent("thinking", "正在思考..."));
-
-        // 流式获取内容
         Flux<String> contentStream = client.prompt()
             .options(OpenAiChatOptions.builder()
                 .temperature(0.7)
@@ -159,28 +156,46 @@ public class NvcAssistantService {
             .stream()
             .content()
             .filter(s -> s != null && !s.isEmpty())
-            .doOnNext(chunk -> contentAccumulator.get().append(chunk))
-            .map(chunk -> formatSseEvent("content", chunk));
+            .doOnNext(chunk -> contentAccumulator.get().append(chunk));
 
-        // 完成事件 + 保存 AI 回复
-        Flux<String> doneEvent = Flux.just(formatSseEvent("done", "{\"conversationId\":" + convId + "}"))
-            .doOnComplete(() -> {
-                // 流式完成后保存 AI 回复
-                try {
-                    String fullContent = contentAccumulator.get().toString();
-                    if (!fullContent.isEmpty()) {
-                        int finalSeq = messageService.getMessageCount(convId);
-                        NvcAssistantMessageEntity assistantMsg = messageService.buildAssistantMessage(
-                            convId, userId, fullContent, null, finalSeq);
-                        messageService.saveMessage(assistantMsg);
-                        log.info("Saved streaming assistant reply: conversationId={}, length={}", convId, fullContent.length());
-                    }
-                } catch (Exception e) {
-                    log.error("Failed to save streaming assistant reply: conversationId={}", convId, e);
+        // 5. 保存回调：流结束后保存完整回复
+        Runnable saveCallback = () -> {
+            try {
+                String fullContent = contentAccumulator.get().toString();
+                if (!fullContent.isEmpty()) {
+                    int finalSeq = messageService.getMessageCount(convId);
+                    NvcAssistantMessageEntity assistantMsg = messageService.buildAssistantMessage(
+                        convId, userId, fullContent, null, finalSeq);
+                    messageService.saveMessage(assistantMsg);
+                    log.info("Saved streaming assistant reply: conversationId={}, length={}", convId, fullContent.length());
                 }
-            });
+            } catch (Exception e) {
+                log.error("Failed to save streaming assistant reply: conversationId={}", convId, e);
+            }
+        };
 
-        return Flux.concat(thinking, contentStream, doneEvent);
+        return new ChatStreamResult(convId, contentStream, saveCallback);
+    }
+
+    /**
+     * 流式对话结果封装
+     */
+    public record ChatStreamResult(long conversationId, Flux<String> contentStream, Runnable onComplete) {}
+
+    /**
+     * @deprecated 使用 {@link #chatStreamRaw(Long, AssistantRequest)}，由 Controller 负责 SSE 格式化
+     */
+    @Deprecated
+    public Flux<String> chatStream(Long userId, AssistantRequest request) {
+        ChatStreamResult result = chatStreamRaw(userId, request);
+
+        Flux<String> thinking = Flux.just(formatSseEvent("thinking", "正在思考..."));
+        Flux<String> content = result.contentStream()
+            .map(chunk -> formatSseEvent("content", chunk));
+        Flux<String> done = Flux.just(formatSseEvent("done", "{\"conversationId\":" + result.conversationId() + "}"))
+            .doOnComplete(result.onComplete());
+
+        return Flux.concat(thinking, content, done);
     }
 
     // ==================== 内部方法 ====================

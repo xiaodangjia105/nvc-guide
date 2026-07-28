@@ -8,9 +8,9 @@ import nvc.guide.modules.nvcwiki.dto.WikiCreateRequest;
 import nvc.guide.modules.nvcwiki.dto.WikiResponse;
 import nvc.guide.modules.nvcwiki.model.NvcWikiCategory;
 import nvc.guide.modules.nvcwiki.model.NvcWikiSourceType;
+import nvc.guide.common.ai.LlmProviderRegistry;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.converter.BeanOutputConverter;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StreamUtils;
@@ -30,15 +30,15 @@ public class NvcWikiAutoGenerateService {
 
     private final NvcWikiService wikiService;
     private final StructuredOutputInvoker structuredOutputInvoker;
-    private final ChatClient chatClient;
+    private final LlmProviderRegistry llmProviderRegistry;
 
     public NvcWikiAutoGenerateService(
             NvcWikiService wikiService,
             StructuredOutputInvoker structuredOutputInvoker,
-            @Qualifier("defaultChatClient") ChatClient chatClient) {
+            LlmProviderRegistry llmProviderRegistry) {
         this.wikiService = wikiService;
         this.structuredOutputInvoker = structuredOutputInvoker;
-        this.chatClient = chatClient;
+        this.llmProviderRegistry = llmProviderRegistry;
     }
 
     /**
@@ -65,6 +65,7 @@ public class NvcWikiAutoGenerateService {
             BeanOutputConverter<WikiGenerateResult> converter =
                     new BeanOutputConverter<>(WikiGenerateResult.class);
 
+            ChatClient chatClient = llmProviderRegistry.getDefaultChatClient();
             WikiGenerateResult result = structuredOutputInvoker.invoke(
                     chatClient,
                     systemPrompt,

@@ -116,10 +116,11 @@ export function sendChatStream(
         buffer = lines.pop() || '';
 
         for (const line of lines) {
-          if (line.startsWith('event: ')) {
-            currentEventType = line.slice(7).trim();
-          } else if (line.startsWith('data: ')) {
-            const raw = line.slice(6);
+          // Spring ServerSentEvent 输出 event:xxx (无空格)，兼容 event: xxx
+          if (line.startsWith('event:')) {
+            currentEventType = line.slice(6).trim();
+          } else if (line.startsWith('data:')) {
+            const raw = line.slice(5).trimStart();
             if (raw === '[DONE]') continue;
             try {
               // 后端格式: event: {type}\ndata: {text}
