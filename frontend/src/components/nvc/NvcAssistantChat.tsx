@@ -7,6 +7,15 @@ import NvcToolCallCard from './NvcToolCallCard';
 import NvcPracticePreviewCard from './NvcPracticePreviewCard';
 import type { ToolCallRecord } from '../../api/nvc-assistant';
 
+/**
+ * LLM 输出用 \n 换行，但 Markdown 规范中单个 \n 是软换行（渲染为空格）。
+ * 转成 \n\n 让 ReactMarkdown 正确渲染为段落/换行。
+ */
+function normalizeLlmNewlines(text: string): string {
+  // 已经是 \n\n 的不动，单个 \n 转成 \n\n
+  return text.replace(/(?<!\n)\n(?!\n)/g, '\n\n');
+}
+
 // ==================== 消息类型 ====================
 
 interface DisplayMessage {
@@ -185,7 +194,7 @@ export default function NvcAssistantChat({
                         ) : (
                           <div className="prose prose-sm dark:prose-invert max-w-none">
                             <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                              {msg.content}
+                              {normalizeLlmNewlines(msg.content)}
                             </ReactMarkdown>
                           </div>
                         )}
