@@ -13,6 +13,7 @@ import nvc.guide.modules.nvcassistant.model.NvcAssistantMessageEntity;
 import nvc.guide.modules.nvcassistant.service.NvcAssistantMessageService;
 import nvc.guide.modules.nvcassistant.service.NvcAssistantService;
 import org.springframework.http.MediaType;
+import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
@@ -43,12 +44,48 @@ public class NvcAssistantController {
 
     /**
      * 流式 SSE 对话
+     * 使用 ServerSentEvent 确保正确的 SSE 帧格式，避免浏览器/代理缓冲
      */
     @PostMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<String> chatStream(
+    public Flux<ServerSentEvent<String>> chatStream(
             @RequestParam Long userId,
             @Validated @RequestBody AssistantRequest request) {
-        return assistantService.chatStream(userId, request);
+
+        NvcAssistantService.ChatStreamResult result = assistantService.chatStreamRaw(userId, request);
+        long convId = result.conversationId();
+
+        // thinking 事件
+        Flux<ServerSentEvent<String>> thinking = Flux.just(
+            ServerSentEvent.<String>builder()
+                .event("thinking")
+                .data("正在思考...")
+                .build()
+        );
+
+        // 内容流——出错时发送 error 事件而不是抛异常
+        Flux<ServerSentEvent<String>> contentStream = result.contentStream()
+            .map(chunk -> ServerSentEvent.<String>builder()
+                .event("content")
+                .data(chunk)
+                .build()
+            )
+            .onErrorResume(e -> {
+                log.error("Stream error: conversationId={}", convId, e);
+                return Flux.just(ServerSentEvent.<String>builder()
+                    .event("error")
+                    .data("对话出错: " + e.getMessage())
+                    .build());
+            });
+
+        // done 事件 + 保存回调
+        Flux<ServerSentEvent<String>> done = Flux.just(
+            ServerSentEvent.<String>builder()
+                .event("done")
+                .data("{\"conversationId\":" + convId + "}")
+                .build()
+        ).doOnComplete(result.onComplete());
+
+        return Flux.concat(thinking, contentStream, done);
     }
 
     /**

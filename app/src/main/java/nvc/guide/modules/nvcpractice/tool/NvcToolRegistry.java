@@ -7,6 +7,8 @@ import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.function.FunctionToolCallback;
 import org.springframework.stereotype.Service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -59,15 +61,23 @@ public class NvcToolRegistry {
             .toList();
     }
 
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
     /**
      * NvcTool → Spring AI FunctionToolCallback 适配
+     *
+     * <p>注意：inputType 使用 Map.class 而非 String.class。
+     * LLM 可能发送 JSON Object（如 {"profile": {...}}），如果用 String.class，
+     * Jackson 会尝试将 Object 反序列化为 String 导致 MismatchedInputException。
+     * 使用 Map.class 后，再手动序列化为 JSON 字符串传给 NvcTool。
      */
     private ToolCallback toFunctionCallback(NvcTool tool) {
         return FunctionToolCallback.builder(tool.name(),
-                (String input, ToolContext aiContext) -> {
+                (Map<String, Object> input, ToolContext aiContext) -> {
                     try {
                         NvcToolContext nvcContext = extractNvcContext(aiContext);
-                        NvcToolResult result = tool.execute(input, nvcContext);
+                        String jsonInput = OBJECT_MAPPER.writeValueAsString(input);
+                        NvcToolResult result = tool.execute(jsonInput, nvcContext);
                         return result.success() ? result.data() : "Error: " + result.errorMessage();
                     } catch (Exception e) {
                         log.error("[NvcToolRegistry] Tool execution failed: tool={}", tool.name(), e);
@@ -76,7 +86,7 @@ public class NvcToolRegistry {
                 })
             .description(tool.description())
             .inputSchema(tool.inputSchema())
-            .inputType(String.class)
+            .inputType(Map.class)
             .build();
     }
 

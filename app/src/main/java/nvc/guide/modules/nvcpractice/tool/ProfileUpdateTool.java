@@ -1,12 +1,17 @@
 package nvc.guide.modules.nvcpractice.tool;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import nvc.guide.modules.nvcprofile.dto.UserProfileUpdateRequest;
+import nvc.guide.modules.nvcprofile.model.NvcCommunicationStyle;
+import nvc.guide.modules.nvcprofile.model.NvcUserProfileEntity;
 import nvc.guide.modules.nvcprofile.service.NvcProfileService;
 import org.springframework.ai.util.json.JsonParser;
 import org.springframework.ai.util.json.schema.JsonSchemaGenerator;
 import org.springframework.stereotype.Component;
+
+import java.util.Map;
 
 @Component
 @RequiredArgsConstructor
@@ -14,13 +19,17 @@ import org.springframework.stereotype.Component;
 public class ProfileUpdateTool implements NvcTool {
 
     private final NvcProfileService profileService;
+    private final ObjectMapper objectMapper;
 
     @Override
     public String name() { return "profile_update"; }
 
     @Override
     public String description() {
-        return "更新用户 NVC 档案字段，如沟通背景、性格特征、沟通风格等。";
+        return "更新用户 NVC 档案。支持字段：communicationBackground(沟通背景/个人信息), " +
+            "personalityTraits(性格特征), communicationStyle(沟通风格), " +
+            "emotionalTriggers(情绪触发点), commonScenarios(常见场景), " +
+            "relationshipTypes(关系类型), preferences(其他偏好JSON)。";
     }
 
     @Override
@@ -37,27 +46,51 @@ public class ProfileUpdateTool implements NvcTool {
                 return NvcToolResult.failure("缺少用户ID");
             }
 
-            UserProfileUpdateRequest request = switch (params.field()) {
+            String field = params.field();
+            String value = params.value();
+
+            // 构建请求——只设置目标字段，其余为 null
+            UserProfileUpdateRequest request = switch (field) {
                 case "communicationBackground" ->
-                    new UserProfileUpdateRequest(params.value(), null, null, null, null, null);
+                    new UserProfileUpdateRequest(value, null, null, null, null, null);
                 case "personalityTraits" ->
-                    new UserProfileUpdateRequest(null, params.value(), null, null, null, null);
+                    new UserProfileUpdateRequest(null, value, null, null, null, null);
                 case "communicationStyle" ->
-                    new UserProfileUpdateRequest(null, null,
-                        nvc.guide.modules.nvcprofile.model.NvcCommunicationStyle.valueOf(params.value()),
-                        null, null, null);
-                case "emotionTriggers" ->
-                    new UserProfileUpdateRequest(null, null, null, params.value(), null, null);
+                    new UserProfileUpdateRequest(null, null, NvcCommunicationStyle.valueOf(value), null, null, null);
+                case "emotionalTriggers" ->
+                    new UserProfileUpdateRequest(null, null, null, value, null, null);
+                case "commonScenarios" ->
+                    new UserProfileUpdateRequest(null, null, null, null, value, null);
+                case "relationshipTypes" ->
+                    new UserProfileUpdateRequest(null, null, null, null, null, value);
+                case "preferences" -> {
+                    // preferences 存到 JSONB 字段，需要单独处理
+                    NvcUserProfileEntity profile = profileService.getOrCreateProfile(userId);
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> existing = profile.getPreferences() != null
+                        ? profile.getPreferences() : new java.util.HashMap<>();
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> incoming = objectMapper.readValue(value, Map.class);
+                    existing.putAll(incoming);
+                    profile.setPreferences(existing);
+                    profileService.saveProfile(profile);
+                    yield null; // 已单独处理，下面会返回成功
+                }
                 default -> null;
             };
 
+            if ("preferences".equals(field)) {
+                return NvcToolResult.success("偏好信息已更新");
+            }
+
             if (request == null) {
-                return NvcToolResult.failure("不支持的字段: " + params.field()
-                    + "，支持: communicationBackground, personalityTraits, communicationStyle, emotionTriggers");
+                return NvcToolResult.failure("不支持的字段: " + field
+                    + "，支持: communicationBackground, personalityTraits, communicationStyle, "
+                    + "emotionalTriggers, commonScenarios, relationshipTypes, preferences");
             }
 
             profileService.updateProfile(userId, request);
-            return NvcToolResult.success("档案字段 " + params.field() + " 已更新");
+            return NvcToolResult.success("档案字段 " + field + " 已更新");
         } catch (Exception e) {
             log.error("[ProfileUpdateTool] Execution failed", e);
             return NvcToolResult.failure("档案更新失败: " + e.getMessage());

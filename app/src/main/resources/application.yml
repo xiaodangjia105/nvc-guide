@@ -25,7 +25,6 @@ springdoc:
   packages-to-scan: nvc.guide.modules
 
 spring:
-  config:
   application:
     name: nvc-guide
 
