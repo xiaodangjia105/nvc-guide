@@ -64,6 +64,18 @@ public class AgentLoop {
                 List<Message> messages = new ArrayList<>(contextMessages);
                 messages.add(new UserMessage(userMessage));
 
+                // 调试日志：显示发送给 LLM 的消息
+                log.info("[AgentLoop] Sending {} messages to LLM: userId={}, conversationId={}",
+                    messages.size(), userId, conversationId);
+                for (int i = 0; i < messages.size(); i++) {
+                    Message msg = messages.get(i);
+                    String content = msg.getText();
+                    log.info("[AgentLoop] Message {}: type={}, contentLength={}, content={}",
+                        i, msg.getClass().getSimpleName(),
+                        content != null ? content.length() : 0,
+                        content != null ? content.substring(0, Math.min(200, content.length())) + "..." : "null");
+                }
+
                 // 2. 发送 thinking 事件
                 sink.next(AgentEvent.thinking("正在思考..."));
 
@@ -90,7 +102,7 @@ public class AgentLoop {
 
                         log.info("[AgentLoop] Turn {}: LLM requested {} tool calls: {}",
                             turn, toolCalls.size(),
-                            toolCalls.stream().map(AssistantMessage.ToolCall::name).toList());
+                            toolCalls.stream().map(tc -> tc.name() + "(" + tc.arguments() + ")").toList());
 
                         // 发送工具调用开始事件
                         for (AssistantMessage.ToolCall tc : toolCalls) {
@@ -135,6 +147,9 @@ public class AgentLoop {
                     } else {
                         // 无工具调用，提取文本内容并结束
                         String content = extractContent(response);
+                        log.info("[AgentLoop] Turn {}: LLM returned content (length={}): {}",
+                            turn, content != null ? content.length() : 0,
+                            content != null && content.length() > 100 ? content.substring(0, 100) + "..." : content);
                         if (content != null && !content.isEmpty()) {
                             sink.next(AgentEvent.content(content));
                         }
@@ -165,14 +180,20 @@ public class AgentLoop {
     private ChatResponse callLlm(List<Message> messages) {
         ChatClient client = llmProviderRegistry.getDefaultChatClient();
 
+        // 调试日志：显示可用工具
+        List<org.springframework.ai.tool.ToolCallback> toolCallbacks = toolRegistry.toFunctionCallbacks();
+        log.info("[AgentLoop] Available tools: {}", toolCallbacks.stream()
+            .map(tc -> tc.getToolDefinition().name())
+            .toList());
+
         return client.prompt()
             .messages(messages)
             .options(OpenAiChatOptions.builder()
-                .temperature(0.7)
+                .temperature(0.3)  // 降低温度，使工具选择更确定性
                 .maxTokens(2000)
                 .topP(0.9)
                 // 提供工具定义（让 LLM 知道有哪些工具可用）
-                .toolCallbacks(toolRegistry.toFunctionCallbacks())
+                .toolCallbacks(toolCallbacks)
                 // 禁用自动工具执行（我们自己处理工具调用）
                 .internalToolExecutionEnabled(false)
                 .build())

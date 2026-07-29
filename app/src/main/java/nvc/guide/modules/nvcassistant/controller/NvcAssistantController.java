@@ -99,6 +99,11 @@ public class NvcAssistantController {
         return result.eventStream()
             .map(event -> toServerSentEvent(event, convId))
             .onErrorResume(e -> {
+                // 客户端断开连接是正常情况，不需要记录错误日志
+                if (isClientDisconnect(e)) {
+                    log.info("[NvcAssistantController] Client disconnected: conversationId={}", convId);
+                    return Flux.empty();
+                }
                 log.error("Stream error: conversationId={}", convId, e);
                 return Flux.just(ServerSentEvent.<String>builder()
                     .event("error")
@@ -106,6 +111,22 @@ public class NvcAssistantController {
                     .build());
             })
             .doOnComplete(result.onComplete());
+    }
+
+    /**
+     * 判断是否是客户端断开连接
+     */
+    private boolean isClientDisconnect(Throwable e) {
+        Throwable cause = e;
+        while (cause != null) {
+            if (cause instanceof java.io.IOException
+                && cause.getMessage() != null
+                && cause.getMessage().contains("你的主机中的软件中止了一个已建立的连接")) {
+                return true;
+            }
+            cause = cause.getCause();
+        }
+        return false;
     }
 
     /**

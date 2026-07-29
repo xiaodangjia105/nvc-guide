@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.context.request.WebRequest;
 
 import java.net.SocketTimeoutException;
 import java.util.stream.Collectors;
@@ -153,8 +154,21 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.OK)
-    public Result<Void> handleException(Exception e) {
+    public Result<Void> handleException(Exception e, WebRequest request) {
+        // SSE 请求不处理（客户端断开连接等）
+        if (isSseRequest(request)) {
+            log.debug("SSE request exception (ignored): {}", e.getMessage());
+            return null;
+        }
         log.error("系统异常: {}", e.getMessage(), e);
         return Result.error(ErrorCode.INTERNAL_ERROR, "系统繁忙，请稍后重试");
+    }
+
+    /**
+     * 判断是否是 SSE 请求
+     */
+    private boolean isSseRequest(WebRequest request) {
+        String contentType = request.getHeader("Accept");
+        return contentType != null && contentType.contains("text/event-stream");
     }
 }
