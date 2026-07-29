@@ -6,18 +6,13 @@ import nvc.guide.common.ai.LlmProviderRegistry;
 import nvc.guide.modules.nvcassistant.model.NvcAssistantMessageEntity;
 import nvc.guide.modules.nvcassistant.model.NvcAssistantMessageRole;
 import nvc.guide.modules.nvcassistant.service.NvcAssistantMessageService;
-import nvc.guide.modules.nvcprofile.service.NvcProfileService;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -34,13 +29,6 @@ public class ContextManager {
 
     private final NvcAssistantMessageService messageService;
     private final LlmProviderRegistry llmProviderRegistry;
-    private final NvcProfileService profileService;
-
-    @Value("classpath:prompts/nvc-assistant-system.st")
-    private Resource systemPromptResource;
-
-    /** 缓存的系统 Prompt 模板 */
-    private volatile String cachedSystemPromptTemplate;
 
     /** 消息轮数阈值，超过此值触发压缩 */
     private static final int COMPRESSION_THRESHOLD = 20;
@@ -50,23 +38,28 @@ public class ContextManager {
     private static final int FALLBACK_EARLY_MESSAGES = 5;
 
     /**
+     * 上下文构建结果
+     *
+     * @param messages 历史消息列表（不含系统 Prompt，由 PromptBuilder 负责）
+     * @param summary  压缩后的摘要（无压缩时为 null）
+     */
+    public record ContextResult(List<Message> messages, String summary) {}
+
+    /**
      * 构建上下文消息列表
      *
      * <p>如果消息数超过阈值，自动压缩早期消息。
-     * 返回的消息列表包含：系统 Prompt + 摘要（如有） + 最近消息
+     * 返回的 ContextResult 包含：历史消息 + 摘要（如有）。
+     * 系统 Prompt 由 PromptBuilder 负责构建，不在此处添加。
      *
      * @param conversationId 对话 ID
-     * @param userId 用户 ID（用于加载用户档案）
-     * @return 上下文消息列表
+     * @param userId 用户 ID（用于日志，不再用于加载档案）
+     * @return 上下文构建结果（消息 + 摘要）
      */
-    public List<Message> buildContext(Long conversationId, Long userId) {
+    public ContextResult buildContext(Long conversationId, Long userId) {
         List<Message> messages = new ArrayList<>();
 
-        // 1. 系统 Prompt（注入用户档案）
-        String systemPrompt = loadSystemPrompt(userId);
-        messages.add(new SystemMessage(systemPrompt));
-
-        // 2. 获取所有消息
+        // 1. 获取所有消息
         List<NvcAssistantMessageEntity> allMessages = messageService.getMessages(conversationId);
 
         if (allMessages.size() <= COMPRESSION_THRESHOLD) {
@@ -79,20 +72,19 @@ public class ContextManager {
             }
             log.debug("Context built without compression: conversationId={}, messageCount={}",
                 conversationId, allMessages.size());
-            return messages;
+            return new ContextResult(messages, null);
         }
 
-        // 3. 超过阈值，需要压缩
+        // 2. 超过阈值，需要压缩
         List<NvcAssistantMessageEntity> earlyMessages = allMessages.subList(0,
             allMessages.size() - KEEP_RECENT_MESSAGES);
         List<NvcAssistantMessageEntity> recentMessages = allMessages.subList(
             allMessages.size() - KEEP_RECENT_MESSAGES, allMessages.size());
 
-        // 4. 生成早期消息的摘要
+        // 3. 生成早期消息的摘要
         String summary = generateSummary(earlyMessages);
 
-        // 5. 构建上下文：摘要 + 最近消息
-        messages.add(new SystemMessage("以下是之前对话的摘要：\n" + summary));
+        // 4. 构建上下文：最近消息（摘要由 PromptBuilder 注入系统提示词）
         for (NvcAssistantMessageEntity msg : recentMessages) {
             Message converted = toMessage(msg);
             if (converted != null) {
@@ -103,7 +95,7 @@ public class ContextManager {
         log.info("Context compressed: conversationId={}, total={}, early={}, recent={}, summaryLength={}",
             conversationId, allMessages.size(), earlyMessages.size(), recentMessages.size(), summary.length());
 
-        return messages;
+        return new ContextResult(messages, summary);
     }
 
     /**
@@ -207,33 +199,4 @@ public class ContextManager {
         };
     }
 
-    /**
-     * 加载系统 Prompt 并注入用户档案
-     */
-    private String loadSystemPrompt(Long userId) {
-        String template = getOrLoadSystemPromptTemplate();
-        String profileSummary = profileService.getUserProfilePrompt(userId);
-        return template.replace("{userProfileSummary}", profileSummary != null ? profileSummary : "暂无档案");
-    }
-
-    /**
-     * 获取或加载系统 Prompt 模板（带缓存）
-     */
-    private String getOrLoadSystemPromptTemplate() {
-        if (cachedSystemPromptTemplate != null) {
-            return cachedSystemPromptTemplate;
-        }
-        synchronized (this) {
-            if (cachedSystemPromptTemplate != null) {
-                return cachedSystemPromptTemplate;
-            }
-            try {
-                cachedSystemPromptTemplate = systemPromptResource.getContentAsString(StandardCharsets.UTF_8);
-            } catch (IOException e) {
-                log.error("Failed to load system prompt template", e);
-                cachedSystemPromptTemplate = "你是 NVC 非暴力沟通练习平台的 AI 助手。";
-            }
-            return cachedSystemPromptTemplate;
-        }
-    }
 }

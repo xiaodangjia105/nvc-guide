@@ -8,10 +8,13 @@ import nvc.guide.modules.nvcassistant.model.NvcAssistantMessageEntity;
 import nvc.guide.modules.nvcassistant.service.agent.AgentEvent;
 import nvc.guide.modules.nvcassistant.service.agent.AgentLoop;
 import nvc.guide.modules.nvcassistant.service.agent.ContextManager;
+import nvc.guide.modules.nvcassistant.service.agent.PromptBuilder;
 import org.springframework.ai.chat.messages.Message;
+import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -27,6 +30,7 @@ public class NvcAssistantService {
     private final NvcAssistantMessageService messageService;
     private final AgentLoop agentLoop;
     private final ContextManager contextManager;
+    private final PromptBuilder promptBuilder;
 
     /**
      * 流式 SSE 对话（使用 AgentLoop）
@@ -44,13 +48,21 @@ public class NvcAssistantService {
             convId, userId, request.getMessage(), seq++);
         messageService.saveMessage(userMsg);
 
-        // 3. 构建上下文消息（系统 Prompt + 摘要 + 历史，支持自动压缩）
-        List<Message> contextMessages = contextManager.buildContext(convId, userId);
+        // 3. 构建上下文（历史消息 + 摘要，不含系统 Prompt）
+        ContextManager.ContextResult contextResult = contextManager.buildContext(convId, userId);
 
-        // 4. 通过 AgentLoop 执行（返回 SSE 事件流）
+        // 4. 通过 PromptBuilder 构建系统提示词（注入用户档案 + 上下文摘要 + 当前时间）
+        String systemPrompt = promptBuilder.buildSystemPrompt(userId, contextResult.summary());
+
+        // 5. 组装最终上下文：系统 Prompt + 历史消息
+        List<Message> contextMessages = new ArrayList<>();
+        contextMessages.add(new SystemMessage(systemPrompt));
+        contextMessages.addAll(contextResult.messages());
+
+        // 6. 通过 AgentLoop 执行（返回 SSE 事件流）
         Flux<AgentEvent> eventStream = agentLoop.executeStream(userId, convId, contextMessages, request.getMessage());
 
-        // 5. 用 final 变量捕获 seq（lambda 要求 effectively final）
+        // 7. 用 final 变量捕获 seq（lambda 要求 effectively final）
         final int assistantSeq = seq;
         final boolean isFirstRound = seq <= 1;
 
@@ -70,7 +82,7 @@ public class NvcAssistantService {
                 log.info("[NvcAssistantService] Stream completed: conversationId={}, userId={}", convId, userId);
             });
 
-        // 6. 保存回调（兼容旧接口）
+        // 8. 保存回调（兼容旧接口）
         Runnable saveCallback = () -> {
             // 内容已在 doOnNext 中保存，这里只做日志
             log.debug("[NvcAssistantService] Save callback invoked: conversationId={}", convId);

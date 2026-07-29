@@ -5,26 +5,19 @@ import lombok.extern.slf4j.Slf4j;
 import nvc.guide.common.ai.LlmProviderRegistry;
 import nvc.guide.modules.nvcassistant.dto.ToolCallRecord;
 import nvc.guide.modules.nvcpractice.tool.NvcToolRegistry;
-import nvc.guide.modules.nvcprofile.service.NvcProfileService;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
-import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.ToolResponseMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.model.Generation;
 import org.springframework.ai.openai.OpenAiChatOptions;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Agent 主循环 — 控制多轮工具调用
@@ -47,13 +40,6 @@ public class AgentLoop {
     private final LlmProviderRegistry llmProviderRegistry;
     private final NvcToolRegistry toolRegistry;
     private final ToolExecutor toolExecutor;
-    private final NvcProfileService profileService;
-
-    @Value("classpath:prompts/nvc-assistant-system.st")
-    private Resource systemPromptResource;
-
-    /** 缓存的系统 Prompt 模板 */
-    private volatile String cachedSystemPromptTemplate;
 
     /** 最大工具调用轮数 */
     private static final int MAX_TOOL_CALL_TURNS = 10;
@@ -65,7 +51,7 @@ public class AgentLoop {
      *
      * @param userId         用户 ID
      * @param conversationId 对话 ID
-     * @param contextMessages 上下文消息列表（系统 Prompt + 历史，不含当前用户消息）
+     * @param contextMessages 上下文消息列表（由 NvcAssistantService 组装：SystemPrompt + 历史，不含当前用户消息）
      * @param userMessage    当前用户消息
      * @return SSE 事件流
      */
