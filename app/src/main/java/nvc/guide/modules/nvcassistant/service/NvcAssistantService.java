@@ -3,27 +3,15 @@ package nvc.guide.modules.nvcassistant.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import nvc.guide.modules.nvcassistant.dto.AssistantRequest;
-import nvc.guide.modules.nvcassistant.dto.AssistantResponse;
-import nvc.guide.modules.nvcassistant.dto.ToolCallRecord;
 import nvc.guide.modules.nvcassistant.model.NvcAssistantConversationEntity;
 import nvc.guide.modules.nvcassistant.model.NvcAssistantMessageEntity;
-import nvc.guide.modules.nvcassistant.model.NvcAssistantMessageRole;
 import nvc.guide.modules.nvcassistant.service.agent.AgentEvent;
 import nvc.guide.modules.nvcassistant.service.agent.AgentLoop;
-import nvc.guide.modules.nvcprofile.service.NvcProfileService;
+import nvc.guide.modules.nvcassistant.service.agent.ContextManager;
 import org.springframework.ai.chat.messages.Message;
-import org.springframework.ai.chat.messages.SystemMessage;
-import org.springframework.ai.chat.messages.UserMessage;
-import org.springframework.ai.chat.messages.AssistantMessage;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Flux;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -37,14 +25,8 @@ import java.util.List;
 public class NvcAssistantService {
 
     private final NvcAssistantMessageService messageService;
-    private final NvcProfileService profileService;
     private final AgentLoop agentLoop;
-
-    @Value("classpath:prompts/nvc-assistant-system.st")
-    private Resource systemPromptResource;
-
-    /** 缓存的系统 Prompt 模板 */
-    private volatile String cachedSystemPromptTemplate;
+    private final ContextManager contextManager;
 
     /**
      * 流式 SSE 对话（使用 AgentLoop）
@@ -62,8 +44,8 @@ public class NvcAssistantService {
             convId, userId, request.getMessage(), seq++);
         messageService.saveMessage(userMsg);
 
-        // 3. 构建上下文消息（系统 Prompt + 历史）
-        List<Message> contextMessages = buildContextMessages(convId, userId);
+        // 3. 构建上下文消息（系统 Prompt + 摘要 + 历史，支持自动压缩）
+        List<Message> contextMessages = contextManager.buildContext(convId, userId);
 
         // 4. 通过 AgentLoop 执行（返回 SSE 事件流）
         Flux<AgentEvent> eventStream = agentLoop.executeStream(userId, convId, contextMessages, request.getMessage());
@@ -112,60 +94,6 @@ public class NvcAssistantService {
             return messageService.getConversationOrThrow(conversationId, userId);
         }
         return messageService.createConversation(userId);
-    }
-
-    /**
-     * 构建上下文消息列表（系统 Prompt + 最近历史）
-     */
-    private List<Message> buildContextMessages(Long conversationId, Long userId) {
-        List<Message> messages = new ArrayList<>();
-
-        // 1. 系统 Prompt（注入用户档案）
-        String systemPrompt = loadSystemPrompt(userId);
-        messages.add(new SystemMessage(systemPrompt));
-
-        // 2. 最近历史
-        List<NvcAssistantMessageEntity> history = messageService.getRecentMessages(conversationId);
-        for (NvcAssistantMessageEntity msg : history) {
-            switch (msg.getRole()) {
-                case USER -> messages.add(new UserMessage(msg.getContent()));
-                case ASSISTANT -> messages.add(new AssistantMessage(msg.getContent()));
-                case SYSTEM -> messages.add(new SystemMessage(msg.getContent()));
-                // TOOL 消息在当前模型中不直接加入历史
-            }
-        }
-
-        return messages;
-    }
-
-    /**
-     * 加载系统 Prompt 并注入用户档案
-     */
-    private String loadSystemPrompt(Long userId) {
-        String template = getOrLoadSystemPromptTemplate();
-        String profileSummary = profileService.getUserProfilePrompt(userId);
-        return template.replace("{userProfileSummary}", profileSummary != null ? profileSummary : "暂无档案");
-    }
-
-    /**
-     * 获取或加载系统 Prompt 模板（带缓存）
-     */
-    private String getOrLoadSystemPromptTemplate() {
-        if (cachedSystemPromptTemplate != null) {
-            return cachedSystemPromptTemplate;
-        }
-        synchronized (this) {
-            if (cachedSystemPromptTemplate != null) {
-                return cachedSystemPromptTemplate;
-            }
-            try {
-                cachedSystemPromptTemplate = systemPromptResource.getContentAsString(StandardCharsets.UTF_8);
-            } catch (IOException e) {
-                log.error("Failed to load system prompt template", e);
-                cachedSystemPromptTemplate = "你是 NVC 非暴力沟通练习平台的 AI 助手。";
-            }
-            return cachedSystemPromptTemplate;
-        }
     }
 
     /**

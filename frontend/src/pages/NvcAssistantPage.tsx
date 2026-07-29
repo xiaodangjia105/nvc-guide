@@ -243,8 +243,9 @@ export default function NvcAssistantPage() {
           }
 
           case 'content': {
-            // 后端发送纯文本内容
-            const token = typeof event.data === 'string' ? event.data : String(event.data);
+            // 后端发送纯文本内容（换行符已转义为 \\n，需要还原）
+            const raw = typeof event.data === 'string' ? event.data : String(event.data);
+            const token = raw.replace(/\\n/g, '\n').replace(/\\r/g, '\r');
             streamContentRef.current += token;
             const content = streamContentRef.current;
             setMessages((prev) =>

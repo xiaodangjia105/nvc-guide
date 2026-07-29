@@ -200,10 +200,14 @@ public class NvcAssistantController {
 
     /**
      * 格式化事件数据
+     *
+     * <p>CONTENT 事件需要转义换行符，因为 SSE 协议使用 \n 作为行分隔符。
+     * 前端收到后会反转义：data.replace(/\\n/g, '\n')
      */
     private String formatEventData(AgentEvent event, long conversationId) {
         return switch (event.type()) {
-            case THINKING, CONTENT, ERROR -> event.data();
+            case THINKING, ERROR -> event.data();
+            case CONTENT -> escapeNewlines(event.data());
             case TOOLCALL_START -> toJson(Map.of(
                 "toolName", event.data(),
                 "arguments", event.metadata().getOrDefault("arguments", "{}")
@@ -216,6 +220,14 @@ public class NvcAssistantController {
             ));
             case DONE -> toJson(Map.of("conversationId", conversationId));
         };
+    }
+
+    /**
+     * 转义换行符为 \\n，避免 SSE 协议解析时被当作行分隔符
+     */
+    private String escapeNewlines(String text) {
+        if (text == null) return "";
+        return text.replace("\n", "\\n").replace("\r", "\\r");
     }
 
     private String toJson(Object obj) {
