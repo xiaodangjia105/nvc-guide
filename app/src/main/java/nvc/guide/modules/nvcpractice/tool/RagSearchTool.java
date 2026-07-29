@@ -24,7 +24,7 @@ public class RagSearchTool implements NvcTool {
 
     @Override
     public String description() {
-        return "搜索 NVC 知识库，检索相关理论、话术模板、情绪词汇等信息。当用户询问 NVC 相关知识或需要参考资料时使用。";
+        return "【搜索NVC知识】仅当用户问「什么是NVC」「NVC理论」「四要素」等知识性问题时调用。不要用于更新档案。";
     }
 
     @Override
