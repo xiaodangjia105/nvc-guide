@@ -40,6 +40,7 @@ public class AgentLoop {
     private final LlmProviderRegistry llmProviderRegistry;
     private final NvcToolRegistry toolRegistry;
     private final ToolExecutor toolExecutor;
+    private final IntentRouter intentRouter;
 
     /** 最大工具调用轮数 */
     private static final int MAX_TOOL_CALL_TURNS = 10;
@@ -64,7 +65,7 @@ public class AgentLoop {
                 List<Message> messages = new ArrayList<>(contextMessages);
                 messages.add(new UserMessage(userMessage));
 
-                log.debug("[AgentLoop] Sending {} messages to LLM: userId={}, conversationId={}",
+                log.info("[AgentLoop] Sending {} messages to LLM: userId={}, conversationId={}",
                     messages.size(), userId, conversationId);
 
                 // 2. 发送 thinking 事件

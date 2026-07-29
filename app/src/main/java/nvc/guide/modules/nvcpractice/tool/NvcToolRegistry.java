@@ -72,12 +72,19 @@ public class NvcToolRegistry {
      * 使用 Map.class 后，再手动序列化为 JSON 字符串传给 NvcTool。
      */
     private ToolCallback toFunctionCallback(NvcTool tool) {
+        String schema = tool.inputSchema();
+        log.info("[NvcToolRegistry] Registering tool: name={}, description={}, schema={}",
+            tool.name(), tool.description(), schema);
+
         return FunctionToolCallback.builder(tool.name(),
                 (Map<String, Object> input, ToolContext aiContext) -> {
                     try {
                         NvcToolContext nvcContext = extractNvcContext(aiContext);
                         String jsonInput = OBJECT_MAPPER.writeValueAsString(input);
+                        log.info("[NvcToolRegistry] Executing tool: name={}, input={}", tool.name(), jsonInput);
                         NvcToolResult result = tool.execute(jsonInput, nvcContext);
+                        log.info("[NvcToolRegistry] Tool result: name={}, success={}, result={}",
+                            tool.name(), result.success(), result.success() ? result.data() : result.errorMessage());
                         return result.success() ? result.data() : "Error: " + result.errorMessage();
                     } catch (Exception e) {
                         log.error("[NvcToolRegistry] Tool execution failed: tool={}", tool.name(), e);
@@ -85,7 +92,7 @@ public class NvcToolRegistry {
                     }
                 })
             .description(tool.description())
-            .inputSchema(tool.inputSchema())
+            .inputSchema(schema)
             .inputType(Map.class)
             .build();
     }
