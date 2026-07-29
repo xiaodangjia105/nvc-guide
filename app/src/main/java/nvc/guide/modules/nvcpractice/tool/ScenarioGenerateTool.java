@@ -26,7 +26,7 @@ public class ScenarioGenerateTool implements NvcTool {
 
     @Override
     public String description() {
-        return "AI 生成一个新的 NVC 练习场景。需要指定情境、关系和关注的 NVC 要素。";
+        return "【生成场景】仅当用户说「生成场景」「创建一个新场景」「自定义场景」时调用。";
     }
 
     @Override

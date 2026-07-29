@@ -25,7 +25,7 @@ public class WikiSearchTool implements NvcTool {
     public String name() { return "wiki_search"; }
 
     @Override
-    public String description() { return "搜索用户的个人 Wiki 知识库，查找相关案例、知识和经验"; }
+    public String description() { return "【搜索个人笔记】仅当用户说「我的笔记」「之前的记录」「搜索笔记」时调用。不要用于更新档案。"; }
 
     @Override
     public String inputSchema() {

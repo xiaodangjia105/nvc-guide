@@ -26,10 +26,14 @@ public class ProfileUpdateTool implements NvcTool {
 
     @Override
     public String description() {
-        return "更新用户 NVC 档案。支持字段：communicationBackground(沟通背景/个人信息), " +
-            "personalityTraits(性格特征), communicationStyle(沟通风格), " +
-            "emotionalTriggers(情绪触发点), commonScenarios(常见场景), " +
-            "relationshipTypes(关系类型), preferences(其他偏好JSON)。";
+        return "【更新用户档案】当用户说「我是XXX」「帮我记录」「更新档案」「修改个人信息」时必须调用此工具。" +
+            "支持字段：communicationBackground(职业/年龄/性别等个人信息，自由文本), " +
+            "personalityTraits(性格特征，JSON数组如[\"内向\",\"敏感\"]), " +
+            "communicationStyle(沟通风格：ASSERTIVE/PASSIVE/AGGRESSIVE/PASSIVE_AGGRESSIVE), " +
+            "emotionalTriggers(情绪触发点，自由文本), " +
+            "commonScenarios(常见沟通场景，JSON数组), " +
+            "relationshipTypes(重要关系类型，JSON数组), " +
+            "preferences(其他偏好，JSON对象如{\"age\":21,\"gender\":\"男\"})。";
     }
 
     @Override

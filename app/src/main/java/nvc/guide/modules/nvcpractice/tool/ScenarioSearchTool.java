@@ -24,7 +24,7 @@ public class ScenarioSearchTool implements NvcTool {
 
     @Override
     public String description() {
-        return "搜索 NVC 练习场景，可按场景类型和难度筛选。返回匹配的场景列表。";
+        return "【搜索练习场景】仅当用户说「推荐场景」「找场景」「有什么场景」时调用。不要用于更新档案或回答问题。";
     }
 
     @Override

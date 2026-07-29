@@ -26,7 +26,7 @@ public class WikiWriteTool implements NvcTool {
     public String name() { return "wiki_write"; }
 
     @Override
-    public String description() { return "将知识、案例或学习心得写入用户的个人 Wiki 知识库"; }
+    public String description() { return "【保存笔记】仅当用户说「帮我记下来」「保存这个」「记录笔记」时调用。"; }
 
     @Override
     public String inputSchema() {
