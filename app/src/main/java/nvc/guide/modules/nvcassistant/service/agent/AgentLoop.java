@@ -64,17 +64,8 @@ public class AgentLoop {
                 List<Message> messages = new ArrayList<>(contextMessages);
                 messages.add(new UserMessage(userMessage));
 
-                // 调试日志：显示发送给 LLM 的消息
-                log.info("[AgentLoop] Sending {} messages to LLM: userId={}, conversationId={}",
+                log.debug("[AgentLoop] Sending {} messages to LLM: userId={}, conversationId={}",
                     messages.size(), userId, conversationId);
-                for (int i = 0; i < messages.size(); i++) {
-                    Message msg = messages.get(i);
-                    String content = msg.getText();
-                    log.info("[AgentLoop] Message {}: type={}, contentLength={}, content={}",
-                        i, msg.getClass().getSimpleName(),
-                        content != null ? content.length() : 0,
-                        content != null ? content.substring(0, Math.min(200, content.length())) + "..." : "null");
-                }
 
                 // 2. 发送 thinking 事件
                 sink.next(AgentEvent.thinking("正在思考..."));

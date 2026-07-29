@@ -18,7 +18,7 @@ public class ProfileQueryTool implements NvcTool {
 
     @Override
     public String description() {
-        return "查询用户 NVC 档案，包括等级、沟通背景、性格特征、能力雷达等信息。";
+        return "【查看档案】仅当用户说「看看我的档案」「查看档案」「我的个人信息」时调用。不要用于更新档案。";
     }
 
     @Override

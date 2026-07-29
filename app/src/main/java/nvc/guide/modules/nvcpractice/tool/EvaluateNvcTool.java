@@ -20,7 +20,7 @@ public class EvaluateNvcTool implements NvcTool {
 
     @Override
     public String description() {
-        return "评估用户的 NVC 表达质量，返回观察、感受、需求、请求四个维度的评分和反馈。";
+        return "【评估NVC表达】仅当用户说「帮我评估」「这句话说得对吗」「评估我的表达」时调用。";
     }
 
     @Override

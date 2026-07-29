@@ -11,8 +11,6 @@ import nvc.guide.modules.nvcpractice.tool.NvcToolResult;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -47,14 +45,15 @@ public class ToolExecutor {
             return List.of();
         }
 
-        NvcToolContext context = NvcToolContext.builder()
-            .userId(userId)
-            .sessionId(sessionId)
-            .build();
-
-        // 并行执行所有工具调用
+        // 并行执行所有工具调用（每个调用独立的 context，避免属性冲突）
         List<CompletableFuture<ToolCallResult>> futures = toolCalls.stream()
-            .map(tc -> CompletableFuture.supplyAsync(() -> executeSingle(tc, context)))
+            .map(tc -> CompletableFuture.supplyAsync(() -> {
+                NvcToolContext ctx = NvcToolContext.builder()
+                    .userId(userId)
+                    .sessionId(sessionId)
+                    .build();
+                return executeSingle(tc, ctx);
+            }))
             .toList();
 
         // 等待所有完成
@@ -90,11 +89,17 @@ public class ToolExecutor {
                     NvcToolHook.ToolCallDecision decision = hook.beforeToolCall(toolName, argsNode, context)
                         .get(TOOL_TIMEOUT_MS, TimeUnit.MILLISECONDS);
                     if (decision == NvcToolHook.ToolCallDecision.SKIP) {
+                        long duration = System.currentTimeMillis() - startTime;
+                        // 检查是否有缓存结果（CacheToolHook 命中时设置）
+                        String cachedResult = context.getAttribute("cachedResult");
+                        if (cachedResult != null) {
+                            log.info("[ToolExecutor] SKIPPED (cached): tool={}, duration={}ms", toolName, duration);
+                            return ToolCallResult.success(toolName, arguments, cachedResult, duration);
+                        }
                         String skipReason = context.hasAttribute("skipReason")
                             ? context.getAttribute("skipReason").toString()
                             : "Hook 跳过";
-                        long duration = System.currentTimeMillis() - startTime;
-                        log.info("[ToolExecutor] SKIPPED by hook: tool={}, reason={}, duration={}ms",
+                        log.info("[ToolExecutor] SKIPPED: tool={}, reason={}, duration={}ms",
                             toolName, skipReason, duration);
                         return ToolCallResult.skipped(toolName, arguments, skipReason);
                     }

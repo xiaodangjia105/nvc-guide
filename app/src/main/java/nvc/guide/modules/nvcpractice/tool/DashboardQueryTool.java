@@ -22,7 +22,7 @@ public class DashboardQueryTool implements NvcTool {
 
     @Override
     public String description() {
-        return "查询用户练习统计数据，包括总练习次数、完成次数、总分等。";
+        return "【查看练习数据】仅当用户说「练习数据」「统计」「我练了多少次」时调用。";
     }
 
     @Override

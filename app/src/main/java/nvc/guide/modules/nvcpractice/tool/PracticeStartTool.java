@@ -23,7 +23,7 @@ public class PracticeStartTool implements NvcTool {
 
     @Override
     public String description() {
-        return "启动一个新的 NVC 练习会话。需要指定场景ID和练习模式（SCENARIO/FREE_DIALOG/STRUCTURED_FOUR_STEP）。";
+        return "【开始练习】仅当用户说「开始练习」「我想练习」「启动练习」时调用。";
     }
 
     @Override
