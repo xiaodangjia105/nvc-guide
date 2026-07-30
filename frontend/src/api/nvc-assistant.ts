@@ -1,4 +1,5 @@
 import { request, getAuthHeaders } from './request';
+import { consumeSSEEventsWithAbort } from '../utils/sse';
 
 // ==================== 类型定义 ====================
 
@@ -85,68 +86,24 @@ export function sendChatStream(
   onEvent: (event: StreamEvent) => void,
   onError?: (error: Error) => void
 ): AbortController {
-  const controller = new AbortController();
-
   const baseURL = import.meta.env.PROD ? '' : 'http://localhost:8080';
 
-  fetch(`${baseURL}/api/nvc/assistant/chat/stream?userId=${userId}`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: JSON.stringify(data),
-    signal: controller.signal,
-  })
-    .then(async (response) => {
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-      const reader = response.body?.getReader();
-      if (!reader) return;
-
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      let currentEventType = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-
-        for (const line of lines) {
-          // Spring ServerSentEvent 输出 event:xxx (无空格)，兼容 event: xxx
-          if (line.startsWith('event:')) {
-            currentEventType = line.slice(6).trim();
-          } else if (line.startsWith('data:')) {
-            const raw = line.slice(5).trimStart();
-            if (raw === '[DONE]') continue;
-            try {
-              // 后端格式: event: {type}\ndata: {text}
-              // 尝试 JSON 解析，如果不是 JSON 则作为纯文本
-              let parsedData: string | Record<string, unknown>;
-              try {
-                parsedData = JSON.parse(raw);
-              } catch {
-                parsedData = raw;
-              }
-              onEvent({
-                type: (currentEventType || 'content') as StreamEvent['type'],
-                data: parsedData,
-              });
-            } catch {
-              // ignore parse errors for malformed SSE lines
-            }
-          }
-        }
-      }
-    })
-    .catch((err: Error) => {
-      if (err.name !== 'AbortError') {
-        onError?.(err);
-      }
-    });
-
-  return controller;
+  return consumeSSEEventsWithAbort<string | Record<string, unknown>>(
+    `${baseURL}/api/nvc/assistant/chat/stream?userId=${userId}`,
+    {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    },
+    {
+      onEvent: (type, parsedData) => {
+        onEvent({
+          type: (type || 'content') as StreamEvent['type'],
+          data: parsedData,
+        });
+      },
+      onComplete: () => {},
+      onError: (err) => onError?.(err),
+    }
+  );
 }

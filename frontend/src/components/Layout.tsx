@@ -5,6 +5,7 @@ import {
   FileText, MessageSquare, Moon, Settings, Sun, Target, User, Sparkles,
 } from 'lucide-react';
 import {useTheme} from '../hooks/useTheme';
+import ErrorBoundary from './ErrorBoundary';
 
 interface NavItem {
   id: string;
@@ -177,7 +178,9 @@ export default function Layout() {
           exit={{ opacity: 0, y: -20 }}
           transition={{ duration: 0.3 }}
         >
-          <Outlet />
+          <ErrorBoundary>
+            <Outlet />
+          </ErrorBoundary>
         </motion.div>
       </main>
     </div>

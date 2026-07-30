@@ -60,6 +60,8 @@ class NvcScenarioServiceTest {
             .build();
     }
 
+    // ========== queryScenarios() ==========
+
     @Nested
     @DisplayName("queryScenarios()")
     class QueryScenariosTests {
@@ -130,6 +132,8 @@ class NvcScenarioServiceTest {
         }
     }
 
+    // ========== getScenario() ==========
+
     @Nested
     @DisplayName("getScenario()")
     class GetScenarioTests {
@@ -149,7 +153,7 @@ class NvcScenarioServiceTest {
         }
 
         @Test
-        @DisplayName("场景不存在时抛出异常")
+        @DisplayName("场景不存在时抛出 BusinessException")
         void notFound_throwsException() {
             when(scenarioRepository.findById(999L))
                 .thenReturn(Optional.empty());
@@ -158,6 +162,8 @@ class NvcScenarioServiceTest {
                 () -> service.getScenario(999L));
         }
     }
+
+    // ========== incrementUsage() ==========
 
     @Nested
     @DisplayName("incrementUsage()")
@@ -190,10 +196,29 @@ class NvcScenarioServiceTest {
             assertDoesNotThrow(() -> service.incrementUsage(999L));
             verify(scenarioRepository, never()).save(any());
         }
+
+        @Test
+        @DisplayName("使用次数从 0 开始递增")
+        void incrementFromZero() {
+            NvcScenarioEntity scenario = buildScenario(
+                1L, "新场景", NvcScenarioType.WORKPLACE, NvcDifficulty.MEDIUM);
+            scenario.setUsageCount(0);
+
+            when(scenarioRepository.findById(1L))
+                .thenReturn(Optional.of(scenario));
+            when(scenarioRepository.save(any()))
+                .thenAnswer(i -> i.getArgument(0));
+
+            service.incrementUsage(1L);
+
+            assertEquals(1, scenario.getUsageCount());
+        }
     }
 
+    // ========== generateScenario() + extractJson() ==========
+
     @Nested
-    @DisplayName("generateScenario()")
+    @DisplayName("generateScenario() + extractJson()")
     class GenerateScenarioTests {
 
         private NvcScenarioService realService;
@@ -278,7 +303,84 @@ class NvcScenarioServiceTest {
             assertThrows(BusinessException.class,
                 () -> realService.generateScenario(request));
         }
+
+        @Test
+        @DisplayName("从 ```json 代码块中提取 JSON 并解析")
+        void generateScenario_jsonCodeBlock_extractsAndParses() {
+            mockChatClient("""
+                ```json
+                {"title":"代码块场景","description":"从代码块中提取","context":"测试环境","focus_elements":["feeling"]}
+                ```
+                """);
+
+            NvcScenarioEntity saved = NvcScenarioEntity.builder()
+                .id(3L).title("代码块场景").description("从代码块中提取")
+                .scenarioType(NvcScenarioType.WORKPLACE).difficulty(NvcDifficulty.MEDIUM)
+                .context("测试环境").focusElements("[\"feeling\"]")
+                .isSystem(false).usageCount(0)
+                .build();
+            when(scenarioRepository.save(any())).thenReturn(saved);
+
+            ScenarioGenerateRequest request = new ScenarioGenerateRequest(
+                NvcScenarioType.WORKPLACE, NvcDifficulty.MEDIUM, null, null);
+
+            NvcScenarioEntity result = realService.generateScenario(request);
+
+            assertNotNull(result);
+            assertEquals("代码块场景", result.getTitle());
+            verify(scenarioRepository).save(any());
+        }
+
+        @Test
+        @DisplayName("从无语言标记的 ``` 代码块中提取 JSON")
+        void generateScenario_plainCodeBlock_extractsAndParses() {
+            mockChatClient("""
+                ```
+                {"title":"普通代码块","description":"无语言标记","context":"背景","focus_elements":["need"]}
+                ```
+                """);
+
+            NvcScenarioEntity saved = NvcScenarioEntity.builder()
+                .id(4L).title("普通代码块").description("无语言标记")
+                .scenarioType(NvcScenarioType.FAMILY).difficulty(NvcDifficulty.EASY)
+                .isSystem(false).usageCount(0)
+                .build();
+            when(scenarioRepository.save(any())).thenReturn(saved);
+
+            ScenarioGenerateRequest request = new ScenarioGenerateRequest(
+                NvcScenarioType.FAMILY, NvcDifficulty.EASY, null, null);
+
+            NvcScenarioEntity result = realService.generateScenario(request);
+
+            assertNotNull(result);
+            assertEquals("普通代码块", result.getTitle());
+        }
+
+        @Test
+        @DisplayName("从混合文本中提取 JSON 对象")
+        void generateScenario_jsonInMixedText_extractsAndParses() {
+            mockChatClient("这是我生成的场景：\n" +
+                "{\"title\":\"混合文本\",\"description\":\"JSON嵌在文字中\"}\n" +
+                "希望对你有帮助！");
+
+            NvcScenarioEntity saved = NvcScenarioEntity.builder()
+                .id(5L).title("混合文本").description("JSON嵌在文字中")
+                .scenarioType(NvcScenarioType.WORKPLACE).difficulty(NvcDifficulty.MEDIUM)
+                .isSystem(false).usageCount(0)
+                .build();
+            when(scenarioRepository.save(any())).thenReturn(saved);
+
+            ScenarioGenerateRequest request = new ScenarioGenerateRequest(
+                NvcScenarioType.WORKPLACE, NvcDifficulty.MEDIUM, null, null);
+
+            NvcScenarioEntity result = realService.generateScenario(request);
+
+            assertNotNull(result);
+            assertEquals("混合文本", result.getTitle());
+        }
     }
+
+    // ========== toDTO() ==========
 
     @Nested
     @DisplayName("toDTO()")

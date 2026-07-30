@@ -1,5 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import Layout from './components/Layout';
+import ErrorBoundary from './components/ErrorBoundary';
 import { Suspense, lazy } from 'react';
 import type { UploadKnowledgeBaseResponse } from './api/knowledgebase';
 import { ROUTES } from './constants/routes';
@@ -33,8 +34,9 @@ const Loading = () => (
 function App() {
   return (
     <BrowserRouter>
-      <Suspense fallback={<Loading />}>
-        <Routes>
+      <ErrorBoundary>
+        <Suspense fallback={<Loading />}>
+          <Routes>
           <Route path="/" element={<Layout />}>
             {/* 默认重定向到 NVC 练习中心 */}
             <Route index element={<Navigate to="/nvc" replace />} />
@@ -64,8 +66,9 @@ function App() {
             {/* 设置 */}
             <Route path="settings" element={<SettingsPage />} />
           </Route>
-        </Routes>
-      </Suspense>
+          </Routes>
+        </Suspense>
+      </ErrorBoundary>
     </BrowserRouter>
   );
 }
