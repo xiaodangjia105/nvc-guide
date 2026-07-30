@@ -4,6 +4,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Send, Loader2, Bot, User } from 'lucide-react';
 import { practiceApi } from '../../api/nvc';
+import { consumeSSEEvents } from '../../utils/sse';
 
 interface NvcChatPanelProps {
   sessionId: number;
@@ -137,57 +138,35 @@ export default function NvcChatPanel({
 
     try {
       const response = await practiceApi.sendMessageStream(sessionId, text);
-      const reader = response.body?.getReader();
-      if (!reader) {
-        throw new Error('No reader available');
-      }
-
-      const decoder = new TextDecoder();
-      let buffer = '';
       let fullContent = '';
-      let currentEvent = '';
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-
-        for (const line of lines) {
-          if (line.startsWith('event:')) {
-            currentEvent = line.slice(6).trim();
-          } else if (line.startsWith('data:')) {
-            const data = line.slice(5).trim();
-            if (data === '[DONE]') continue;
-
-            // 只处理 message 事件的内容
-            if (currentEvent === 'message') {
-              // 后端转义了换行符，还原回来
-              const token = data.replace(/\\n/g, '\n').replace(/\\r/g, '\r');
-              fullContent += token;
-              setMessages((prev) =>
-                prev.map((m) =>
-                  m.id === aiMsgId
-                    ? { ...m, content: fullContent }
-                    : m
-                )
-              );
-            }
-            currentEvent = '';
-          }
-        }
-      }
-
-      // 标记流式结束，应用前端兜底清理
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === aiMsgId
-            ? { ...m, content: cleanAiResponse(m.content), isStreaming: false }
-            : m
-        )
-      );
+      await consumeSSEEvents(response, {
+        onEvent: (_type, data) => {
+          // 只处理 message 事件的内容（type 为空时默认为 content）
+          const token = (data as string).replace(/\\n/g, '\n').replace(/\\r/g, '\r');
+          fullContent += token;
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === aiMsgId
+                ? { ...m, content: fullContent }
+                : m
+            )
+          );
+        },
+        onComplete: () => {
+          // 标记流式结束，应用前端兜底清理
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === aiMsgId
+                ? { ...m, content: cleanAiResponse(m.content), isStreaming: false }
+                : m
+            )
+          );
+        },
+        onError: (err) => {
+          throw err;
+        },
+      });
     } catch (err) {
       console.error('Stream error:', err);
       setMessages((prev) =>

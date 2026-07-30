@@ -5,7 +5,7 @@ import {
   TbEar,
   TbHeart,
   TbArrowsLeftRight,
-  TbMirror,
+  TbUserCircle,
   TbSparkles,
 } from 'react-icons/tb';
 
@@ -20,7 +20,7 @@ const SKILL_ICON_MAP: Record<string, IconType> = {
   'empathy-listening': TbEar,
   'nvc-expression': TbHeart,
   'conflict-resolution': TbArrowsLeftRight,
-  'self-connection': TbMirror,
+  'self-connection': TbUserCircle,
   'custom': TbSparkles,
 };
 
