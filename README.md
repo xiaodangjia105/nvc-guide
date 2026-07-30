@@ -1,11 +1,13 @@
 <div align="center">
 
-**NVC 非暴力沟通练习助手** - 基于大语言模型的智能沟通练习平台
+# NVC 非暴力沟通练习助手
+
+**基于 AI 的智能沟通技能练习平台**
 
 [![Java](https://img.shields.io/badge/Java-21-orange?logo=openjdk)](https://openjdk.org/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.0-green?logo=springboot)](https://spring.io/projects/spring-boot)
 [![Spring AI](https://img.shields.io/badge/Spring%20AI-2.0-blue?logo=spring)](https://spring.io/projects/spring-ai)
-[![React](https://img.shields.io/badge/React-18.3-blue?logo=react)](https://react.dev/)
+[![React](https://img.shields.io/badge/React-18-blue?logo=react)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue?logo=typescript)](https://www.typescriptlang.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-pgvector-336791?logo=postgresql)](https://www.postgresql.org/)
 
@@ -13,23 +15,27 @@
 
 ---
 
-## 项目介绍
+## 📖 项目介绍
 
-NVC 非暴力沟通练习助手是一个基于大语言模型的智能沟通练习平台，帮助用户通过结构化练习掌握非暴力沟通（Nonviolent Communication）的四要素：观察、感受、需求、请求。
+NVC 非暴力沟通练习助手是一个基于大语言模型的智能沟通练习平台，帮助用户通过结构化练习掌握非暴力沟通（Nonviolent Communication）的四要素：**观察、感受、需求、请求**。
 
 系统利用 Spring AI、多 Agent 协同调度、实时流式评估和语音识别技术，为用户提供文字练习、语音练习、场景库、用户档案和数据可视化等完整的 NVC 学习体验。
 
-## 核心功能
+---
+
+## ✨ 核心功能
 
 ### 🎯 三种练习模式
 
-- **场景驱动模式**：基于预设场景进行 NVC 对话练习，AI 扮演困难搭档
-- **自由对话模式**：开放式 NVC 表达练习，实时评估四要素
-- **结构化四步练习**：分步骤学习观察、感受、需求、请求
+| 模式 | 说明 |
+|------|------|
+| **场景驱动模式** | 基于预设场景进行 NVC 对话练习，AI 扮演困难搭档 |
+| **自由对话模式** | 开放式 NVC 表达练习，实时评估四要素 |
+| **结构化四步练习** | 分步骤学习观察、感受、需求、请求 |
 
 ### 🤖 多 Agent 协同调度
 
-系统内置 10+ 种 NVC 专职 Agent，通过智能调度中心（NvcAgentOrchestrator）自动选择最合适的 Agent 响应用户：
+系统内置 10+ 种 NVC 专职 Agent，通过智能调度中心自动选择最合适的 Agent 响应用户：
 
 | Agent | 职责 |
 |-------|------|
@@ -50,7 +56,7 @@ NVC 非暴力沟通练习助手是一个基于大语言模型的智能沟通练�
 
 ### 🎙️ 语音练习
 
-- **实时语音对话**：WebSocket + 千问3 语音模型（ASR/TTS）
+- **实时语音对话**：WebSocket + 语音模型（ASR/TTS）
 - **服务端 VAD**：自动断句，实时字幕
 - **回声防护**：避免 AI 语音被误录入
 - **多轮上下文**：支持暂停/恢复
@@ -61,8 +67,9 @@ NVC 非暴力沟通练习助手是一个基于大语言模型的智能沟通练�
 - **沟通分析**：分析用户的沟通模式和改进空间
 - **个性化推荐**：基于用户能力推荐合适的练习场景
 
-### 📚 场景库管理
+### 📚 知识库与场景库
 
+- **RAG 知识检索**：基于 NVC 理论文档的检索增强生成
 - **AI 生成场景**：基于 NVC 理论自动生成练习场景
 - **难度分级**：初级、中级、高级场景分类
 - **场景标签**：家庭、职场、社交等多维度标签
@@ -73,26 +80,33 @@ NVC 非暴力沟通练习助手是一个基于大语言模型的智能沟通练�
 - **趋势图**：跟踪用户 NVC 能力的发展趋势
 - **练习统计**：练习次数、时长、得分等统计
 
-## 技术栈
+### 📖 NVC Wiki
+
+- **知识百科**：NVC 核心概念、理论框架、实践技巧
+- **快速检索**：支持关键词搜索和分类浏览
+
+---
+
+## 🛠️ 技术栈
 
 ### 后端技术
 
 | 技术 | 版本 | 说明 |
 |------|------|------|
-| Spring Boot | 4.0.1 | 应用框架 |
+| Spring Boot | 4.0 | 应用框架 |
 | Java | 21 | 开发语言（虚拟线程） |
-| Spring AI | 2.0.0-M4 | AI 集成框架、OpenAI 兼容模型接入 |
+| Spring AI | 2.0 | AI 集成框架、OpenAI 兼容模型接入 |
 | PostgreSQL + pgvector | 14+ | 关系数据库 + 向量存储 |
-| Redis + Redisson | 6+ / 4.0.0 | 缓存 + 消息队列（Stream） |
-| MapStruct | 1.6.3 | 对象映射 |
-| DashScope SDK | 2.22.7 | 语音识别/合成（Qwen3 ASR/TTS） |
+| Redis + Redisson | 6+ | 缓存 + 消息队列（Stream） |
+| MapStruct | 1.6 | 对象映射 |
+| DashScope SDK | 2.22 | 语音识别/合成 |
 | Gradle | 8.14 | 构建工具 |
 
 ### 前端技术
 
 | 技术 | 版本 | 说明 |
 |------|------|------|
-| React | 18.3 | UI 框架 |
+| React | 18 | UI 框架 |
 | TypeScript | 5.6 | 开发语言 |
 | Vite | 5.4 | 构建工具 |
 | Tailwind CSS | 4.1 | 样式框架 |
@@ -101,7 +115,9 @@ NVC 非暴力沟通练习助手是一个基于大语言模型的智能沟通练�
 | Lucide React | 0.468 | 图标库 |
 | pnpm | 10.26 | 前端包管理器 |
 
-## 项目结构
+---
+
+## 📁 项目结构
 
 ```
 nvc-guide/
@@ -121,24 +137,33 @@ nvc-guide/
 │   │   │   ├── file/                 # 文件解析、存储
 │   │   │   ├── mapper/               # MapStruct 映射器
 │   │   │   └── redis/                # RedisService
-│   │   └── modules/                  # 业务模块
+│   │   └── modules/                  # 业务模块（9个）
 │   │       ├── nvcpractice/          # NVC 文字练习（核心模块）
 │   │       ├── nvcvoice/             # NVC 语音练习
 │   │       ├── nvcprofile/           # 用户档案系统
 │   │       ├── nvcscenario/          # 场景库管理
-│   │       ├── knowledgebase/        # 知识库（RAG）
+│   │       ├── nvcassistant/         # 主 Agent 对话入口
+│   │       ├── nvcwiki/              # NVC Wiki 知识库
+│   │       ├── knowledgebase/        # RAG 知识库
 │   │       └── llmprovider/          # LLM Provider 管理
 │   └── src/main/resources/
 │       ├── application.yml           # 应用配置
-│       ├── prompts/                  # AI 提示词模板（nvc-*.st）
+│       ├── prompts/                  # AI 提示词模板
 │       └── scripts/                  # Redis Lua 脚本
 │
-├── frontend/                         # 前端应用
+├── frontend/                         # 前端应用（15个页面）
 │   ├── src/
 │   │   ├── api/                      # API 接口
 │   │   ├── components/               # 公共组件
 │   │   ├── hooks/                    # 业务 Hooks
 │   │   ├── pages/                    # 页面组件
+│   │   │   ├── NvcPracticePage.tsx   # 练习页面
+│   │   │   ├── NvcVoicePage.tsx      # 语音练习
+│   │   │   ├── NvcAssistantPage.tsx  # AI 助手
+│   │   │   ├── NvcDashboardPage.tsx  # 数据仪表盘
+│   │   │   ├── NvcProfilePage.tsx    # 用户档案
+│   │   │   ├── NvcWikiPage.tsx       # NVC Wiki
+│   │   │   └── ...                   # 其他页面
 │   │   ├── types/                    # 类型定义
 │   │   └── utils/                    # 工具函数
 │   ├── package.json
@@ -146,12 +171,14 @@ nvc-guide/
 │
 ├── docker-compose.yml                # 完整部署：前端 + 后端 + PostgreSQL + Redis + MinIO
 ├── docker-compose.dev.yml            # 本地开发依赖：PostgreSQL + Redis + RustFS
-├── docs/                             # 设计文档与改造记录
+├── docs/                             # 设计文档与决策记录
 ├── .env.example                      # 环境变量示例
 └── README.md
 ```
 
-## 快速开始
+---
+
+## 🚀 快速开始
 
 ### 环境要求
 
@@ -207,7 +234,9 @@ pnpm dev
 
 前端服务启动于 `http://localhost:5173`
 
-## Docker 快速部署
+---
+
+## 🐳 Docker 快速部署
 
 ```bash
 # 1. 复制环境变量配置文件
@@ -225,7 +254,21 @@ docker-compose up -d --build
 - **后端 API**：http://localhost:8080
 - **接口文档**：http://localhost:8080/swagger-ui.html
 
-## 功能特性详解
+---
+
+## 📊 项目规模
+
+| 指标 | 数量 |
+|------|------|
+| 后端模块 | 9 个 |
+| Java 文件 | 219 个 |
+| TypeScript 文件 | 56 个 |
+| 前端页面 | 15 个 |
+| AI Agent | 10+ 种 |
+
+---
+
+## 📚 功能特性详解
 
 ### NVC 四要素练习
 
@@ -251,7 +294,43 @@ docker-compose up -d --build
 - **完整性**：是否包含四要素
 - **NVC 质量**：整体 NVC 表达水平
 
-## 常见问题
+---
+
+## 🗺️ 开发路线
+
+### ✅ 已完成（Phase 1-4）
+
+- [x] 项目初始化与基础架构搭建
+- [x] 数据库实体与 Repository 创建
+- [x] Agent 配置体系与调度中心
+- [x] NVC 文字练习核心流程
+- [x] NVC 评估引擎
+- [x] 用户档案系统
+- [x] 场景库管理
+- [x] 结构化四步练习模式
+- [x] 语音练习模块
+- [x] 前端页面开发
+- [x] RAG 知识库与个性化检索
+- [x] 数据可视化仪表盘
+- [x] NVC 主 Agent 对话入口
+- [x] NVC Wiki 知识库
+
+### 🚧 进行中
+
+- [ ] UI 细节打磨与交互优化
+- [ ] 场景库扩充（更多真实场景）
+- [ ] Prompt 持续调优
+
+### 📋 计划中
+
+- [ ] 用户认证与多用户支持
+- [ ] 练习社区与分享功能
+- [ ] 移动端适配
+- [ ] 更多语言支持
+
+---
+
+## ❓ 常见问题
 
 ### Q: AI 模型配置
 
@@ -279,7 +358,9 @@ CREATE EXTENSION IF NOT EXISTS vector;
 
 开发环境建议设置 `spring.jpa.hibernate.ddl-auto: update`
 
-## 开发指南
+---
+
+## 🛠️ 开发指南
 
 ### 添加新的 NVC Agent
 
@@ -294,21 +375,38 @@ CREATE EXTENSION IF NOT EXISTS vector;
 2. 通过场景库管理页面添加场景
 3. 或使用 AI 生成功能自动创建场景
 
-## 相关资源
+### 代码规范
+
+- **分层架构**：Controller → Service → Repository
+- **命名规范**：Entity（`XxxEntity`）、DTO（`XxxDTO`）、Request（`XxxRequest`）、Response（`XxxResponse`）
+- **异常处理**：统一使用 `BusinessException(ErrorCode.XXX, message)`
+- **配置管理**：敏感信息放 `.env`，业务配置用 `@ConfigurationProperties`
+
+---
+
+## 📄 许可证
+
+AGPL-3.0 License
+
+---
+
+## 🤝 贡献
+
+欢迎提交 Issue 和 Pull Request！
+
+---
+
+## 🙏 相关资源
 
 - [非暴力沟通 - 马歇尔·卢森堡](https://www.nonviolentcommunication.com/)
 - [NVC 中文网](https://www.nvc-cn.com/)
 - [Spring AI 文档](https://docs.spring.io/spring-ai/reference/)
 - [Spring Boot 文档](https://spring.io/projects/spring-boot)
 
-## 许可证
+---
 
-AGPL-3.0 License
+<div align="center">
 
-## 贡献
+**开始你的 NVC 练习之旅吧！** 🌟
 
-欢迎提交 Issue 和 Pull Request！
-
-## 致谢
-
-本项目基于 [interview-guide](https://github.com/Snailclimb/interview-guide) 改造而成，感谢原作者的优秀基础架构。
+</div>
