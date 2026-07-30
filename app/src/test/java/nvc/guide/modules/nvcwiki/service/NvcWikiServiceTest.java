@@ -22,6 +22,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -317,6 +322,101 @@ class NvcWikiServiceTest {
 
             List<nvc.guide.modules.nvcwiki.dto.WikiSearchResult> results =
                     service.searchWikis(1L, "不存在的内容", 5);
+
+            assertTrue(results.isEmpty());
+        }
+    }
+
+    // ==================== listWikis ====================
+
+    @Nested
+    @DisplayName("listWikis()")
+    class ListWikisTests {
+
+        @Test
+        @DisplayName("无分类过滤：返回用户全部 Wiki")
+        void listWikis_noCategory_returnsAll() {
+            KnowledgeBaseEntity entity1 = buildEntity(10L, 1L, "Wiki1");
+            KnowledgeBaseEntity entity2 = buildEntity(11L, 1L, "Wiki2");
+            Page<KnowledgeBaseEntity> page = new PageImpl<>(
+                List.of(entity1, entity2), PageRequest.of(0, 10), 2);
+
+            when(knowledgeBaseRepository.findByTypeAndUserIdOrderByUploadedAtDesc(
+                eq(KnowledgeBaseType.PERSONAL_WIKI), eq(1L), any(Pageable.class)))
+                .thenReturn(page);
+
+            Page<WikiResponse> result = service.listWikis(1L, null, PageRequest.of(0, 10));
+
+            assertEquals(2, result.getTotalElements());
+            assertEquals("Wiki1", result.getContent().get(0).title());
+            assertEquals("Wiki2", result.getContent().get(1).title());
+        }
+
+        @Test
+        @DisplayName("有分类过滤：返回指定分类的 Wiki")
+        void listWikis_withCategory_returnsFiltered() {
+            KnowledgeBaseEntity entity = buildEntity(10L, 1L, "学习笔记");
+            entity.setCategory(NvcWikiCategory.LEARNING_SUMMARY.name());
+            Page<KnowledgeBaseEntity> page = new PageImpl<>(
+                List.of(entity), PageRequest.of(0, 10), 1);
+
+            when(knowledgeBaseRepository.findByTypeAndUserIdAndCategoryOrderByUploadedAtDesc(
+                eq(KnowledgeBaseType.PERSONAL_WIKI), eq(1L),
+                eq(NvcWikiCategory.LEARNING_SUMMARY.name()), any(Pageable.class)))
+                .thenReturn(page);
+
+            Page<WikiResponse> result = service.listWikis(
+                1L, NvcWikiCategory.LEARNING_SUMMARY, PageRequest.of(0, 10));
+
+            assertEquals(1, result.getTotalElements());
+            assertEquals("学习笔记", result.getContent().get(0).title());
+        }
+
+        @Test
+        @DisplayName("无 Wiki 时返回空页")
+        void listWikis_empty_returnsEmptyPage() {
+            Page<KnowledgeBaseEntity> page = new PageImpl<>(
+                List.of(), PageRequest.of(0, 10), 0);
+
+            when(knowledgeBaseRepository.findByTypeAndUserIdOrderByUploadedAtDesc(
+                eq(KnowledgeBaseType.PERSONAL_WIKI), eq(1L), any(Pageable.class)))
+                .thenReturn(page);
+
+            Page<WikiResponse> result = service.listWikis(1L, null, PageRequest.of(0, 10));
+
+            assertEquals(0, result.getTotalElements());
+            assertTrue(result.getContent().isEmpty());
+        }
+    }
+
+    // ==================== searchByKeyword ====================
+
+    @Nested
+    @DisplayName("searchByKeyword()")
+    class SearchByKeywordTests {
+
+        @Test
+        @DisplayName("关键词搜索返回匹配的 Wiki")
+        void searchByKeyword_returnsMatches() {
+            KnowledgeBaseEntity entity = buildEntity(10L, 1L, "NVC学习笔记");
+            when(knowledgeBaseRepository.searchByTypeAndUserIdAndKeyword(
+                eq(KnowledgeBaseType.PERSONAL_WIKI), eq(1L), eq("NVC")))
+                .thenReturn(List.of(entity));
+
+            List<WikiResponse> results = service.searchByKeyword(1L, "NVC");
+
+            assertEquals(1, results.size());
+            assertEquals("NVC学习笔记", results.get(0).title());
+        }
+
+        @Test
+        @DisplayName("无匹配结果时返回空列表")
+        void searchByKeyword_noMatches_returnsEmpty() {
+            when(knowledgeBaseRepository.searchByTypeAndUserIdAndKeyword(
+                eq(KnowledgeBaseType.PERSONAL_WIKI), eq(1L), eq("不存在")))
+                .thenReturn(List.of());
+
+            List<WikiResponse> results = service.searchByKeyword(1L, "不存在");
 
             assertTrue(results.isEmpty());
         }
