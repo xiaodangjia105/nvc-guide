@@ -25,8 +25,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * 统一面试评估服务
- * 文字面试和语音面试共用的评估逻辑：分批评估 + 结构化输出 + 二次汇总 + 降级兜底
+ * 统一 NVC 练习评估服务
+ * 文字练习和语音练习共用的评估逻辑：分批评估 + 结构化输出 + 二次汇总 + 降级兜底
  */
 @Service
 public class UnifiedEvaluationService {
@@ -76,7 +76,7 @@ public class UnifiedEvaluationService {
     public UnifiedEvaluationService(
             StructuredOutputInvoker structuredOutputInvoker,
             ResourceLoader resourceLoader,
-            InterviewEvaluationProperties evaluationProperties) throws IOException {
+            NvcEvaluationProperties evaluationProperties) throws IOException {
         this.structuredOutputInvoker = structuredOutputInvoker;
         this.resourceLoader = resourceLoader;
         this.systemPromptTemplate = new PromptTemplate(loadPrompt(evaluationProperties.getSystemPromptPath()));
@@ -89,12 +89,12 @@ public class UnifiedEvaluationService {
     }
 
     /**
-     * 评估面试问答（文字和语音通用）
+     * 评估 NVC 练习对话（文字和语音通用）
      *
      * @param chatClient  LLM 客户端
      * @param sessionId   会话ID（用于日志）
-     * @param qaRecords   问答记录列表
-     * @param resumeText  简历摘要（可选，可为 null）
+     * @param qaRecords   对话记录列表
+     * @param resumeText  上下文摘要（可选，可为 null）
      * @return 评估报告
      */
     public EvaluationReport evaluate(ChatClient chatClient,
@@ -109,12 +109,12 @@ public class UnifiedEvaluationService {
                                      List<QaRecord> qaRecords,
                                      String resumeText,
                                      String referenceContext) {
-        log.info("开始评估面试: sessionId={}, 共{}题", sessionId, qaRecords.size());
+        log.info("开始评估NVC练习: sessionId={}, 共{}题", sessionId, qaRecords.size());
 
         String resumeContext = resumeText != null ? resumeText : "";
-        // 超长简历截断，保留前 3000 字符（约 1500~2000 tokens），避免极端情况下 token 消耗过大
+        // 超长上下文截断，保留前 3000 字符（约 1500~2000 tokens），避免极端情况下 token 消耗过大
         if (resumeContext.length() > 3000) {
-            resumeContext = resumeContext.substring(0, 3000) + "\n...(简历内容过长，已截断)";
+            resumeContext = resumeContext.substring(0, 3000) + "\n...(上下文内容过长，已截断)";
         }
         String referenceBaseline = referenceContext != null ? referenceContext.trim() : "";
         if (referenceBaseline.length() > MAX_REFERENCE_CONTEXT_CHARS) {
@@ -227,7 +227,7 @@ public class UnifiedEvaluationService {
             .filter(r -> r != null && r.overallFeedback() != null && !r.overallFeedback().isBlank())
             .map(BatchReportDTO::overallFeedback)
             .collect(Collectors.joining("\n\n"));
-        return feedback.isBlank() ? "本次面试已完成分批评估，但未生成有效综合评语。" : feedback;
+        return feedback.isBlank() ? "本次练习已完成分批评估，但未生成有效综合评语。" : feedback;
     }
 
     private List<String> mergeListItems(List<BatchResult> batchResults, boolean strengthsMode) {

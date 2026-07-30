@@ -8,13 +8,12 @@ import java.time.Duration;
 import java.util.Optional;
 
 /**
- * 会话 Redis 缓存服务（骨架）
- * 原 InterviewSessionCache，后续改造为 NvcSessionCache
+ * 会话 Redis 缓存服务
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class InterviewSessionCache {
+public class NvcSessionCache {
 
     private final RedisService redisService;
 
