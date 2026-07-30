@@ -4,6 +4,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import nvc.guide.common.ai.LlmProviderRegistry;
 import nvc.guide.modules.nvcassistant.dto.ToolCallRecord;
+import nvc.guide.modules.nvcpractice.tool.NvcTool;
+import nvc.guide.modules.nvcpractice.tool.NvcToolContext;
 import nvc.guide.modules.nvcpractice.tool.NvcToolRegistry;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.AssistantMessage;
@@ -40,6 +42,7 @@ public class AgentLoop {
     private final LlmProviderRegistry llmProviderRegistry;
     private final NvcToolRegistry toolRegistry;
     private final ToolExecutor toolExecutor;
+    private final IntentRouter intentRouter;
 
     /** 最大工具调用轮数 */
     private static final int MAX_TOOL_CALL_TURNS = 10;
@@ -64,13 +67,48 @@ public class AgentLoop {
                 List<Message> messages = new ArrayList<>(contextMessages);
                 messages.add(new UserMessage(userMessage));
 
-                log.debug("[AgentLoop] Sending {} messages to LLM: userId={}, conversationId={}",
+                // 2. 意图预路由：高置信度意图直接执行工具，跳过 LLM
+                IntentRouter.IntentMatch intentMatch = intentRouter.detectIntent(userMessage);
+                if (intentMatch != null) {
+                    NvcTool directTool = toolRegistry.getTool(intentMatch.toolName());
+                    if (directTool != null) {
+                        log.info("[AgentLoop] IntentRouter matched: tool={}, reason={}",
+                            intentMatch.toolName(), intentMatch.reason());
+                        sink.next(AgentEvent.thinking("正在处理..."));
+                        sink.next(AgentEvent.toolcallStart(intentMatch.toolName(), intentMatch.arguments()));
+
+                        // 通过 ToolExecutor 执行（保留 Hook 链：缓存、限流、日志等）
+                        AssistantMessage.ToolCall syntheticTc = new AssistantMessage.ToolCall(
+                            "intent-" + System.currentTimeMillis(), "function",
+                            intentMatch.toolName(), intentMatch.arguments());
+                        List<ToolCallResult> results = toolExecutor.execute(
+                            List.of(syntheticTc), userId, conversationId);
+
+                        ToolCallResult result = results.get(0);
+                        sink.next(AgentEvent.toolcallEnd(
+                            result.toolName(), result.success(),
+                            truncateResult(result.result()), result.durationMs()));
+
+                        String responseText = result.success()
+                            ? result.result()
+                            : "操作失败: " + result.result();
+                        sink.next(AgentEvent.content(responseText));
+                        sink.next(AgentEvent.done(conversationId));
+                        sink.complete();
+                        return;
+                    }
+                    // 工具不存在，降级到 LLM 循环
+                    log.warn("[AgentLoop] IntentRouter matched tool '{}' but not found in registry, falling through to LLM",
+                        intentMatch.toolName());
+                }
+
+                log.info("[AgentLoop] Sending {} messages to LLM: userId={}, conversationId={}",
                     messages.size(), userId, conversationId);
 
-                // 2. 发送 thinking 事件
+                // 3. 发送 thinking 事件
                 sink.next(AgentEvent.thinking("正在思考..."));
 
-                // 3. 循环调用 LLM
+                // 4. 循环调用 LLM
                 int turn = 0;
                 List<ToolCallRecord> allToolCalls = new ArrayList<>();
 

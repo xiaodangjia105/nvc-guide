@@ -1,7 +1,7 @@
 package nvc.guide.common.evaluation;
 
 /**
- * 通用面试问答记录（文字面试和语音面试共用）
+ * NVC 练习对话记录（文字练习和语音练习共用）
  */
 public record QaRecord(
     int questionIndex,

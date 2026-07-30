@@ -3,7 +3,7 @@ package nvc.guide.common.evaluation;
 import java.util.List;
 
 /**
- * 通用面试评估报告（文字面试和语音面试共用）
+ * NVC 练习评估报告（文字练习和语音练习共用）
  */
 public record EvaluationReport(
     String sessionId,

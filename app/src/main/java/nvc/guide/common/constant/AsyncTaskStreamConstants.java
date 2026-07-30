@@ -2,7 +2,7 @@ package nvc.guide.common.constant;
 
 /**
  * 异步任务 Redis Stream 通用常量
- * 包含知识库向量化和简历分析两个异步任务的配置
+ * 包含知识库向量化和 NVC 语音评估等异步任务的配置
  */
 public final class AsyncTaskStreamConstants {
 
@@ -65,72 +65,6 @@ public final class AsyncTaskStreamConstants {
      * 知识库ID字段
      */
     public static final String FIELD_KB_ID = "kbId";
-
-    // ========== 简历分析 Stream 配置 ==========
-
-    /**
-     * 简历分析 Stream Key
-     */
-    public static final String RESUME_ANALYZE_STREAM_KEY = "resume:analyze:stream";
-
-    /**
-     * 简历分析 Consumer Group 名称
-     */
-    public static final String RESUME_ANALYZE_GROUP_NAME = "analyze-group";
-
-    /**
-     * 简历分析 Consumer 名称前缀
-     */
-    public static final String RESUME_ANALYZE_CONSUMER_PREFIX = "analyze-consumer-";
-
-    /**
-     * 简历ID字段
-     */
-    public static final String FIELD_RESUME_ID = "resumeId";
-
-    // ========== 面试评估 Stream 配置 ==========
-
-    /**
-     * 面试评估 Stream Key
-     */
-    public static final String INTERVIEW_EVALUATE_STREAM_KEY = "interview:evaluate:stream";
-
-    /**
-     * 面试评估 Consumer Group 名称
-     */
-    public static final String INTERVIEW_EVALUATE_GROUP_NAME = "evaluate-group";
-
-    /**
-     * 面试评估 Consumer 名称前缀
-     */
-    public static final String INTERVIEW_EVALUATE_CONSUMER_PREFIX = "evaluate-consumer-";
-
-    /**
-     * 面试会话ID字段
-     */
-    public static final String FIELD_SESSION_ID = "sessionId";
-
-    // ========== 语音面试评估 Stream 配置 ==========
-
-    /**
-     * 语音面试评估 Stream Key
-     */
-    public static final String VOICE_EVALUATE_STREAM_KEY = "voice:evaluate:stream";
-
-    /**
-     * 语音面试评估 Consumer Group 名称
-     */
-    public static final String VOICE_EVALUATE_GROUP_NAME = "voice-evaluate-group";
-
-    /**
-     * 语音面试评估 Consumer 名称前缀
-     */
-    public static final String VOICE_EVALUATE_CONSUMER_PREFIX = "voice-evaluate-consumer-";
-
-    /**
-     * 语音面试会话ID字段
-     */
-    public static final String FIELD_VOICE_SESSION_ID = "voiceSessionId";
 
     // ========== NVC 语音评估 Stream 配置 ==========
 

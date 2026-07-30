@@ -5,12 +5,12 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 /**
- * 评估配置属性（保留，后续改造为 NVC 评估配置）
+ * NVC 评估配置属性
  */
 @Data
 @Component
 @ConfigurationProperties(prefix = "app.evaluation")
-public class InterviewEvaluationProperties {
+public class NvcEvaluationProperties {
 
     /**
      * 评估系统提示词路径

@@ -135,8 +135,8 @@ public class LlmProviderRegistry {
     }
 
     /**
-     * 获取语音面试专用 ChatClient：SkillsTool + ToolCallAdvisor（流式）。
-     * 不加 Memory Advisor（语音面试手动管理对话历史）。
+     * 获取语音练习专用 ChatClient：SkillsTool + ToolCallAdvisor（流式）。
+     * 不加 Memory Advisor（语音练习手动管理对话历史）。
      */
     public ChatClient getVoiceChatClient(String providerId) {
         String id = resolveProviderId(providerId);
@@ -314,7 +314,7 @@ public class LlmProviderRegistry {
         }
         SafeGuardAdvisor advisor = SafeGuardAdvisor.builder()
             .sensitiveWords(config.getSafeguardWords())
-            .failureResponse("抱歉，我只能协助面试相关的任务。")
+            .failureResponse("抱歉，我只能协助 NVC 练习相关的任务。")
             .order(100)
             .build();
         return Optional.of(advisor);

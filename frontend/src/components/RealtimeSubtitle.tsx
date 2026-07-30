@@ -16,7 +16,7 @@ interface RealtimeSubtitleProps {
 
 // 简单的消息气泡组件
 function MessageBubble({ role, text, highlight, italic, suffix }: {
-  role: 'user' | 'interviewer';
+  role: 'user' | 'assistant';
   text: string;
   highlight?: boolean;
   italic?: boolean;
@@ -92,7 +92,7 @@ export default function RealtimeSubtitle({
           {messages.map((msg) => (
             <div key={msg.id}>
               <MessageBubble
-                role={msg.role === 'user' ? 'user' : 'interviewer'}
+                role={msg.role === 'user' ? 'user' : 'assistant'}
                 text={msg.text}
               />
             </div>
@@ -107,7 +107,7 @@ export default function RealtimeSubtitle({
               exit={{ opacity: 0 }}
             >
               <MessageBubble
-                role="interviewer"
+                role="assistant"
                 text={activeAiText}
                 highlight
                 suffix={(
