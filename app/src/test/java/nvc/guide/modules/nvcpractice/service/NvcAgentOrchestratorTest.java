@@ -1,8 +1,13 @@
 package nvc.guide.modules.nvcpractice.service;
 
 import nvc.guide.common.exception.BusinessException;
+import nvc.guide.modules.knowledgebase.model.KnowledgeBaseType;
 import nvc.guide.modules.nvcpractice.dto.AgentDecision;
 import nvc.guide.modules.nvcpractice.dto.NvcChatRequest;
+import nvc.guide.modules.nvcpractice.dto.RagResult;
+import nvc.guide.modules.nvcprofile.dto.AbilityRadarDTO;
+import nvc.guide.modules.nvcprofile.model.NvcLevel;
+import nvc.guide.modules.nvcprofile.model.NvcUserProfileEntity;
 import java.util.Map;
 import nvc.guide.modules.nvcpractice.dto.PracticeContext;
 import nvc.guide.modules.nvcpractice.model.NvcAgentConfigEntity;
@@ -328,6 +333,280 @@ class NvcAgentOrchestratorTest {
       assertNotNull(result);
       verify(agentConfigService).getConfig(NvcAgentScene.NVC_EXPRESSION_EVALUATOR);
       verify(agentChatService).chatPlain(eq(evaluatorConfig), anyString(), anyString());
+    }
+
+    @Test
+    @DisplayName("无评估数据时返回默认 JSON")
+    void reflect_noEvaluation_returnsDefaultJson() {
+      NvcPracticeSessionEntity session = buildSession(
+          NvcSessionPhase.IN_PROGRESS,
+          NvcPracticeMode.FREE_DIALOG, null);
+      PracticeContext context = PracticeContext.builder()
+          .session(session).lastEvaluation(null).roundCount(0).build();
+
+      String result = orchestrator.reflect(context);
+
+      assertNotNull(result);
+      assertTrue(result.contains("weak_elements"));
+      assertTrue(result.contains("No evaluation data available"));
+    }
+  }
+
+  // ========== executeAgentStream() ==========
+
+  @Nested
+  @DisplayName("executeAgentStream()")
+  class ExecuteAgentStreamTests {
+
+    @Test
+    @DisplayName("流式执行返回 Flux<String>")
+    void executeAgentStream_returnsFlux() {
+      NvcAgentConfigEntity config = NvcAgentConfigEntity.builder()
+          .id(1L)
+          .agentScene(NvcAgentScene.DIALOGUE_GUIDE)
+          .systemPrompt("test")
+          .modelProvider("mimo")
+          .isEnabled(true)
+          .build();
+      when(agentConfigService.getConfig(NvcAgentScene.DIALOGUE_GUIDE)).thenReturn(config);
+
+      PracticeContext context = PracticeContext.builder()
+          .session(buildSession(NvcSessionPhase.IN_PROGRESS,
+              NvcPracticeMode.FREE_DIALOG, null))
+          .roundCount(1).build();
+
+      when(agentChatService.chatStream(any(NvcChatRequest.class)))
+          .thenReturn(reactor.core.publisher.Flux.just("你好", "！", "我是引导官。"));
+
+      AgentDecision decision = new AgentDecision(NvcAgentScene.DIALOGUE_GUIDE, "test", null);
+      java.util.List<String> result = orchestrator.executeAgentStream(decision, context, "你好")
+          .collectList().block();
+
+      assertNotNull(result);
+      assertEquals(3, result.size());
+      assertEquals("你好", result.get(0));
+    }
+
+    @Test
+    @DisplayName("Agent 禁用时 fallback 到 DIALOGUE_GUIDE（流式）")
+    void executeAgentStream_disabledAgent_fallback() {
+      NvcAgentConfigEntity disabledConfig = NvcAgentConfigEntity.builder()
+          .id(2L).agentScene(NvcAgentScene.DIFFICULT_PARTNER).isEnabled(false).build();
+      NvcAgentConfigEntity fallbackConfig = NvcAgentConfigEntity.builder()
+          .id(1L).agentScene(NvcAgentScene.DIALOGUE_GUIDE)
+          .systemPrompt("fallback").modelProvider("mimo").isEnabled(true).build();
+      when(agentConfigService.getConfig(NvcAgentScene.DIFFICULT_PARTNER))
+          .thenReturn(disabledConfig);
+      when(agentConfigService.getConfig(NvcAgentScene.DIALOGUE_GUIDE))
+          .thenReturn(fallbackConfig);
+
+      PracticeContext context = PracticeContext.builder()
+          .session(buildSession(NvcSessionPhase.IN_PROGRESS,
+              NvcPracticeMode.FREE_DIALOG, null))
+          .roundCount(1).build();
+
+      when(agentChatService.chatStream(any(NvcChatRequest.class)))
+          .thenReturn(reactor.core.publisher.Flux.just("fallback"));
+
+      AgentDecision decision = new AgentDecision(
+          NvcAgentScene.DIFFICULT_PARTNER, "test", null);
+      java.util.List<String> result = orchestrator.executeAgentStream(decision, context, "hello")
+          .collectList().block();
+
+      assertNotNull(result);
+      assertEquals("fallback", result.get(0));
+    }
+  }
+
+  // ========== buildPracticeContext() RAG 路径 ==========
+
+  @Nested
+  @DisplayName("buildPracticeContext() RAG 路径")
+  class BuildPracticeContextRagTests {
+
+    private NvcUserProfileEntity buildProfile(Long userId) {
+      return NvcUserProfileEntity.builder()
+          .id(1L).userId(userId)
+          .nvcLevel(NvcLevel.BEGINNER)
+          .totalPracticeCount(5)
+          .build();
+    }
+
+    @Test
+    @DisplayName("场景驱动模式：RAG 查询使用场景描述")
+    void buildContext_scenarioMode_ragUsesScenarioDescription() {
+      NvcPracticeSessionEntity session = buildSession(
+          NvcSessionPhase.IN_PROGRESS, NvcPracticeMode.SCENARIO, null);
+      session.setScenarioId(42L);
+      when(sessionRepository.findById(1L)).thenReturn(Optional.of(session));
+      when(messageRepository.findBySessionIdOrderBySequenceNumAsc(1L))
+          .thenReturn(List.of());
+      when(evaluationRepository.findBySessionIdOrderByCreatedAtAsc(1L))
+          .thenReturn(List.of());
+
+      NvcScenarioEntity scenario = NvcScenarioEntity.builder()
+          .id(42L).title("职场冲突").description("同事误解你的意图").build();
+      when(scenarioRepository.findById(42L)).thenReturn(Optional.of(scenario));
+
+      NvcUserProfileEntity profile = buildProfile(100L);
+      when(profileService.getOrCreateProfile(100L)).thenReturn(profile);
+      when(profileService.getAbilityRadar(100L)).thenReturn(null);
+
+      RagResult ragResult = new RagResult("职场沟通技巧", Map.of("source", "test"), 0.9);
+      when(ragService.retrieve(eq("职场冲突\n同事误解你的意图"), any(), eq(3)))
+          .thenReturn(List.of(ragResult));
+      when(ragService.formatForPrompt(any())).thenReturn("RAG上下文");
+
+      PracticeContext ctx = orchestrator.buildPracticeContext(1L, 100L);
+
+      assertNotNull(ctx.getRagContext());
+      assertEquals("RAG上下文", ctx.getRagContext());
+      verify(ragService).retrieve(eq("职场冲突\n同事误解你的意图"), any(), eq(3));
+    }
+
+    @Test
+    @DisplayName("自由对话模式：RAG 查询使用用户最新消息")
+    void buildContext_freeDialog_ragUsesLastUserMessage() {
+      NvcPracticeSessionEntity session = buildSession(
+          NvcSessionPhase.IN_PROGRESS, NvcPracticeMode.FREE_DIALOG, null);
+      when(sessionRepository.findById(1L)).thenReturn(Optional.of(session));
+
+      NvcPracticeMessageEntity userMsg = NvcPracticeMessageEntity.builder()
+          .id(1L).sessionId(1L).role(NvcMessageRole.USER)
+          .content("如何表达我的感受？").sequenceNum(1).build();
+      when(messageRepository.findBySessionIdOrderBySequenceNumAsc(1L))
+          .thenReturn(List.of(userMsg));
+      when(evaluationRepository.findBySessionIdOrderByCreatedAtAsc(1L))
+          .thenReturn(List.of());
+
+      NvcUserProfileEntity profile = buildProfile(100L);
+      when(profileService.getOrCreateProfile(100L)).thenReturn(profile);
+      when(profileService.getAbilityRadar(100L)).thenReturn(null);
+
+      RagResult ragResult = new RagResult("感受表达", Map.of("source", "test"), 0.8);
+      when(ragService.retrieve(eq("如何表达我的感受？"), any(), eq(3)))
+          .thenReturn(List.of(ragResult));
+      when(ragService.formatForPrompt(any())).thenReturn("RAG上下文");
+
+      PracticeContext ctx = orchestrator.buildPracticeContext(1L, 100L);
+
+      assertNotNull(ctx.getRagContext());
+      verify(ragService).retrieve(eq("如何表达我的感受？"), any(), eq(3));
+    }
+
+    @Test
+    @DisplayName("结构化四步模式：RAG 查询使用步骤名称")
+    void buildContext_structuredMode_ragUsesStepName() {
+      NvcPracticeSessionEntity session = buildSession(
+          NvcSessionPhase.IN_PROGRESS,
+          NvcPracticeMode.STRUCTURED_FOUR_STEP,
+          NvcPracticeStep.FEELING);
+      when(sessionRepository.findById(1L)).thenReturn(Optional.of(session));
+      when(messageRepository.findBySessionIdOrderBySequenceNumAsc(1L))
+          .thenReturn(List.of());
+      when(evaluationRepository.findBySessionIdOrderByCreatedAtAsc(1L))
+          .thenReturn(List.of());
+
+      NvcUserProfileEntity profile = buildProfile(100L);
+      when(profileService.getOrCreateProfile(100L)).thenReturn(profile);
+      when(profileService.getAbilityRadar(100L)).thenReturn(null);
+
+      RagResult ragResult = new RagResult("感受练习", Map.of("source", "test"), 0.8);
+      when(ragService.retrieve(eq("NVC FEELING 练习"), any(), eq(3)))
+          .thenReturn(List.of(ragResult));
+      when(ragService.formatForPrompt(any())).thenReturn("RAG上下文");
+
+      PracticeContext ctx = orchestrator.buildPracticeContext(1L, 100L);
+
+      assertNotNull(ctx.getRagContext());
+      verify(ragService).retrieve(eq("NVC FEELING 练习"), any(), eq(3));
+    }
+
+    @Test
+    @DisplayName("无 RAG 查询条件时 ragContext 为 null")
+    void buildContext_noRagQuery_ragContextIsNull() {
+      NvcPracticeSessionEntity session = buildSession(
+          NvcSessionPhase.IN_PROGRESS,
+          NvcPracticeMode.STRUCTURED_FOUR_STEP, null);
+      when(sessionRepository.findById(1L)).thenReturn(Optional.of(session));
+      when(messageRepository.findBySessionIdOrderBySequenceNumAsc(1L))
+          .thenReturn(List.of());
+      when(evaluationRepository.findBySessionIdOrderByCreatedAtAsc(1L))
+          .thenReturn(List.of());
+
+      NvcUserProfileEntity profile = buildProfile(100L);
+      when(profileService.getOrCreateProfile(100L)).thenReturn(profile);
+
+      PracticeContext ctx = orchestrator.buildPracticeContext(1L, 100L);
+
+      assertNull(ctx.getRagContext());
+    }
+
+    @Test
+    @DisplayName("有薄弱要素时使用个性化检索")
+    void buildContext_withWeakElement_usesPersonalizedRag() {
+      NvcPracticeSessionEntity session = buildSession(
+          NvcSessionPhase.IN_PROGRESS, NvcPracticeMode.FREE_DIALOG, null);
+      when(sessionRepository.findById(1L)).thenReturn(Optional.of(session));
+
+      NvcPracticeMessageEntity userMsg = NvcPracticeMessageEntity.builder()
+          .id(1L).sessionId(1L).role(NvcMessageRole.USER)
+          .content("我不知道怎么表达需求").sequenceNum(1).build();
+      when(messageRepository.findBySessionIdOrderBySequenceNumAsc(1L))
+          .thenReturn(List.of(userMsg));
+      when(evaluationRepository.findBySessionIdOrderByCreatedAtAsc(1L))
+          .thenReturn(List.of());
+
+      NvcUserProfileEntity profile = buildProfile(100L);
+      when(profileService.getOrCreateProfile(100L)).thenReturn(profile);
+
+      AbilityRadarDTO radar = new AbilityRadarDTO(
+          80, 60, 40, 70, 65, 62, "BEGINNER");  // need=40 is weakest
+      when(profileService.getAbilityRadar(100L)).thenReturn(radar);
+
+      RagResult ragResult = new RagResult("需求表达", Map.of("source", "test"), 0.9);
+      when(ragService.retrievePersonalized(
+          eq("我不知道怎么表达需求"), eq("need"), eq(3)))
+          .thenReturn(List.of(ragResult));
+      when(ragService.formatForPrompt(any())).thenReturn("个性化RAG");
+
+      PracticeContext ctx = orchestrator.buildPracticeContext(1L, 100L);
+
+      assertEquals("个性化RAG", ctx.getRagContext());
+      verify(ragService).retrievePersonalized(
+          eq("我不知道怎么表达需求"), eq("need"), eq(3));
+    }
+
+    @Test
+    @DisplayName("无薄弱要素（全 0 分）时使用标准检索")
+    void buildContext_allZeroScores_usesStandardRag() {
+      NvcPracticeSessionEntity session = buildSession(
+          NvcSessionPhase.IN_PROGRESS, NvcPracticeMode.FREE_DIALOG, null);
+      when(sessionRepository.findById(1L)).thenReturn(Optional.of(session));
+
+      NvcPracticeMessageEntity userMsg = NvcPracticeMessageEntity.builder()
+          .id(1L).sessionId(1L).role(NvcMessageRole.USER)
+          .content("你好").sequenceNum(1).build();
+      when(messageRepository.findBySessionIdOrderBySequenceNumAsc(1L))
+          .thenReturn(List.of(userMsg));
+      when(evaluationRepository.findBySessionIdOrderByCreatedAtAsc(1L))
+          .thenReturn(List.of());
+
+      NvcUserProfileEntity profile = buildProfile(100L);
+      when(profileService.getOrCreateProfile(100L)).thenReturn(profile);
+
+      AbilityRadarDTO radar = new AbilityRadarDTO(0, 0, 0, 0, 0, 0, "BEGINNER");
+      when(profileService.getAbilityRadar(100L)).thenReturn(radar);
+
+      RagResult ragResult = new RagResult("NVC基础", Map.of("source", "test"), 0.8);
+      when(ragService.retrieve(eq("你好"), any(), eq(3)))
+          .thenReturn(List.of(ragResult));
+      when(ragService.formatForPrompt(any())).thenReturn("标准RAG");
+
+      PracticeContext ctx = orchestrator.buildPracticeContext(1L, 100L);
+
+      assertEquals("标准RAG", ctx.getRagContext());
+      verify(ragService).retrieve(eq("你好"), any(), eq(3));
     }
   }
 }

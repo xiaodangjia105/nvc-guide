@@ -1,0 +1,83 @@
+# Integration Test Profile Configuration
+# 使用 Testcontainers 提供 PostgreSQL + Redis，无需本地安装
+# 实际连接参数由 IntegrationTestBase 的 @DynamicPropertySource 注入
+
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+
+  ai:
+    openai:
+      base-url: https://dashscope.aliyuncs.com/compatible-mode
+      api-key: test-api-key
+      chat:
+        options:
+          model: qwen3.5-flash
+          temperature: 0.2
+      embedding:
+        options:
+          model: text-embedding-v3
+    retry:
+      max-attempts: 1
+      on-client-errors: false
+    vectorstore:
+      pgvector:
+        index-type: HNSW
+        distance-type: COSINE_DISTANCE
+        dimensions: 1024
+        initialize-schema: true
+        remove-existing-vector-store-table: false
+
+app:
+  ai:
+    default-provider: dashscope
+    providers:
+      dashscope:
+        base-url: https://dashscope.aliyuncs.com/compatible-mode
+        api-key: test-api-key
+        model: qwen3.5-flash
+    structured-max-attempts: 2
+    structured-include-last-error: true
+    rag:
+      rewrite:
+        enabled: false
+      search:
+        short-query-length: 4
+        topk-short: 20
+        topk-medium: 12
+        topk-long: 8
+        min-score-short: 0.18
+        min-score-default: 0.28
+  evaluation:
+    batch-size: 8
+
+  storage:
+    endpoint: http://localhost:9000
+    access-key: minioadmin
+    secret-key: minioadmin
+    bucket: nvc-guide
+    region: us-east-1
+
+  cors:
+    allowed-origins: http://localhost:5173
+
+  nvc:
+    voice:
+      qwen-asr:
+        url: wss://dashscope.aliyuncs.com/api-ws/v1/realtime
+        model: qwen3-asr-flash-realtime
+        api-key: test-api-key
+        language: zh
+        format: pcm
+        sample-rate: 16000
+      qwen-tts:
+        model: qwen3-tts-flash-realtime
+        api-key: test-api-key
+        voice: Cherry
+        format: pcm
+        sample-rate: 24000
