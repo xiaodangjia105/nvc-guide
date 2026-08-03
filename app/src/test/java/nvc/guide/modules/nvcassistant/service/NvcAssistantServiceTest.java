@@ -1,5 +1,6 @@
 package nvc.guide.modules.nvcassistant.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import nvc.guide.modules.nvcassistant.dto.AssistantRequest;
 import nvc.guide.modules.nvcassistant.model.NvcAssistantConversationEntity;
 import nvc.guide.modules.nvcassistant.model.NvcAssistantMessageEntity;
@@ -27,6 +28,7 @@ class NvcAssistantServiceTest {
     private AgentLoop agentLoop;
     private ContextManager contextManager;
     private PromptBuilder promptBuilder;
+    private ObjectMapper objectMapper;
     private NvcAssistantService service;
 
     @BeforeEach
@@ -35,7 +37,8 @@ class NvcAssistantServiceTest {
         agentLoop = mock(AgentLoop.class);
         contextManager = mock(ContextManager.class);
         promptBuilder = mock(PromptBuilder.class);
-        service = new NvcAssistantService(messageService, agentLoop, contextManager, promptBuilder);
+        objectMapper = new ObjectMapper();
+        service = new NvcAssistantService(messageService, agentLoop, contextManager, promptBuilder, objectMapper);
     }
 
     private AssistantRequest buildRequest(String message, Long conversationId) {

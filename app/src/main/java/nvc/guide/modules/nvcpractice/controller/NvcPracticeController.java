@@ -111,8 +111,14 @@ public class NvcPracticeController {
   public Flux<ServerSentEvent<String>> sendMessageStream(
       @PathVariable Long sessionId,
       @RequestBody SendMessageRequest request) {
-    return dialogueService.sendMessageStream(
-        sessionId, request.content());
+    return dialogueService.sendMessageStream(sessionId, request.content())
+        .onErrorResume(e -> {
+          log.error("Practice stream error: sessionId={}", sessionId, e);
+          return Flux.just(ServerSentEvent.<String>builder()
+              .event("error")
+              .data("对话出错: " + e.getMessage())
+              .build());
+        });
   }
 
   /**

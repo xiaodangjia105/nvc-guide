@@ -144,6 +144,13 @@ public class RagChatController {
                     : "【错误】回答生成失败：" + e.getMessage();
                 sessionService.completeStreamMessage(messageId, content);
                 log.error("RAG 聊天流式错误: sessionId={}", sessionId, e);
+            })
+            .onErrorResume(e -> {
+                // 发送结构化错误事件，让客户端知道流已结束
+                return Flux.just(ServerSentEvent.<String>builder()
+                    .event("error")
+                    .data("回答生成失败: " + e.getMessage())
+                    .build());
             });
     }
 }
