@@ -115,14 +115,24 @@ public class NvcAssistantController {
 
     /**
      * 判断是否是客户端断开连接
+     *
+     * <p>检查异常链中是否包含 IOException 或 ClientAbortException，
+     * 兼容中英文操作系统和不同 Servlet 容器。
      */
     private boolean isClientDisconnect(Throwable e) {
         Throwable cause = e;
         while (cause != null) {
-            if (cause instanceof java.io.IOException
-                && cause.getMessage() != null
-                && cause.getMessage().contains("你的主机中的软件中止了一个已建立的连接")) {
+            if (cause instanceof org.apache.catalina.connector.ClientAbortException) {
                 return true;
+            }
+            if (cause instanceof java.io.IOException) {
+                String msg = cause.getMessage();
+                if (msg != null && (msg.contains("已建立的连接")
+                    || msg.contains("broken pipe")
+                    || msg.contains("connection was aborted")
+                    || msg.contains("Connection reset"))) {
+                    return true;
+                }
             }
             cause = cause.getCause();
         }

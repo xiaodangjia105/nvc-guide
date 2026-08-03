@@ -222,20 +222,26 @@ public class NvcAgentOrchestrator {
    */
   public Flux<String> executeAgentStream(
       AgentDecision decision, PracticeContext context, String userMessage) {
-    NvcAgentConfigEntity config = agentConfigService.getConfig(decision.scene());
-    if (!config.getIsEnabled()) {
-      config = agentConfigService.getConfig(NvcAgentScene.DIALOGUE_GUIDE);
+    try {
+      NvcAgentConfigEntity config = agentConfigService.getConfig(decision.scene());
+      if (!config.getIsEnabled()) {
+        config = agentConfigService.getConfig(NvcAgentScene.DIALOGUE_GUIDE);
+      }
+      NvcToolCallConfig toolConfig = NvcToolCallConfig.builder()
+          .toolNames(decision.availableTools())
+          .build();
+      return agentChatService.chatStream(NvcChatRequest.builder()
+          .agentConfig(config)
+          .practiceContext(context)
+          .userMessage(userMessage)
+          .promptVariables(decision.promptVariables())
+          .toolConfig(toolConfig)
+          .build());
+    } catch (Exception e) {
+      log.error("[NvcAgentOrchestrator] Failed to execute agent stream: scene={}",
+          decision.scene(), e);
+      return Flux.just("【错误】Agent 配置异常: " + e.getMessage());
     }
-    NvcToolCallConfig toolConfig = NvcToolCallConfig.builder()
-        .toolNames(decision.availableTools())
-        .build();
-    return agentChatService.chatStream(NvcChatRequest.builder()
-        .agentConfig(config)
-        .practiceContext(context)
-        .userMessage(userMessage)
-        .promptVariables(decision.promptVariables())
-        .toolConfig(toolConfig)
-        .build());
   }
 
   // ==================== REFLECT：反思与策略调整 ====================

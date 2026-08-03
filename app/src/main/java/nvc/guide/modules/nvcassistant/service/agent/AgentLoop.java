@@ -113,6 +113,12 @@ public class AgentLoop {
                 List<ToolCallRecord> allToolCalls = new ArrayList<>();
 
                 while (turn < MAX_TOOL_CALL_TURNS) {
+                    // 检查客户端是否已断开
+                    if (sink.isCancelled()) {
+                        log.info("[AgentLoop] Sink cancelled, stopping: userId={}, turn={}", userId, turn);
+                        break;
+                    }
+
                     // 检查总超时
                     if (System.currentTimeMillis() - startTime > TOTAL_TIMEOUT_MS) {
                         log.warn("[AgentLoop] Total timeout: userId={}, turns={}, elapsed={}ms",

@@ -12,6 +12,7 @@ import org.springframework.http.codec.ServerSentEvent;
 import nvc.guide.modules.nvcpractice.model.NvcPracticeMessageEntity;
 import nvc.guide.modules.nvcpractice.model.NvcPracticeMode;
 import nvc.guide.modules.nvcpractice.model.NvcPracticeSessionEntity;
+import nvc.guide.modules.nvcpractice.model.NvcPracticeStep;
 import nvc.guide.modules.nvcpractice.model.NvcSessionPhase;
 import nvc.guide.modules.nvcpractice.repository.NvcPracticeMessageRepository;
 import nvc.guide.modules.nvcpractice.util.AiResponseCleaner;
@@ -228,44 +229,70 @@ public class NvcPracticeDialogueService {
             .data("{\"length\":" + streamingCleaner.getFinalCleaned().length() + "}")
             .build()));
 
-    return Flux.concat(metadataEvent, messageEvents, doneEvent)
+    // 使用 concatDelayError 确保 doneEvent 即使在 messageEvents 出错时也能发送
+    return Flux.concatDelayError(metadataEvent, messageEvents, doneEvent)
         .doOnComplete(() -> {
           // 流式清理已完成，直接获取最终结果
           String cleanedReply = streamingCleaner.getFinalCleaned();
-
-          NvcPracticeMessageEntity aiMsg =
-              NvcPracticeMessageEntity.builder()
-                  .sessionId(sessionId)
-                  .role(NvcMessageRole.ASSISTANT)
-                  .agentScene(decision.scene())
-                  .content(cleanedReply)
-                  .sequenceNum(nextSeq + 1)
-                  .step(currentStep)
-                  .build();
-          messageRepository.save(aiMsg);
-          log.info("Stream reply saved: sessionId={}, length={}",
-              sessionId, cleanedReply.length());
-
-          // 异步触发摘要更新（不阻塞流式输出）
-          try {
-            summaryService.updateSummary(sessionId, userMessage);
-          } catch (Exception e) {
-            log.warn("Summary update failed in stream (non-blocking): sessionId={}",
-                sessionId, e);
+          saveStreamReply(sessionId, userId, cleanedReply, decision.scene(),
+              nextSeq, currentStep, userMessage, practiceMode, decision);
+        })
+        .doOnError(e -> {
+          // 错误时也保存已接收的部分内容
+          String partialContent = streamingCleaner.getFinalCleaned();
+          if (partialContent != null && !partialContent.isEmpty()) {
+            saveStreamReply(sessionId, userId, partialContent, decision.scene(),
+                nextSeq, currentStep, userMessage, practiceMode, decision);
+            log.info("Partial reply saved on error: sessionId={}, length={}",
+                sessionId, partialContent.length());
           }
-
-          // 结构化四步模式：检查是否需要推进步骤
-          try {
-            if (practiceMode == NvcPracticeMode.STRUCTURED_FOUR_STEP
-                && decision.action() != null
-                && decision.action().equals("STEP_ADVANCE")) {
-              structuredPracticeService.advanceStep(sessionId);
-              log.info("Step advanced in stream: sessionId={}", sessionId);
-            }
-          } catch (Exception e) {
-            log.error("Step advancement failed in stream: sessionId={}", sessionId, e);
-          }
+          log.error("Stream error: sessionId={}", sessionId, e);
         });
+  }
+
+  /**
+   * 保存流式回复 + 后续处理（摘要、步骤推进）
+   */
+  private void saveStreamReply(Long sessionId, Long userId, String cleanedReply,
+      NvcAgentScene scene, int nextSeq,
+      NvcPracticeStep currentStep, String userMessage,
+      NvcPracticeMode practiceMode, AgentDecision decision) {
+    try {
+      NvcPracticeMessageEntity aiMsg =
+          NvcPracticeMessageEntity.builder()
+              .sessionId(sessionId)
+              .role(NvcMessageRole.ASSISTANT)
+              .agentScene(scene)
+              .content(cleanedReply)
+              .sequenceNum(nextSeq + 1)
+              .step(currentStep)
+              .build();
+      messageRepository.save(aiMsg);
+      log.info("Stream reply saved: sessionId={}, length={}",
+          sessionId, cleanedReply.length());
+    } catch (Exception e) {
+      log.error("Failed to save stream reply: sessionId={}", sessionId, e);
+    }
+
+    // 异步触发摘要更新（不阻塞流式输出）
+    try {
+      summaryService.updateSummary(sessionId, userMessage);
+    } catch (Exception e) {
+      log.warn("Summary update failed in stream (non-blocking): sessionId={}",
+          sessionId, e);
+    }
+
+    // 结构化四步模式：检查是否需要推进步骤
+    try {
+      if (practiceMode == NvcPracticeMode.STRUCTURED_FOUR_STEP
+          && decision.action() != null
+          && decision.action().equals("STEP_ADVANCE")) {
+        structuredPracticeService.advanceStep(sessionId);
+        log.info("Step advanced in stream: sessionId={}", sessionId);
+      }
+    } catch (Exception e) {
+      log.error("Step advancement failed in stream: sessionId={}", sessionId, e);
+    }
   }
 
   /**

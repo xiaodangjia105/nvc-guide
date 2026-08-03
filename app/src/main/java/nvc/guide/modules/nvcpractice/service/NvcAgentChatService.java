@@ -121,7 +121,12 @@ public class NvcAgentChatService {
           toolRegistry.toFunctionCallbacks(request.getToolConfig().getToolNames()));
     }
 
-    return spec.stream().content();
+    return spec.stream().content()
+        .onErrorResume(e -> {
+          log.error("[NvcAgentChatService] Stream error: provider={}",
+              request.getAgentConfig().getModelProvider(), e);
+          return Flux.just("【错误】AI 服务调用失败: " + e.getMessage());
+        });
   }
 
   // ═══ 内部方法 ═══
