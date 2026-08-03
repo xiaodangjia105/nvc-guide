@@ -18,6 +18,7 @@ import reactor.core.publisher.Flux;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -73,30 +74,38 @@ public class NvcAssistantService {
 
         // 收集工具调用记录（TOOLCALL_START + TOOLCALL_END 配对）
         final ConcurrentLinkedQueue<Map<String, Object>> toolCallRecords = new ConcurrentLinkedQueue<>();
-        // 临时存储 TOOLCALL_START 事件，等待配对的 TOOLCALL_END
-        final ConcurrentLinkedQueue<AgentEvent> pendingToolStarts = new ConcurrentLinkedQueue<>();
+        // 用 toolCallId 作为 key 存储 TOOLCALL_START 事件，确保并行工具调用正确配对
+        final ConcurrentHashMap<String, AgentEvent> pendingToolStarts = new ConcurrentHashMap<>();
 
         Flux<AgentEvent> processedStream = eventStream
             .doOnNext(event -> {
                 switch (event.type()) {
                     case TOOLCALL_START -> {
-                        pendingToolStarts.add(event);
+                        String startToolCallId = String.valueOf(
+                            event.metadata().getOrDefault("toolCallId", event.data()));
+                        pendingToolStarts.put(startToolCallId, event);
                         // 保存 TOOL 消息（工具调用开始）
                         saveToolMessage(convId, userId, event.data(),
                             "调用工具: " + event.data() + "(" + event.metadata().get("arguments") + ")",
                             seqCounter.getAndIncrement());
                     }
                     case TOOLCALL_END -> {
-                        // 配对 TOOLCALL_START
-                        AgentEvent startEvent = pendingToolStarts.poll();
+                        // 通过 toolCallId 精确配对 TOOLCALL_START
+                        String endToolCallId = String.valueOf(
+                            event.metadata().getOrDefault("toolCallId", event.data()));
+                        AgentEvent startEvent = pendingToolStarts.remove(endToolCallId);
                         String toolName = event.data();
                         boolean success = Boolean.TRUE.equals(event.metadata().get("success"));
                         String result = String.valueOf(event.metadata().getOrDefault("result", ""));
                         long durationMs = event.metadata().get("durationMs") instanceof Number n ? n.longValue() : 0;
 
-                        // 记录工具调用
+                        // 记录工具调用（包含 arguments，便于历史重建）
+                        String arguments = startEvent != null
+                            ? String.valueOf(startEvent.metadata().getOrDefault("arguments", "{}"))
+                            : "{}";
                         toolCallRecords.add(Map.of(
                             "toolName", toolName,
+                            "arguments", arguments,
                             "success", success,
                             "result", truncate(result, 500),
                             "durationMs", durationMs

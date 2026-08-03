@@ -4,6 +4,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import nvc.guide.common.ai.LlmProviderRegistry;
 import nvc.guide.modules.nvcassistant.dto.ToolCallRecord;
+import nvc.guide.modules.nvcpractice.model.NvcAgentConfigEntity;
+import nvc.guide.modules.nvcpractice.model.NvcAgentScene;
+import nvc.guide.modules.nvcpractice.repository.NvcAgentConfigRepository;
 import nvc.guide.modules.nvcpractice.tool.NvcTool;
 import nvc.guide.modules.nvcpractice.tool.NvcToolContext;
 import nvc.guide.modules.nvcpractice.tool.NvcToolRegistry;
@@ -43,6 +46,7 @@ public class AgentLoop {
     private final NvcToolRegistry toolRegistry;
     private final ToolExecutor toolExecutor;
     private final IntentRouter intentRouter;
+    private final NvcAgentConfigRepository agentConfigRepository;
 
     /** 最大工具调用轮数 */
     private static final int MAX_TOOL_CALL_TURNS = 10;
@@ -74,19 +78,20 @@ public class AgentLoop {
                     if (directTool != null) {
                         log.info("[AgentLoop] IntentRouter matched: tool={}, reason={}",
                             intentMatch.toolName(), intentMatch.reason());
+                        String intentCallId = "intent-" + System.currentTimeMillis();
                         sink.next(AgentEvent.thinking("正在处理..."));
-                        sink.next(AgentEvent.toolcallStart(intentMatch.toolName(), intentMatch.arguments()));
+                        sink.next(AgentEvent.toolcallStart(intentCallId, intentMatch.toolName(), intentMatch.arguments()));
 
                         // 通过 ToolExecutor 执行（保留 Hook 链：缓存、限流、日志等）
                         AssistantMessage.ToolCall syntheticTc = new AssistantMessage.ToolCall(
-                            "intent-" + System.currentTimeMillis(), "function",
+                            intentCallId, "function",
                             intentMatch.toolName(), intentMatch.arguments());
                         List<ToolCallResult> results = toolExecutor.execute(
                             List.of(syntheticTc), userId, conversationId);
 
                         ToolCallResult result = results.get(0);
                         sink.next(AgentEvent.toolcallEnd(
-                            result.toolName(), result.success(),
+                            intentCallId, result.toolName(), result.success(),
                             truncateResult(result.result()), result.durationMs()));
 
                         String responseText = result.success()
@@ -141,7 +146,7 @@ public class AgentLoop {
 
                         // 发送工具调用开始事件
                         for (AssistantMessage.ToolCall tc : toolCalls) {
-                            sink.next(AgentEvent.toolcallStart(tc.name(), tc.arguments()));
+                            sink.next(AgentEvent.toolcallStart(tc.id(), tc.name(), tc.arguments()));
                         }
 
                         // 执行工具
@@ -155,7 +160,7 @@ public class AgentLoop {
 
                             // SSE 事件
                             sink.next(AgentEvent.toolcallEnd(
-                                result.toolName(), result.success(), truncateResult(result.result()), result.durationMs()));
+                                tc.id(), result.toolName(), result.success(), truncateResult(result.result()), result.durationMs()));
 
                             // 记录
                             allToolCalls.add(ToolCallRecord.builder()
@@ -229,12 +234,31 @@ public class AgentLoop {
             .map(tc -> tc.getToolDefinition().name())
             .toList());
 
+        // 从数据库读取主 Agent 配置，若无则使用默认值
+        double temperature = 0.3;
+        int maxTokens = 2000;
+        double topP = 0.9;
+        try {
+            NvcAgentConfigEntity config = agentConfigRepository
+                .findByAgentScene(NvcAgentScene.MAIN_ASSISTANT)
+                .orElse(null);
+            if (config != null && Boolean.TRUE.equals(config.getIsEnabled())) {
+                temperature = config.getTemperature() != null ? config.getTemperature() : temperature;
+                maxTokens = config.getMaxTokens() != null ? config.getMaxTokens() : maxTokens;
+                topP = config.getTopP() != null ? config.getTopP() : topP;
+                log.info("[AgentLoop] Using DB config: temperature={}, maxTokens={}, topP={}",
+                    temperature, maxTokens, topP);
+            }
+        } catch (Exception e) {
+            log.warn("[AgentLoop] Failed to load agent config, using defaults", e);
+        }
+
         return client.prompt()
             .messages(messages)
             .options(OpenAiChatOptions.builder()
-                .temperature(0.3)  // 降低温度，使工具选择更确定性
-                .maxTokens(2000)
-                .topP(0.9)
+                .temperature(temperature)
+                .maxTokens(maxTokens)
+                .topP(topP)
                 // 提供工具定义（让 LLM 知道有哪些工具可用）
                 .toolCallbacks(toolCallbacks)
                 // 禁用自动工具执行（我们自己处理工具调用）

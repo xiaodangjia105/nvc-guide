@@ -33,7 +33,7 @@ export interface ConversationResponse {
 
 export interface AssistantMessageResponse {
   id: number;
-  role: 'USER' | 'ASSISTANT' | 'SYSTEM';
+  role: 'USER' | 'ASSISTANT' | 'TOOL' | 'SYSTEM';
   content: string;
   toolCalls: ToolCallRecord[];
   createdAt: string;

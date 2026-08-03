@@ -29,14 +29,14 @@ public record AgentEvent(
         return new AgentEvent(AgentEventType.THINKING, message, null);
     }
 
-    public static AgentEvent toolcallStart(String toolName, String arguments) {
+    public static AgentEvent toolcallStart(String toolCallId, String toolName, String arguments) {
         return new AgentEvent(AgentEventType.TOOLCALL_START, toolName,
-            Map.of("arguments", arguments));
+            Map.of("toolCallId", toolCallId, "arguments", arguments));
     }
 
-    public static AgentEvent toolcallEnd(String toolName, boolean success, String result, long durationMs) {
+    public static AgentEvent toolcallEnd(String toolCallId, String toolName, boolean success, String result, long durationMs) {
         return new AgentEvent(AgentEventType.TOOLCALL_END, toolName,
-            Map.of("success", success, "result", result, "durationMs", durationMs));
+            Map.of("toolCallId", toolCallId, "success", success, "result", result, "durationMs", durationMs));
     }
 
     public static AgentEvent content(String text) {

@@ -1,6 +1,7 @@
 package nvc.guide.modules.nvcpractice.model;
 
 public enum NvcAgentScene {
+    MAIN_ASSISTANT,
     SCENARIO_GENERATOR,
     DIALOGUE_GUIDE,
     DIFFICULT_PARTNER,
