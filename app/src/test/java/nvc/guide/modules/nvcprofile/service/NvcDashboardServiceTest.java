@@ -12,6 +12,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -44,12 +46,15 @@ class NvcDashboardServiceTest {
         void aggregatesAllStats() {
             when(sessionRepository.countByUserId(1L)).thenReturn(10L);
             when(sessionRepository.countByUserIdAndCurrentPhase(1L, NvcSessionPhase.COMPLETED)).thenReturn(7L);
+            when(sessionRepository.findByUserIdAndCurrentPhaseOrderByCreatedAtDesc(1L, NvcSessionPhase.COMPLETED))
+                .thenReturn(Collections.emptyList());
             when(abilityScoreRepository.countByUserId(1L)).thenReturn(5L);
 
             Map<String, Object> stats = service.getUserStats(1L);
 
-            assertEquals(10L, stats.get("totalSessions"));
+            assertEquals(10L, stats.get("totalPracticeCount"));
             assertEquals(7L, stats.get("completedSessions"));
+            assertEquals(0L, stats.get("totalPracticeMinutes"));
             assertEquals(5L, stats.get("totalScores"));
         }
 
@@ -58,12 +63,15 @@ class NvcDashboardServiceTest {
         void returnsZerosWhenNoData() {
             when(sessionRepository.countByUserId(999L)).thenReturn(0L);
             when(sessionRepository.countByUserIdAndCurrentPhase(999L, NvcSessionPhase.COMPLETED)).thenReturn(0L);
+            when(sessionRepository.findByUserIdAndCurrentPhaseOrderByCreatedAtDesc(999L, NvcSessionPhase.COMPLETED))
+                .thenReturn(Collections.emptyList());
             when(abilityScoreRepository.countByUserId(999L)).thenReturn(0L);
 
             Map<String, Object> stats = service.getUserStats(999L);
 
-            assertEquals(0L, stats.get("totalSessions"));
+            assertEquals(0L, stats.get("totalPracticeCount"));
             assertEquals(0L, stats.get("completedSessions"));
+            assertEquals(0L, stats.get("totalPracticeMinutes"));
             assertEquals(0L, stats.get("totalScores"));
         }
 

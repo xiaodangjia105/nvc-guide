@@ -15,6 +15,7 @@ import nvc.guide.modules.nvcpractice.repository.NvcPracticeMessageRepository;
 import nvc.guide.modules.nvcpractice.repository.NvcPracticeSessionRepository;
 import nvc.guide.modules.nvcscenario.model.NvcScenarioEntity;
 import nvc.guide.modules.nvcscenario.repository.NvcScenarioRepository;
+import nvc.guide.modules.nvcscenario.service.NvcScenarioService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -54,6 +55,8 @@ class NvcPracticeSessionServiceTest {
     @Mock
     private NvcScenarioRepository scenarioRepository;
     @Mock
+    private NvcScenarioService scenarioService;
+    @Mock
     private RedisService redisService;
     @Mock
     private ObjectMapper objectMapper;
@@ -64,7 +67,7 @@ class NvcPracticeSessionServiceTest {
     void setUp() {
         sessionService = new NvcPracticeSessionService(
             sessionRepository, messageRepository, evaluationService,
-            scenarioRepository, redisService, objectMapper);
+            scenarioRepository, scenarioService, redisService, objectMapper);
     }
 
     private NvcPracticeSessionEntity buildSession(Long id, NvcSessionPhase phase) {

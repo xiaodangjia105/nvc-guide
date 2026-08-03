@@ -13,7 +13,6 @@ import nvc.guide.modules.nvcpractice.model.NvcPracticeSessionEntity;
 import nvc.guide.modules.nvcpractice.model.NvcPracticeStep;
 import nvc.guide.modules.nvcpractice.model.NvcSessionPhase;
 import nvc.guide.modules.nvcpractice.repository.NvcPracticeMessageRepository;
-import nvc.guide.modules.nvcscenario.service.NvcScenarioService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -55,8 +54,6 @@ class NvcPracticeDialogueServiceTest {
   @Mock
   private NvcSummaryService summaryService;
   @Mock
-  private NvcScenarioService scenarioService;
-  @Mock
   private NvcStructuredPracticeService structuredPracticeService;
 
   private NvcPracticeDialogueService dialogueService;
@@ -65,7 +62,7 @@ class NvcPracticeDialogueServiceTest {
   void setUp() {
     dialogueService = new NvcPracticeDialogueService(
         sessionService, messageRepository, orchestrator,
-        objectMapper, evaluationService, summaryService, scenarioService,
+        objectMapper, evaluationService, summaryService,
         structuredPracticeService);
   }
 
@@ -188,8 +185,8 @@ class NvcPracticeDialogueServiceTest {
     }
 
     @Test
-    @DisplayName("场景驱动模式下增加场景使用次数")
-    void sendMessage_scenarioMode_incrementsUsage() {
+    @DisplayName("场景驱动模式下正常发送消息")
+    void sendMessage_scenarioMode_works() {
       // Arrange
       NvcPracticeSessionEntity session = NvcPracticeSessionEntity.builder()
           .id(1L).userId(100L)
@@ -207,15 +204,16 @@ class NvcPracticeDialogueServiceTest {
       when(orchestrator.executeAgent(any(), any(), any())).thenReturn("AI回复");
 
       // Act
-      dialogueService.sendMessage(1L, "你好");
+      DialogueResponse response = dialogueService.sendMessage(1L, "你好");
 
       // Assert
-      verify(scenarioService).incrementUsage(42L);
+      assertNotNull(response);
+      assertEquals("AI回复", response.aiReply());
     }
 
     @Test
-    @DisplayName("无场景 ID 时不调用 incrementUsage")
-    void sendMessage_noScenarioId_doesNotIncrementUsage() {
+    @DisplayName("无场景 ID 时正常发送消息")
+    void sendMessage_noScenarioId_works() {
       // Arrange
       NvcPracticeSessionEntity session =
           buildSession(NvcPracticeMode.FREE_DIALOG, null);
@@ -229,10 +227,10 @@ class NvcPracticeDialogueServiceTest {
       when(orchestrator.executeAgent(any(), any(), any())).thenReturn("AI回复");
 
       // Act
-      dialogueService.sendMessage(1L, "你好");
+      DialogueResponse response = dialogueService.sendMessage(1L, "你好");
 
       // Assert
-      verify(scenarioService, never()).incrementUsage(anyLong());
+      assertNotNull(response);
     }
 
     @Test

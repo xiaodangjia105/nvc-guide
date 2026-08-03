@@ -1,6 +1,7 @@
 package nvc.guide.modules.nvcassistant.service.agent;
 
 import nvc.guide.common.ai.LlmProviderRegistry;
+import nvc.guide.modules.nvcpractice.repository.NvcAgentConfigRepository;
 import nvc.guide.modules.nvcpractice.tool.NvcTool;
 import nvc.guide.modules.nvcpractice.tool.NvcToolRegistry;
 import nvc.guide.modules.nvcpractice.tool.NvcToolResult;
@@ -27,6 +28,7 @@ class AgentLoopTest {
     private NvcToolRegistry toolRegistry;
     private ToolExecutor toolExecutor;
     private IntentRouter intentRouter;
+    private NvcAgentConfigRepository agentConfigRepository;
     private AgentLoop agentLoop;
 
     @BeforeEach
@@ -35,7 +37,8 @@ class AgentLoopTest {
         toolRegistry = mock(NvcToolRegistry.class);
         toolExecutor = mock(ToolExecutor.class);
         intentRouter = spy(new IntentRouter());
-        agentLoop = new AgentLoop(llmProviderRegistry, toolRegistry, toolExecutor, intentRouter);
+        agentConfigRepository = mock(NvcAgentConfigRepository.class);
+        agentLoop = new AgentLoop(llmProviderRegistry, toolRegistry, toolExecutor, intentRouter, agentConfigRepository);
     }
 
     private ChatResponse mockTextResponse(String content) {
