@@ -16,7 +16,6 @@ import nvc.guide.modules.nvcpractice.model.NvcPracticeStep;
 import nvc.guide.modules.nvcpractice.model.NvcSessionPhase;
 import nvc.guide.modules.nvcpractice.repository.NvcPracticeMessageRepository;
 import nvc.guide.modules.nvcpractice.util.AiResponseCleaner;
-import nvc.guide.modules.nvcscenario.service.NvcScenarioService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -35,7 +34,6 @@ public class NvcPracticeDialogueService {
   private final ObjectMapper objectMapper;
   private final NvcEvaluationService evaluationService;
   private final NvcSummaryService summaryService;
-  private final NvcScenarioService scenarioService;
   private final NvcStructuredPracticeService structuredPracticeService;
 
   /**
@@ -58,11 +56,6 @@ public class NvcPracticeDialogueService {
             .step(session.getCurrentStep())
             .build();
     messageRepository.save(userMsg);
-
-    // 2.5 场景驱动模式：增加场景使用次数
-    if (session.getScenarioId() != null) {
-      scenarioService.incrementUsage(session.getScenarioId());
-    }
 
     // 3. 构建练习上下文
     PracticeContext context = orchestrator.buildPracticeContext(
@@ -159,11 +152,6 @@ public class NvcPracticeDialogueService {
             .step(session.getCurrentStep())
             .build();
     messageRepository.save(userMsg);
-
-    // 2.5 场景驱动模式：增加场景使用次数
-    if (session.getScenarioId() != null) {
-      scenarioService.incrementUsage(session.getScenarioId());
-    }
 
     // 3. 构建上下文 + Agent 调度（在状态转换之前，确保 SCENARIO_GENERATOR 可以被选中）
     var currentStep = session.getCurrentStep();

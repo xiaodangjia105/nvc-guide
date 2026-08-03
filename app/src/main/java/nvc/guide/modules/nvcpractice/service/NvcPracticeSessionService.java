@@ -16,6 +16,7 @@ import nvc.guide.modules.nvcpractice.repository.NvcPracticeMessageRepository;
 import nvc.guide.modules.nvcpractice.repository.NvcPracticeSessionRepository;
 import nvc.guide.modules.nvcscenario.model.NvcScenarioEntity;
 import nvc.guide.modules.nvcscenario.repository.NvcScenarioRepository;
+import nvc.guide.modules.nvcscenario.service.NvcScenarioService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -48,6 +49,7 @@ public class NvcPracticeSessionService {
   private final NvcPracticeMessageRepository messageRepository;
   private final NvcEvaluationService evaluationService;
   private final NvcScenarioRepository scenarioRepository;
+  private final NvcScenarioService scenarioService;
   private final RedisService redisService;
   private final ObjectMapper objectMapper;
 
@@ -81,6 +83,11 @@ public class NvcPracticeSessionService {
     log.info(
         "NVC practice session created: sessionId={}, mode={}, userId={}",
         saved.getId(), request.practiceMode(), userId);
+
+    // 场景驱动模式：创建会话时记录一次场景使用
+    if (scenarioId != null) {
+      scenarioService.incrementUsage(scenarioId);
+    }
 
     cacheSession(saved);
     return saved;
