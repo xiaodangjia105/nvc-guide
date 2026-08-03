@@ -12,6 +12,8 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import nvc.guide.modules.nvcpractice.dto.AgentDecision;
 import nvc.guide.modules.nvcpractice.dto.PracticeContext;
+import nvc.guide.modules.nvcpractice.model.NvcAgentConfigEntity;
+import nvc.guide.modules.nvcpractice.repository.NvcAgentConfigRepository;
 import nvc.guide.modules.nvcvoice.config.NvcVoiceProperties;
 import nvc.guide.modules.nvcvoice.dto.WebSocketSubtitleMessage;
 import nvc.guide.modules.nvcvoice.service.NvcVoiceLlmService;
@@ -38,6 +40,7 @@ public class VoicePipelineCoordinator {
   private final NvcVoiceService voiceService;
   private final NvcVoiceProperties properties;
   private final ObjectMapper objectMapper;
+  private final NvcAgentConfigRepository agentConfigRepository;
 
   /** 阻塞 LLM/TTS 工作的虚拟线程池 */
   private final ExecutorService pipelineExecutor = Executors.newVirtualThreadPerTaskExecutor();
@@ -49,7 +52,8 @@ public class VoicePipelineCoordinator {
       NvcVoicePromptService promptService,
       NvcVoiceService voiceService,
       NvcVoiceProperties properties,
-      ObjectMapper objectMapper) {
+      ObjectMapper objectMapper,
+      NvcAgentConfigRepository agentConfigRepository) {
     this.asrProvider = asrProvider;
     this.ttsProvider = ttsProvider;
     this.llmService = llmService;
@@ -57,6 +61,7 @@ public class VoicePipelineCoordinator {
     this.voiceService = voiceService;
     this.properties = properties;
     this.objectMapper = objectMapper;
+    this.agentConfigRepository = agentConfigRepository;
   }
 
   // ==================== ASR 阶段 ====================
@@ -64,7 +69,7 @@ public class VoicePipelineCoordinator {
   /**
    * 启动 ASR 会话
    */
-  public void startAsr(String sessionId, WebSocketSession wsSession) {
+  public void startAsr(String sessionId, WebSocketSession wsSession, SessionState state) {
     log.info("[Pipeline] Starting ASR for session: {}", sessionId);
 
     asrProvider.startSession(sessionId, new AsrCallbacks(
@@ -73,14 +78,14 @@ public class VoicePipelineCoordinator {
         // onFinal: 合并到缓冲区
         text -> {
           log.debug("[Pipeline] ASR final: {}", text);
-          // 缓冲区在 Handler 的 SessionState 中管理
+          handleSttFinal(text, state);
         },
         // onReady
         () -> log.info("[Pipeline] ASR ready for session: {}", sessionId),
         // onError
         error -> {
           log.error("[Pipeline] ASR error for session {}: {}", sessionId, error.getMessage());
-          handleAsrError(sessionId, wsSession, error);
+          handleAsrError(sessionId, wsSession, error, state);
         }
     ));
   }
@@ -143,9 +148,12 @@ public class VoicePipelineCoordinator {
 
         log.info("[Pipeline] Agent decision: {}, reason: {}", decision.scene(), decision.reason());
 
-        // 2. 构建 Prompt
+        // 2. 构建 Prompt — 从 AgentConfig 获取 systemPrompt
+        String agentSystemPrompt = agentConfigRepository.findByAgentScene(decision.scene())
+            .map(NvcAgentConfigEntity::getSystemPrompt)
+            .orElse(null);
         String systemPrompt = promptService.buildSystemPrompt(
-            decision.scene().name(), null); // TODO: 从 AgentConfig 获取 systemPrompt
+            agentSystemPrompt, context.getScenarioDescription());
         String userPrompt = llmService.buildUserPrompt(userText, null);
 
         // 3. LLM 流式调用
@@ -240,7 +248,8 @@ public class VoicePipelineCoordinator {
     });
   }
 
-  private void handleAsrError(String sessionId, WebSocketSession wsSession, Throwable error) {
+  private void handleAsrError(String sessionId, WebSocketSession wsSession, Throwable error,
+      SessionState state) {
     // 尝试重启 ASR
     try {
       Thread.sleep(1000);
@@ -248,6 +257,7 @@ public class VoicePipelineCoordinator {
           text -> sendSubtitle(wsSession, WebSocketSubtitleMessage.userPartial(text)),
           text -> {
             // 重新连接后继续合并
+            handleSttFinal(text, state);
           },
           () -> log.info("[Pipeline] ASR reconnected for session: {}", sessionId),
           retryError -> {
