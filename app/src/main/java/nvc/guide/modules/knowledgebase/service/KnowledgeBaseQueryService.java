@@ -301,10 +301,11 @@ public class KnowledgeBaseQueryService {
 
     private SearchParams resolveSearchParams(String question) {
         int compactLength = question.replaceAll("\\s+", "").length();
+        int mediumQueryLength = shortQueryLength * 3;
         if (compactLength <= shortQueryLength) {
             return new SearchParams(topkShort, minScoreShort);
         }
-        if (compactLength <= 12) {
+        if (compactLength <= mediumQueryLength) {
             return new SearchParams(topkMedium, minScoreDefault);
         }
         return new SearchParams(topkLong, minScoreDefault);

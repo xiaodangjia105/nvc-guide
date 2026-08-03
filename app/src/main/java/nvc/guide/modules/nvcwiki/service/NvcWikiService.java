@@ -56,6 +56,7 @@ public class NvcWikiService {
         entity.setOriginalFilename(request.title() + ".md");
         entity.setFileSize(request.content() != null ? (long) request.content().length() : 0L);
         entity.setFileHash(generateContentHash(userId, request.title(), request.content()));
+        entity.setContent(request.content());
         entity.setVectorStatus(VectorStatus.PENDING);
 
         entity = knowledgeBaseRepository.save(entity);
@@ -90,6 +91,9 @@ public class NvcWikiService {
         }
         if (request.category() != null) {
             entity.setCategory(request.category().name());
+        }
+        if (request.content() != null) {
+            entity.setContent(request.content());
         }
 
         entity = knowledgeBaseRepository.save(entity);

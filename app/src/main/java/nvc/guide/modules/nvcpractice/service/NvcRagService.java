@@ -174,12 +174,16 @@ public class NvcRagService {
   }
 
   private double extractScore(Document doc) {
-    Object distance = doc.getMetadata().getOrDefault("distance", 0.0);
-    if (distance instanceof Double d) {
+    // Spring AI 不同版本可能使用不同的 key: score / distance / similarity
+    Object score = doc.getMetadata().get("score");
+    if (score == null) score = doc.getMetadata().get("distance");
+    if (score == null) score = doc.getMetadata().get("similarity");
+    if (score == null) return 0.0;
+    if (score instanceof Double d) {
       return d;
     }
     try {
-      return Double.parseDouble(distance.toString());
+      return Double.parseDouble(score.toString());
     } catch (NumberFormatException e) {
       return 0.0;
     }
