@@ -141,8 +141,9 @@ export default function NvcChatPanel({
       let fullContent = '';
 
       await consumeSSEEvents(response, {
-        onEvent: (_type, data) => {
-          // 只处理 message 事件的内容（type 为空时默认为 content）
+        onEvent: (type, data) => {
+          // 只处理 message 事件（跳过 metadata 和 done）
+          if (type && type !== 'message') return;
           const token = (data as string).replace(/\\n/g, '\n').replace(/\\r/g, '\r');
           fullContent += token;
           setMessages((prev) =>
