@@ -46,8 +46,14 @@ public class KnowledgeBaseVectorService {
     public void vectorizeAndStore(Long knowledgeBaseId, String content) {
         log.info("开始向量化知识库: kbId={}, contentLength={}", knowledgeBaseId, content.length());
         try {
-            // 1. 先删除该知识库的旧向量数据
-            deleteByKnowledgeBaseId(knowledgeBaseId);
+            // 1. 先删除该知识库的旧向量数据（删除失败必须阻止后续写入，防止重复向量）
+            try {
+                vectorRepository.deleteByKnowledgeBaseId(knowledgeBaseId);
+            } catch (Exception e) {
+                log.error("删除旧向量数据失败，阻止后续写入: kbId={}, error={}", knowledgeBaseId, e.getMessage(), e);
+                throw new BusinessException(ErrorCode.KNOWLEDGE_BASE_VECTORIZATION_FAILED,
+                    "删除旧向量数据失败: " + e.getMessage());
+            }
             
             // 2. 将文本分块
             List<Document> chunks = textSplitter.apply(
