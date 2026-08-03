@@ -21,6 +21,7 @@ import nvc.guide.modules.nvcpractice.model.NvcPracticeMode;
 import nvc.guide.modules.nvcpractice.service.NvcAgentOrchestrator;
 import nvc.guide.modules.nvcpractice.dto.PracticeContext;
 import nvc.guide.modules.nvcpractice.dto.AgentDecision;
+import nvc.guide.modules.nvcscenario.repository.NvcScenarioRepository;
 import nvc.guide.modules.nvcvoice.config.NvcVoiceProperties;
 import nvc.guide.modules.nvcvoice.dto.CreateVoiceSessionRequest;
 import nvc.guide.modules.nvcvoice.dto.VoiceEvaluationStatusDTO;
@@ -57,6 +58,7 @@ public class NvcVoiceService {
   private final NvcVoiceProperties properties;
   private final NvcVoiceEvaluateStreamProducer evaluateStreamProducer;
   private final NvcAgentOrchestrator orchestrator;
+  private final NvcScenarioRepository scenarioRepository;
 
   private static final String SESSION_CACHE_KEY_PREFIX = "nvc:voice:session:";
   private static final int CACHE_TTL_HOURS = 1;
@@ -330,12 +332,19 @@ public class NvcVoiceService {
     }
 
     // 构建 PracticeContext
-    // 注意：PracticeContext 需要 NvcPracticeSessionEntity，这里暂时使用简化构建
-    // TODO: 后续完善，将 NvcVoiceSessionEntity 转换为 NvcPracticeSessionEntity
     int messageCount = (int) messageRepository.countBySessionId(sessionId);
+
+    // 从场景库获取场景描述
+    String scenarioDescription = null;
+    if (session.getScenarioId() != null) {
+      scenarioDescription = scenarioRepository.findById(session.getScenarioId())
+          .map(s -> s.getTitle() + "：" + s.getDescription())
+          .orElse(null);
+    }
+
     return PracticeContext.builder()
         .roundCount(messageCount)
-        .scenarioDescription(null) // TODO: 从场景库获取
+        .scenarioDescription(scenarioDescription)
         .build();
   }
 
