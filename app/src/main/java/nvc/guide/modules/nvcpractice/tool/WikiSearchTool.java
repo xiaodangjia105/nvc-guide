@@ -1,6 +1,8 @@
 package nvc.guide.modules.nvcpractice.tool;
 
 import lombok.extern.slf4j.Slf4j;
+import nvc.guide.common.exception.BusinessException;
+import nvc.guide.common.exception.ErrorCode;
 import nvc.guide.modules.nvcwiki.dto.WikiSearchResult;
 import nvc.guide.modules.nvcwiki.service.NvcWikiService;
 import org.springframework.ai.util.json.schema.JsonSchemaGenerator;
@@ -69,7 +71,7 @@ public class WikiSearchTool implements NvcTool {
             com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
             return mapper.readValue(input, WikiSearchInput.class);
         } catch (Exception e) {
-            throw new RuntimeException("解析 Wiki 搜索参数失败: " + e.getMessage());
+            throw new BusinessException(ErrorCode.INTERNAL_ERROR, "解析 Wiki 搜索参数失败: " + e.getMessage());
         }
     }
 

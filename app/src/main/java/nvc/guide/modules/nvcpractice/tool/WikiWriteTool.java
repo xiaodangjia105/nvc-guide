@@ -1,6 +1,8 @@
 package nvc.guide.modules.nvcpractice.tool;
 
 import lombok.extern.slf4j.Slf4j;
+import nvc.guide.common.exception.BusinessException;
+import nvc.guide.common.exception.ErrorCode;
 import nvc.guide.modules.nvcwiki.dto.WikiCreateRequest;
 import nvc.guide.modules.nvcwiki.dto.WikiResponse;
 import nvc.guide.modules.nvcwiki.model.NvcWikiCategory;
@@ -73,7 +75,7 @@ public class WikiWriteTool implements NvcTool {
             com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
             return mapper.readValue(input, WikiWriteInput.class);
         } catch (Exception e) {
-            throw new RuntimeException("解析 Wiki 写入参数失败: " + e.getMessage());
+            throw new BusinessException(ErrorCode.INTERNAL_ERROR, "解析 Wiki 写入参数失败: " + e.getMessage());
         }
     }
 

@@ -91,6 +91,7 @@ export default function NvcWikiPage() {
 
   // 搜索结果点击
   const handleSearchResultClick = async (result: WikiSearchResult) => {
+    if (!result.id) return;
     try {
       const wiki = await wikiApi.get(userId, result.id);
       setEditingWiki(wiki);

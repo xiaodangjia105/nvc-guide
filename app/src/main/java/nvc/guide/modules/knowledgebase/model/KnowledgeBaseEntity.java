@@ -82,6 +82,10 @@ public class KnowledgeBaseEntity {
 
     // 向量分块数量
     private Integer chunkCount = 0;
+
+    // 内容文本（Wiki 场景存储 Markdown 内容，知识库文档场景为 null）
+    @Column(columnDefinition = "TEXT")
+    private String content;
     
     @PrePersist
     protected void onCreate() {
@@ -243,6 +247,14 @@ public class KnowledgeBaseEntity {
 
     public void setUserId(Long userId) {
         this.userId = userId;
+    }
+
+    public String getContent() {
+        return content;
+    }
+
+    public void setContent(String content) {
+        this.content = content;
     }
 }
 

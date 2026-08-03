@@ -22,6 +22,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -57,6 +60,7 @@ public class NvcWikiService {
         entity.setFileSize(request.content() != null ? (long) request.content().length() : 0L);
         entity.setFileHash(generateContentHash(userId, request.title(), request.content()));
         entity.setVectorStatus(VectorStatus.PENDING);
+        entity.setContent(request.content());
 
         entity = knowledgeBaseRepository.save(entity);
 
@@ -90,6 +94,9 @@ public class NvcWikiService {
         }
         if (request.category() != null) {
             entity.setCategory(request.category().name());
+        }
+        if (request.content() != null) {
+            entity.setContent(request.content());
         }
 
         entity = knowledgeBaseRepository.save(entity);
@@ -128,7 +135,7 @@ public class NvcWikiService {
     @Transactional(readOnly = true)
     public WikiResponse getWiki(Long userId, Long wikiId) {
         KnowledgeBaseEntity entity = getWikiOrThrow(wikiId, userId);
-        return toResponse(entity, null, null, null);
+        return toResponse(entity, entity.getContent(), null, null);
     }
 
     /**
@@ -144,7 +151,7 @@ public class NvcWikiService {
             page = knowledgeBaseRepository.findByTypeAndUserIdOrderByUploadedAtDesc(
                     KnowledgeBaseType.PERSONAL_WIKI, userId, pageable);
         }
-        return page.map(entity -> toResponse(entity, null, null, null));
+        return page.map(entity -> toResponse(entity, entity.getContent(), null, null));
     }
 
     /**
@@ -158,7 +165,9 @@ public class NvcWikiService {
             // 从 metadata 中提取 wiki 信息
             Object kbIdObj = r.metadata().get("kb_id");
             Long kbId = kbIdObj != null ? Long.parseLong(kbIdObj.toString()) : null;
-            String title = kbId != null ? getWikiTitle(kbId) : "未知条目";
+            if (kbId == null) return null; // 过滤无效结果
+
+            String title = getWikiTitle(kbId);
 
             return new WikiSearchResult(
                     kbId,
@@ -168,7 +177,7 @@ public class NvcWikiService {
                     r.score(),
                     null
             );
-        }).toList();
+        }).filter(r -> r != null).toList();
     }
 
     /**
@@ -207,7 +216,18 @@ public class NvcWikiService {
 
     private String generateContentHash(Long userId, String title, String content) {
         String raw = userId + ":" + title + ":" + (content != null ? content.hashCode() : 0);
-        return String.valueOf(raw.hashCode());
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] hash = md.digest(raw.getBytes(StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder();
+            for (byte b : hash) {
+                sb.append(String.format("%02x", b));
+            }
+            return sb.toString();
+        } catch (NoSuchAlgorithmException e) {
+            // SHA-256 在所有 JVM 中都可用，这里不会执行
+            return String.valueOf(raw.hashCode());
+        }
     }
 
     private WikiResponse toResponse(KnowledgeBaseEntity entity, String content,
@@ -219,11 +239,16 @@ public class NvcWikiService {
             category = NvcWikiCategory.OTHER;
         }
 
+        // 根据 sessionId 判断来源类型
+        NvcWikiSourceType sourceType = sessionId != null
+                ? NvcWikiSourceType.AUTO_GENERATED
+                : NvcWikiSourceType.MANUAL;
+
         return new WikiResponse(
                 entity.getId(),
                 entity.getName(),
                 category,
-                NvcWikiSourceType.MANUAL, // 默认，实际应从 metadata 获取
+                sourceType,
                 content,
                 tags != null ? tags : List.of(),
                 sessionId,
