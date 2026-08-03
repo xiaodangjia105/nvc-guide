@@ -277,8 +277,34 @@ public class NvcAssistantController {
             .id(entity.getId())
             .role(entity.getRole().name())
             .content(entity.getContent())
-            .toolCalls(List.of())
+            .toolCalls(parseToolCallsJson(entity.getToolCallsJson()))
             .createdAt(entity.getCreatedAt())
             .build();
+    }
+
+    /**
+     * 解析 toolCallsJson 为 ToolCallRecord 列表
+     */
+    @SuppressWarnings("unchecked")
+    private List<ToolCallRecord> parseToolCallsJson(String toolCallsJson) {
+        if (toolCallsJson == null || toolCallsJson.isBlank()) {
+            return List.of();
+        }
+        try {
+            List<Map<String, Object>> records = objectMapper.readValue(toolCallsJson,
+                objectMapper.getTypeFactory().constructCollectionType(List.class, Map.class));
+            return records.stream()
+                .map(record -> ToolCallRecord.builder()
+                    .toolName((String) record.get("toolName"))
+                    .arguments((String) record.get("arguments"))
+                    .result((String) record.get("result"))
+                    .success(Boolean.TRUE.equals(record.get("success")))
+                    .durationMs(record.get("durationMs") instanceof Number n ? n.longValue() : 0)
+                    .build())
+                .toList();
+        } catch (Exception e) {
+            log.warn("Failed to parse toolCallsJson: {}", e.getMessage());
+            return List.of();
+        }
     }
 }

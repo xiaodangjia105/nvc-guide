@@ -40,7 +40,7 @@ export default function NvcAssistantPage() {
       const raw = await assistantApi.getMessages(userId, conversationId);
       const display: DisplayMessage[] = raw.map((m) => ({
         id: `msg-${m.id}`,
-        role: m.role as 'USER' | 'ASSISTANT',
+        role: m.role as 'USER' | 'ASSISTANT' | 'TOOL',
         content: m.content,
         toolCalls: m.toolCalls || [],
         practicePreview: null,
@@ -105,8 +105,12 @@ export default function NvcAssistantPage() {
     const lastUserIdx = [...messages].reverse().findIndex((m) => m.role === 'USER');
     if (lastUserIdx === -1) return;
     const lastUserMsg = messages[messages.length - 1 - lastUserIdx];
-    // 移除最后的助手消息
-    setMessages((prev) => prev.filter((m) => m.role === 'USER'));
+    // 只移除最后一条 ASSISTANT 消息（而非所有非 USER 消息）
+    setMessages((prev) => {
+      const lastAssistantIdx = prev.map(m => m.role).lastIndexOf('ASSISTANT');
+      if (lastAssistantIdx === -1) return prev;
+      return prev.filter((_, i) => i !== lastAssistantIdx);
+    });
     // 重新发送
     handleSend(lastUserMsg.content);
   }, [messages]);

@@ -238,8 +238,10 @@ public class ContextManager {
                 Map<String, Object> record = records.get(i);
                 String toolName = (String) record.get("toolName");
                 if (toolName != null) {
+                    String arguments = record.get("arguments") != null
+                        ? record.get("arguments").toString() : "{}";
                     toolCalls.add(new AssistantMessage.ToolCall(
-                        "call-" + entity.getId() + "-" + i, "function", toolName, "{}"
+                        "call-" + entity.getId() + "-" + i, "function", toolName, arguments
                     ));
                 }
             }
