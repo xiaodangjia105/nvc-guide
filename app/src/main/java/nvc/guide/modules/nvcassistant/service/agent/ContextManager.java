@@ -1,5 +1,6 @@
 package nvc.guide.modules.nvcassistant.service.agent;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import nvc.guide.common.ai.LlmProviderRegistry;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 上下文管理器 — 消息管理 + 压缩
@@ -29,6 +31,7 @@ public class ContextManager {
 
     private final NvcAssistantMessageService messageService;
     private final LlmProviderRegistry llmProviderRegistry;
+    private final ObjectMapper objectMapper;
 
     /** 消息轮数阈值，超过此值触发压缩 */
     private static final int COMPRESSION_THRESHOLD = 20;
@@ -188,15 +191,68 @@ public class ContextManager {
     /**
      * 将实体转换为 Spring AI Message
      *
-     * <p>TOOL 角色的消息不直接加入上下文（工具调用结果在 AgentLoop 中动态生成）
+     * <p>TOOL 角色的消息转为 ToolResponseMessage，让 LLM 知道之前调用了什么工具、得到了什么结果。
+     * 如果 TOOL 消息缺少 toolCallId/toolName，则跳过（兼容旧数据）。
      */
     private Message toMessage(NvcAssistantMessageEntity entity) {
         return switch (entity.getRole()) {
             case USER -> new UserMessage(entity.getContent());
-            case ASSISTANT -> new AssistantMessage(entity.getContent());
+            case ASSISTANT -> {
+                // 如果有 toolCallsJson，构建带工具调用的 AssistantMessage
+                if (entity.getToolCallsJson() != null && !entity.getToolCallsJson().isEmpty()) {
+                    yield buildAssistantMessageWithToolCalls(entity);
+                }
+                yield new AssistantMessage(entity.getContent());
+            }
             case SYSTEM -> new SystemMessage(entity.getContent());
-            case TOOL -> null; // TOOL 消息不加入上下文
+            case TOOL -> {
+                // TOOL 消息转为 ToolResponseMessage（使用 builder，与 AgentLoop 一致）
+                if (entity.getToolName() != null) {
+                    String toolCallId = entity.getToolCallId() != null
+                        ? entity.getToolCallId()
+                        : "tool-" + entity.getId();
+                    yield org.springframework.ai.chat.messages.ToolResponseMessage.builder()
+                        .responses(java.util.List.of(
+                            new org.springframework.ai.chat.messages.ToolResponseMessage.ToolResponse(
+                                toolCallId, entity.getToolName(), entity.getContent()
+                            )))
+                        .build();
+                }
+                // 缺少必要字段，跳过
+                yield null;
+            }
         };
+    }
+
+    /**
+     * 构建带工具调用记录的 AssistantMessage
+     */
+    private Message buildAssistantMessageWithToolCalls(NvcAssistantMessageEntity entity) {
+        try {
+            java.util.List<Map<String, Object>> records =
+                objectMapper.readValue(entity.getToolCallsJson(),
+                    objectMapper.getTypeFactory().constructCollectionType(
+                        java.util.List.class, Map.class));
+            java.util.List<AssistantMessage.ToolCall> toolCalls = new java.util.ArrayList<>();
+            for (int i = 0; i < records.size(); i++) {
+                Map<String, Object> record = records.get(i);
+                String toolName = (String) record.get("toolName");
+                if (toolName != null) {
+                    toolCalls.add(new AssistantMessage.ToolCall(
+                        "call-" + entity.getId() + "-" + i, "function", toolName, "{}"
+                    ));
+                }
+            }
+            if (!toolCalls.isEmpty()) {
+                // 使用 setToolCalls 方式（Spring AI AssistantMessage 构造器可能不接受 List）
+                AssistantMessage msg = new AssistantMessage(entity.getContent());
+                msg.getToolCalls().addAll(toolCalls);
+                return msg;
+            }
+        } catch (Exception e) {
+            log.warn("Failed to parse toolCallsJson for message {}: {}", entity.getId(), e.getMessage());
+        }
+        return new AssistantMessage(entity.getContent());
     }
 
 }

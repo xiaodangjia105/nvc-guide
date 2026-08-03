@@ -9,6 +9,7 @@ import nvc.guide.modules.nvcassistant.service.agent.AgentEvent;
 import nvc.guide.modules.nvcassistant.service.agent.AgentLoop;
 import nvc.guide.modules.nvcassistant.service.agent.ContextManager;
 import nvc.guide.modules.nvcassistant.service.agent.PromptBuilder;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.stereotype.Service;
@@ -16,6 +17,9 @@ import reactor.core.publisher.Flux;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * 主 Agent 核心对话服务
@@ -31,6 +35,7 @@ public class NvcAssistantService {
     private final AgentLoop agentLoop;
     private final ContextManager contextManager;
     private final PromptBuilder promptBuilder;
+    private final ObjectMapper objectMapper;
 
     /**
      * 流式 SSE 对话（使用 AgentLoop）
@@ -62,15 +67,61 @@ public class NvcAssistantService {
         // 6. 通过 AgentLoop 执行（返回 SSE 事件流）
         Flux<AgentEvent> eventStream = agentLoop.executeStream(userId, convId, contextMessages, request.getMessage());
 
-        // 7. 用 final 变量捕获 seq（lambda 要求 effectively final）
-        final int assistantSeq = seq;
+        // 7. 用 AtomicInteger 实现可变序列号（工具消息需要递增 seq）
+        final AtomicInteger seqCounter = new AtomicInteger(seq);
         final boolean isFirstRound = seq <= 1;
+
+        // 收集工具调用记录（TOOLCALL_START + TOOLCALL_END 配对）
+        final ConcurrentLinkedQueue<Map<String, Object>> toolCallRecords = new ConcurrentLinkedQueue<>();
+        // 临时存储 TOOLCALL_START 事件，等待配对的 TOOLCALL_END
+        final ConcurrentLinkedQueue<AgentEvent> pendingToolStarts = new ConcurrentLinkedQueue<>();
 
         Flux<AgentEvent> processedStream = eventStream
             .doOnNext(event -> {
-                // 收集最终内容用于保存
-                if (event.type() == AgentEvent.AgentEventType.CONTENT) {
-                    saveAssistantReply(convId, userId, event.data(), assistantSeq);
+                switch (event.type()) {
+                    case TOOLCALL_START -> {
+                        pendingToolStarts.add(event);
+                        // 保存 TOOL 消息（工具调用开始）
+                        saveToolMessage(convId, userId, event.data(),
+                            "调用工具: " + event.data() + "(" + event.metadata().get("arguments") + ")",
+                            seqCounter.getAndIncrement());
+                    }
+                    case TOOLCALL_END -> {
+                        // 配对 TOOLCALL_START
+                        AgentEvent startEvent = pendingToolStarts.poll();
+                        String toolName = event.data();
+                        boolean success = Boolean.TRUE.equals(event.metadata().get("success"));
+                        String result = String.valueOf(event.metadata().getOrDefault("result", ""));
+                        long durationMs = event.metadata().get("durationMs") instanceof Number n ? n.longValue() : 0;
+
+                        // 记录工具调用
+                        toolCallRecords.add(Map.of(
+                            "toolName", toolName,
+                            "success", success,
+                            "result", truncate(result, 500),
+                            "durationMs", durationMs
+                        ));
+
+                        // 保存 TOOL 消息（工具调用结果）
+                        String resultSummary = success
+                            ? "工具 " + toolName + " 执行成功: " + truncate(result, 200)
+                            : "工具 " + toolName + " 执行失败: " + truncate(result, 200);
+                        saveToolMessage(convId, userId, toolName, resultSummary, seqCounter.getAndIncrement());
+                    }
+                    case CONTENT -> {
+                        // 保存助手回复（附带工具调用记录 JSON）
+                        String toolCallsJson = null;
+                        if (!toolCallRecords.isEmpty()) {
+                            try {
+                                toolCallsJson = objectMapper.writeValueAsString(new ArrayList<>(toolCallRecords));
+                            } catch (Exception e) {
+                                log.warn("Failed to serialize tool call records", e);
+                            }
+                        }
+                        saveAssistantReply(convId, userId, event.data(), toolCallsJson, seqCounter.getAndIncrement());
+                        toolCallRecords.clear();
+                    }
+                    default -> { /* THINKING, DONE, ERROR — 不保存 */ }
                 }
             })
             .doOnComplete(() -> {
@@ -109,20 +160,53 @@ public class NvcAssistantService {
     }
 
     /**
-     * 保存助手回复
+     * 保存助手回复（附带工具调用记录）
      */
-    private void saveAssistantReply(Long conversationId, Long userId, String content, int seq) {
+    private void saveAssistantReply(Long conversationId, Long userId, String content,
+                                     String toolCallsJson, int seq) {
         try {
             if (content != null && !content.isEmpty()) {
                 NvcAssistantMessageEntity assistantMsg = messageService.buildAssistantMessage(
-                    conversationId, userId, content, null, seq);
+                    conversationId, userId, content, toolCallsJson, seq);
                 messageService.saveMessage(assistantMsg);
-                log.info("[NvcAssistantService] Saved assistant reply: conversationId={}, length={}",
-                    conversationId, content.length());
+                log.info("[NvcAssistantService] Saved assistant reply: conversationId={}, length={}, toolCalls={}",
+                    conversationId, content.length(),
+                    toolCallsJson != null ? "yes" : "no");
             }
         } catch (Exception e) {
             log.error("[NvcAssistantService] Failed to save assistant reply: conversationId={}", conversationId, e);
         }
+    }
+
+    /**
+     * 保存工具调用消息（TOOL 角色）
+     */
+    private void saveToolMessage(Long conversationId, Long userId, String toolName,
+                                  String content, int seq) {
+        try {
+            NvcAssistantMessageEntity toolMsg = NvcAssistantMessageEntity.builder()
+                .conversationId(conversationId)
+                .userId(userId)
+                .role(nvc.guide.modules.nvcassistant.model.NvcAssistantMessageRole.TOOL)
+                .content(content)
+                .toolName(toolName)
+                .sequenceNum(seq)
+                .build();
+            messageService.saveMessage(toolMsg);
+            log.debug("[NvcAssistantService] Saved tool message: conversationId={}, tool={}, seq={}",
+                conversationId, toolName, seq);
+        } catch (Exception e) {
+            log.error("[NvcAssistantService] Failed to save tool message: conversationId={}, tool={}",
+                conversationId, toolName, e);
+        }
+    }
+
+    /**
+     * 截断过长文本
+     */
+    private String truncate(String text, int maxLength) {
+        if (text == null) return "";
+        return text.length() <= maxLength ? text : text.substring(0, maxLength) + "...";
     }
 
     /**
