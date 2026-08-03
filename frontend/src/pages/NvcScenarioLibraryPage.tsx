@@ -74,15 +74,13 @@ export default function NvcScenarioLibraryPage() {
   const handleGenerate = useCallback(async () => {
     setGenerating(true);
     try {
-      const scenario = await scenarioApi.generateScenario({
+      await scenarioApi.generateScenario({
         scenarioType: genType,
         difficulty: genDifficulty,
         description: genDescription || undefined,
       });
-      setScenarios((prev) => [scenario, ...prev]);
       setShowGenerate(false);
       setGenDescription('');
-      // 从服务器重新拉取完整列表，确保数据一致
       loadScenarios();
     } catch (err) {
       console.error('Failed to generate scenario:', err);

@@ -36,6 +36,10 @@ public class KnowledgeBaseEntity {
     @Column(length = 30)
     private KnowledgeBaseType type;
 
+    // 内容（Wiki 场景使用，知识库文档场景不写入）
+    @Column(columnDefinition = "TEXT")
+    private String content;
+
     // 用户 ID（null = 系统知识库，非 null = 用户个人 Wiki）
     @Column(name = "user_id")
     private Long userId;

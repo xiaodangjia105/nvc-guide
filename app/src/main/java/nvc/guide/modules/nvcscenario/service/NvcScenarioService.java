@@ -83,7 +83,7 @@ public class NvcScenarioService {
                 .difficulty(request.difficulty() != null ? request.difficulty() : NvcDifficulty.MEDIUM)
                 .context(node.has("context") ? node.get("context").asText() : null)
                 .focusElements(node.has("focus_elements") ? node.get("focus_elements").toString() : null)
-                .tags(node.has("tags") ? node.get("tags").toString() : null)
+                .tags(node.has("tags") ? parseTags(node.get("tags")) : null)
                 .isSystem(false)
                 .usageCount(0)
                 .build();
@@ -131,6 +131,23 @@ public class NvcScenarioService {
     /**
      * 场景使用次数 +1
      */
+
+    /**
+     * 将 JSON 数组格式的 tags 转为逗号分隔字符串
+     * 输入: ["观察","感受"] 或 "观察,感受"
+     * 输出: "观察,感受"
+     */
+    private String parseTags(com.fasterxml.jackson.databind.JsonNode tagsNode) {
+        if (tagsNode.isArray()) {
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < tagsNode.size(); i++) {
+                if (i > 0) sb.append(",");
+                sb.append(tagsNode.get(i).asText());
+            }
+            return sb.toString();
+        }
+        return tagsNode.asText();
+    }
 
     /**
      * 从可能包含 markdown 代码块的文本中提取纯 JSON

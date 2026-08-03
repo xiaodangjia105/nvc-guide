@@ -59,6 +59,7 @@ public class NvcWikiService {
         entity.setOriginalFilename(request.title() + ".md");
         entity.setFileSize(request.content() != null ? (long) request.content().length() : 0L);
         entity.setFileHash(generateContentHash(userId, request.title(), request.content()));
+        entity.setContent(request.content());
         entity.setVectorStatus(VectorStatus.PENDING);
         entity.setContent(request.content());
 
