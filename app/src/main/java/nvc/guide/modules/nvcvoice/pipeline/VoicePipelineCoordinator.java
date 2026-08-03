@@ -153,7 +153,7 @@ public class VoicePipelineCoordinator {
             .map(NvcAgentConfigEntity::getSystemPrompt)
             .orElse(null);
         String systemPrompt = promptService.buildSystemPrompt(
-            agentSystemPrompt, context.scenarioDescription());
+            agentSystemPrompt, context.getScenarioDescription());
         String userPrompt = llmService.buildUserPrompt(userText, null);
 
         // 3. LLM 流式调用
