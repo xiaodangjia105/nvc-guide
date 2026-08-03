@@ -17,11 +17,11 @@ interface VoiceMessage {
 }
 
 type WSMessage =
-  | { type: 'subtitle'; text: string; isFinal: boolean }
-  | { type: 'audio'; data: string; text?: string }
-  | { type: 'audio_chunk'; data: string; index: number; isLast: boolean }
-  | { type: 'text'; content: string; final?: boolean }
-  | { type: 'control'; action: string; message?: string }
+  | { type: 'subtitle'; text: string; source?: string; partial?: boolean }
+  | { type: 'audio'; data: string; format?: string; text?: string }
+  | { type: 'audio_chunk'; data: string; index?: number; isLast?: boolean }
+  | { type: 'text'; text: string; agentScene?: string }
+  | { type: 'control'; action: string; data?: string }
   | { type: 'error'; message: string };
 
 export default function NvcVoicePage() {

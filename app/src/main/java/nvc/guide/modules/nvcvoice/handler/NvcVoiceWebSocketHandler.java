@@ -83,13 +83,14 @@ public class NvcVoiceWebSocketHandler extends TextWebSocketHandler implements Di
         new ConcurrentWebSocketSessionDecorator(session, WS_SEND_TIME_LIMIT_MS,
             WS_SEND_BUFFER_LIMIT_BYTES);
 
+    SessionState state = new SessionState();
     sessions.put(sessionId, safeSession);
-    sessionStates.put(sessionId, new SessionState());
+    sessionStates.put(sessionId, state);
 
     log.info("[Handler] WebSocket connected: {}", sessionId);
 
     // 启动 ASR
-    pipeline.startAsr(sessionId, safeSession);
+    pipeline.startAsr(sessionId, safeSession, state);
 
     // 发送欢迎消息
     sendWelcomeMessage(safeSession, voiceSession);

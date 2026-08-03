@@ -318,5 +318,8 @@ export interface CommunicationAnalysisRequest {
 // ========== 仪表盘 ==========
 
 export interface DashboardStats {
-  [key: string]: unknown;
+  totalPracticeCount: number;
+  completedSessions: number;
+  totalPracticeMinutes: number;
+  totalScores: number;
 }

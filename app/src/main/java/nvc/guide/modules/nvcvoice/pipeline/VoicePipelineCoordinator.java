@@ -64,7 +64,7 @@ public class VoicePipelineCoordinator {
   /**
    * 启动 ASR 会话
    */
-  public void startAsr(String sessionId, WebSocketSession wsSession) {
+  public void startAsr(String sessionId, WebSocketSession wsSession, SessionState state) {
     log.info("[Pipeline] Starting ASR for session: {}", sessionId);
 
     asrProvider.startSession(sessionId, new AsrCallbacks(
@@ -73,14 +73,14 @@ public class VoicePipelineCoordinator {
         // onFinal: 合并到缓冲区
         text -> {
           log.debug("[Pipeline] ASR final: {}", text);
-          // 缓冲区在 Handler 的 SessionState 中管理
+          handleSttFinal(text, state);
         },
         // onReady
         () -> log.info("[Pipeline] ASR ready for session: {}", sessionId),
         // onError
         error -> {
           log.error("[Pipeline] ASR error for session {}: {}", sessionId, error.getMessage());
-          handleAsrError(sessionId, wsSession, error);
+          handleAsrError(sessionId, wsSession, error, state);
         }
     ));
   }
@@ -240,7 +240,8 @@ public class VoicePipelineCoordinator {
     });
   }
 
-  private void handleAsrError(String sessionId, WebSocketSession wsSession, Throwable error) {
+  private void handleAsrError(String sessionId, WebSocketSession wsSession, Throwable error,
+      SessionState state) {
     // 尝试重启 ASR
     try {
       Thread.sleep(1000);
@@ -248,6 +249,7 @@ public class VoicePipelineCoordinator {
           text -> sendSubtitle(wsSession, WebSocketSubtitleMessage.userPartial(text)),
           text -> {
             // 重新连接后继续合并
+            handleSttFinal(text, state);
           },
           () -> log.info("[Pipeline] ASR reconnected for session: {}", sessionId),
           retryError -> {
