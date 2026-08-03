@@ -39,7 +39,10 @@ export const practiceApi = {
       + `/api/nvc/practice/sessions/${sessionId}/messages/stream`,
       {
         method: 'POST',
-        headers: getAuthHeaders(),
+        headers: {
+          ...getAuthHeaders(),
+          'Accept': 'text/event-stream',
+        },
         body: JSON.stringify({ content }),
       }
     ),

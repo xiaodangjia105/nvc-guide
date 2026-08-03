@@ -141,9 +141,10 @@ public class IntentRouter {
         var matcher = Pattern.compile("我是(?:一名?|个)?([^，,。.！!？?\\d]+)").matcher(message);
         if (matcher.find()) {
             String occupation = matcher.group(1).trim();
-            // 排除非职业词汇
+            // 排除非职业词汇：长度合理，且不是无意义的占位词
+            // 注意：&& 优先级高于 ||，必须加括号确保逻辑正确
             if (!occupation.isEmpty() && occupation.length() <= 10
-                && !occupation.equals("程序员") || occupation.contains("程序")) {
+                && (!occupation.equals("程序员") || occupation.contains("程序"))) {
                 return occupation;
             }
         }

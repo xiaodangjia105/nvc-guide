@@ -166,9 +166,20 @@ public class GlobalExceptionHandler {
 
     /**
      * 判断是否是 SSE 请求
+     *
+     * <p>通过 Accept 头或 URL 路径判断，兼容前端 fetch 未设置 Accept 的情况。
      */
     private boolean isSseRequest(WebRequest request) {
-        String contentType = request.getHeader("Accept");
-        return contentType != null && contentType.contains("text/event-stream");
+        // 1. 检查 Accept 头（标准方式）
+        String accept = request.getHeader("Accept");
+        if (accept != null && accept.contains("text/event-stream")) {
+            return true;
+        }
+        // 2. 检查 URL 路径（SSE 端点以 /stream 结尾）
+        String description = request.getDescription(false);
+        if (description != null && description.contains("/stream")) {
+            return true;
+        }
+        return false;
     }
 }

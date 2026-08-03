@@ -113,6 +113,12 @@ public class AgentLoop {
                 List<ToolCallRecord> allToolCalls = new ArrayList<>();
 
                 while (turn < MAX_TOOL_CALL_TURNS) {
+                    // 检查客户端是否已断开
+                    if (sink.isCancelled()) {
+                        log.info("[AgentLoop] Sink cancelled, stopping: userId={}, turn={}", userId, turn);
+                        break;
+                    }
+
                     // 检查总超时
                     if (System.currentTimeMillis() - startTime > TOTAL_TIMEOUT_MS) {
                         log.warn("[AgentLoop] Total timeout: userId={}, turns={}, elapsed={}ms",
@@ -160,10 +166,18 @@ public class AgentLoop {
                                 .durationMs(result.durationMs())
                                 .build());
 
-                            // 工具结果消息
+                            // 工具结果消息（注入明确指令，防止 LLM 幻觉）
                             String responseText = result.skipped()
                                 ? "跳过: " + result.skipReason()
                                 : (result.success() ? result.result() : "Error: " + result.result());
+
+                            // 当工具返回空结果或"没有找到"时，注入明确指令
+                            if (result.success() && isEmptyResult(result.result())) {
+                                responseText = result.result()
+                                    + "\n\n[系统指令] 搜索结果为空。请如实告知用户未找到相关内容，"
+                                    + "并询问是否要尝试其他搜索词。不要调用其他无关工具，不要编造内容。";
+                            }
+
                             toolResponses.add(new ToolResponseMessage.ToolResponse(
                                 tc.id(), tc.name(), responseText));
                         }
@@ -258,5 +272,19 @@ public class AgentLoop {
     private String truncateResult(String result) {
         if (result == null) return "";
         return result.length() > 2000 ? result.substring(0, 2000) + "..." : result;
+    }
+
+    /**
+     * 判断工具结果是否为空/未找到
+     */
+    private boolean isEmptyResult(String result) {
+        if (result == null || result.isBlank()) return true;
+        String lower = result.toLowerCase();
+        return lower.contains("没有找到")
+            || lower.contains("未找到")
+            || lower.contains("no results")
+            || lower.contains("not found")
+            || lower.equals("[]")
+            || lower.equals("{}");
     }
 }

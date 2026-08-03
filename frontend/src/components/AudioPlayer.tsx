@@ -2,24 +2,98 @@ import React, { useRef, useEffect, useState } from 'react';
 import { Play, Pause, Volume2, VolumeX } from 'lucide-react';
 
 interface AudioPlayerProps {
-  audioData: string; // Base64 encoded audio
+  audioData: string; // Base64 encoded PCM audio
   text?: string;
   onPlayEnd?: () => void;
 }
 
 /**
+ * 将 PCM 16-bit 数据转换为 WAV 格式（添加 WAV header）
+ *
+ * @param pcmBase64 Base64 编码的 PCM 数据
+ * @param sampleRate 采样率（默认 24000）
+ * @param numChannels 声道数（默认 1）
+ * @param bitsPerSample 采样位数（默认 16）
+ * @returns WAV 格式的 Blob URL
+ */
+function pcmToWavUrl(
+  pcmBase64: string,
+  sampleRate = 24000,
+  numChannels = 1,
+  bitsPerSample = 16
+): string {
+  // 解码 Base64 到二进制
+  const binaryString = atob(pcmBase64);
+  const pcmLength = binaryString.length;
+  const pcmData = new Uint8Array(pcmLength);
+  for (let i = 0; i < pcmLength; i++) {
+    pcmData[i] = binaryString.charCodeAt(i);
+  }
+
+  // 构建 WAV header
+  const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
+  const blockAlign = numChannels * (bitsPerSample / 8);
+  const wavLength = 44 + pcmLength;
+  const wavBuffer = new ArrayBuffer(wavLength);
+  const view = new DataView(wavBuffer);
+
+  // RIFF header
+  writeString(view, 0, 'RIFF');
+  view.setUint32(4, wavLength - 8, true);
+  writeString(view, 8, 'WAVE');
+
+  // fmt chunk
+  writeString(view, 12, 'fmt ');
+  view.setUint32(16, 16, true); // chunk size
+  view.setUint16(20, 1, true);  // PCM format
+  view.setUint16(22, numChannels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, byteRate, true);
+  view.setUint16(32, blockAlign, true);
+  view.setUint16(34, bitsPerSample, true);
+
+  // data chunk
+  writeString(view, 36, 'data');
+  view.setUint32(40, pcmLength, true);
+
+  // 写入 PCM 数据
+  const wavBytes = new Uint8Array(wavBuffer);
+  wavBytes.set(pcmData, 44);
+
+  const blob = new Blob([wavBytes], { type: 'audio/wav' });
+  return URL.createObjectURL(blob);
+}
+
+function writeString(view: DataView, offset: number, str: string): void {
+  for (let i = 0; i < str.length; i++) {
+    view.setUint8(offset + i, str.charCodeAt(i));
+  }
+}
+
+/**
  * 音频播放器组件
- * 用于播放AI语音合成生成的MP3音频
+ * 用于播放AI语音合成生成的 PCM 音频（转换为 WAV 格式播放）
  */
 export default function AudioPlayer({ audioData, text, onPlayEnd }: AudioPlayerProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [volume, setVolume] = useState(1);
+  const objectUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (audioData && audioRef.current) {
-      audioRef.current.src = `data:audio/mp3;base64,${audioData}`;
+      // 清理上一次的 Object URL
+      if (objectUrlRef.current) {
+        URL.revokeObjectURL(objectUrlRef.current);
+        objectUrlRef.current = null;
+      }
+
+      // 将 PCM 数据转换为 WAV 格式
+      const wavUrl = pcmToWavUrl(audioData);
+      objectUrlRef.current = wavUrl;
+      audioRef.current.src = wavUrl;
+
       // Auto-play when new audio data arrives
       audioRef.current.play().then(() => {
         setIsPlaying(true);
@@ -28,6 +102,14 @@ export default function AudioPlayer({ audioData, text, onPlayEnd }: AudioPlayerP
         // Auto-play may fail if user hasn't interacted with the page yet
       });
     }
+
+    // 组件卸载时清理 Object URL
+    return () => {
+      if (objectUrlRef.current) {
+        URL.revokeObjectURL(objectUrlRef.current);
+        objectUrlRef.current = null;
+      }
+    };
   }, [audioData]);
 
   useEffect(() => {

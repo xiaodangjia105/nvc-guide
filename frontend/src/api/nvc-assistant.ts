@@ -92,7 +92,10 @@ export function sendChatStream(
     `${baseURL}/api/nvc/assistant/chat/stream?userId=${userId}`,
     {
       method: 'POST',
-      headers: getAuthHeaders(),
+      headers: {
+        ...getAuthHeaders(),
+        'Accept': 'text/event-stream',
+      },
       body: JSON.stringify(data),
     },
     {
