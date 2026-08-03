@@ -14,20 +14,14 @@ interface NvcRadarChartProps {
   size?: 'sm' | 'md' | 'lg';
 }
 
-const DIMENSION_LABELS: Record<string, string> = {
-  observation: '观察',
-  feeling: '感受',
-  need: '需求',
-  request: '请求',
-  empathy: '共情',
-};
-
 export default function NvcRadarChart({ data, size = 'md' }: NvcRadarChartProps) {
-  const chartData = Object.entries(data).map(([key, value]) => ({
-    dimension: DIMENSION_LABELS[key] || key,
-    value,
-    fullMark: 100,
-  }));
+  const chartData = [
+    { dimension: '观察', value: data.observation, fullMark: 100 },
+    { dimension: '感受', value: data.feeling, fullMark: 100 },
+    { dimension: '需求', value: data.need, fullMark: 100 },
+    { dimension: '请求', value: data.request, fullMark: 100 },
+    { dimension: '共情', value: data.empathy, fullMark: 100 },
+  ];
 
   const height = size === 'sm' ? 200 : size === 'md' ? 300 : 400;
 

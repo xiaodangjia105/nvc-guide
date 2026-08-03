@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
-  BarChart3, Clock, Loader2, Target, TrendingUp, Trophy,
+  BarChart3, CheckCircle2, Clock, Loader2, Target, TrendingUp, Trophy,
 } from 'lucide-react';
 import { useUserId } from '../hooks/useUserId';
 import { profileApi, dashboardApi } from '../api/nvc';
@@ -63,7 +63,7 @@ export default function NvcDashboardPage() {
       </div>
 
       {/* 统计卡片 */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -105,6 +105,25 @@ export default function NvcDashboardPage() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
+          className="bg-white dark:bg-slate-800 rounded-xl p-5 border border-slate-200 dark:border-slate-700"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center">
+              <CheckCircle2 className="w-5 h-5 text-purple-500" />
+            </div>
+            <div>
+              <p className="text-sm text-slate-500">已完成练习</p>
+              <p className="text-2xl font-bold text-slate-800 dark:text-white">
+                {(stats?.completedSessions as number) ?? 0}
+              </p>
+            </div>
+          </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
           className="bg-white dark:bg-slate-800 rounded-xl p-5 border border-slate-200 dark:border-slate-700"
         >
           <div className="flex items-center gap-3">
