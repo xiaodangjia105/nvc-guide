@@ -92,7 +92,7 @@ export default function NvcVoicePage() {
   const handleWsMessage = useCallback((msg: WSMessage) => {
     switch (msg.type) {
       case 'subtitle':
-        if (msg.isFinal) {
+        if (msg.partial === false) {
           setUserText('');
           const id = `user-${++msgCounterRef.current}`;
           setMessages((prev) => [...prev, { id, role: 'user', text: msg.text }]);
@@ -114,7 +114,7 @@ export default function NvcVoicePage() {
         break;
 
       case 'audio_chunk':
-        audioChunksRef.current.set(msg.index, msg.data);
+        audioChunksRef.current.set(msg.index ?? 0, msg.data);
         if (msg.isLast) {
           const chunks: string[] = [];
           const sorted = [...audioChunksRef.current.entries()]
@@ -129,10 +129,10 @@ export default function NvcVoicePage() {
         break;
 
       case 'text':
-        setAiText(msg.content);
-        if (msg.final) {
+        // text 消息是 LLM 完成后发送的最终文本，直接作为 AI 消息
+        {
           const id = `ai-${++msgCounterRef.current}`;
-          setMessages((prev) => [...prev, { id, role: 'ai', text: msg.content }]);
+          setMessages((prev) => [...prev, { id, role: 'ai', text: msg.text }]);
           setAiText('');
         }
         break;
