@@ -104,4 +104,21 @@ public final class AsyncTaskStreamConstants {
      * Agent 指标采集 Consumer 名称前缀
      */
     public static final String METRICS_CONSUMER_PREFIX = "nvc-metrics-consumer-";
+
+    // ========== Agent Trace Stream 配置 ==========
+
+    /**
+     * Agent Trace Stream Key
+     */
+    public static final String TRACE_STREAM_KEY = "nvc:trace:stream";
+
+    /**
+     * Agent Trace Consumer Group 名称
+     */
+    public static final String TRACE_GROUP_NAME = "nvc-trace-group";
+
+    /**
+     * Agent Trace Consumer 名称前缀
+     */
+    public static final String TRACE_CONSUMER_PREFIX = "nvc-trace-consumer-";
 }

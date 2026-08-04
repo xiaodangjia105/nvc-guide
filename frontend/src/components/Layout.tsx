@@ -1,7 +1,7 @@
 import {Link, Outlet, useLocation} from 'react-router-dom';
 import {motion} from 'framer-motion';
 import {
-  BarChart3, BookOpen, Bot, ClipboardList, Database,
+  Activity, BarChart3, BookOpen, Bot, ClipboardList, Database,
   FileText, MessageSquare, Moon, Settings, Sun, Target, User, Sparkles,
 } from 'lucide-react';
 import {useTheme} from '../hooks/useTheme';
@@ -40,6 +40,7 @@ export default function Layout() {
         { id: 'nvc-profile', path: '/nvc/profile', label: '个人档案', icon: User, description: '编辑个人信息' },
         { id: 'nvc-agents', path: '/nvc/agents', label: 'Agent配置', icon: Bot, description: '管理AI角色' },
         { id: 'nvc-wiki', path: '/nvc/wiki', label: '知识库', icon: FileText, description: '个人NVC知识库' },
+        { id: 'nvc-traces', path: '/nvc/traces', label: 'Trace 链路', icon: Activity, description: 'Agent 调用链路观测' },
       ],
     },
     {

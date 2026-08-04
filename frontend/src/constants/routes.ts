@@ -24,4 +24,8 @@ export const ROUTES = {
 
   // 设置
   settings: '/settings',
+
+  // Trace 可观测
+  nvcTraces: '/nvc/traces',
+  nvcTraceDetail: (traceId: string) => `/nvc/traces/${traceId}`,
 } as const;

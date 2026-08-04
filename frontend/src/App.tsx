@@ -23,6 +23,8 @@ const NvcScenarioLibraryPage = lazy(() => import('./pages/NvcScenarioLibraryPage
 const NvcAgentConfigPage = lazy(() => import('./pages/NvcAgentConfigPage'));
 const NvcWikiPage = lazy(() => import('./pages/NvcWikiPage'));
 const NvcAssistantPage = lazy(() => import('./pages/NvcAssistantPage'));
+const TraceListPage = lazy(() => import('./pages/TraceListPage'));
+const TraceDetailPage = lazy(() => import('./pages/TraceDetailPage'));
 
 // Loading component
 const Loading = () => (
@@ -53,6 +55,10 @@ function App() {
             <Route path="nvc/agents" element={<NvcAgentConfigPage />} />
             <Route path="nvc/wiki" element={<NvcWikiPage />} />
             <Route path="nvc/assistant" element={<NvcAssistantPage />} />
+
+            {/* Trace 可观测 */}
+            <Route path="nvc/traces" element={<TraceListPage />} />
+            <Route path="nvc/traces/:traceId" element={<TraceDetailPage />} />
 
             {/* 知识库管理 */}
             <Route path="knowledgebase" element={<KnowledgeBaseManagePageWrapper />} />

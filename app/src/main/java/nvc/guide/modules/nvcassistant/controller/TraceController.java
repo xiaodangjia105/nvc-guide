@@ -1,0 +1,94 @@
+package nvc.guide.modules.nvcassistant.controller;
+
+import lombok.RequiredArgsConstructor;
+import nvc.guide.common.result.Result;
+import nvc.guide.modules.nvcassistant.evaluation.OfflineEvaluationService;
+import nvc.guide.modules.nvcassistant.evaluation.dto.EvaluationReport;
+import nvc.guide.modules.nvcassistant.trace.AgentTraceEntity;
+import nvc.guide.modules.nvcassistant.trace.AgentTraceRepository;
+import nvc.guide.modules.nvcassistant.trace.TraceStatsService;
+import nvc.guide.modules.nvcassistant.trace.dto.TraceStats;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+/**
+ * Agent Trace 查询 API
+ */
+@RestController
+@RequestMapping("/api/nvc/traces")
+@RequiredArgsConstructor
+public class TraceController {
+
+    private final AgentTraceRepository traceRepository;
+    private final TraceStatsService traceStatsService;
+    private final OfflineEvaluationService offlineEvaluationService;
+
+    /**
+     * 按 sessionId 查询 Trace 列表
+     */
+    @GetMapping
+    public Result<List<AgentTraceEntity>> listBySession(
+            @RequestParam String sessionId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Page<AgentTraceEntity> result = traceRepository.findBySessionIdOrderByCreatedAtDesc(
+            sessionId, PageRequest.of(page, size));
+        return Result.success(result.getContent());
+    }
+
+    /**
+     * 查询单个 Trace 详情（含 Spans）
+     */
+    @GetMapping("/{traceId}")
+    public Result<AgentTraceEntity> getDetail(@PathVariable String traceId) {
+        return traceRepository.findById(traceId)
+            .map(Result::success)
+            .orElse(Result.success(null));
+    }
+
+    /**
+     * 按时间范围查询 Trace（支持筛选）
+     */
+    @GetMapping("/search")
+    public Result<List<AgentTraceEntity>> search(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String mode) {
+
+        List<AgentTraceEntity> traces;
+        if (status != null) {
+            traces = traceRepository.findByStatusAndTimeRange(status, from, to);
+        } else if (mode != null) {
+            traces = traceRepository.findByModeAndTimeRange(mode, from, to);
+        } else {
+            traces = traceRepository.findByCreatedAtBetween(from, to);
+        }
+        return Result.success(traces);
+    }
+
+    /**
+     * Trace 统计概览
+     */
+    @GetMapping("/stats")
+    public Result<TraceStats> getStats(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to) {
+        return Result.success(traceStatsService.getStats(from, to));
+    }
+
+    /**
+     * 运行离线评估（手动触发）
+     */
+    @PostMapping("/evaluate")
+    public Result<EvaluationReport> runOfflineEvaluation(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to) {
+        return Result.success(offlineEvaluationService.evaluate(from, to));
+    }
+}
