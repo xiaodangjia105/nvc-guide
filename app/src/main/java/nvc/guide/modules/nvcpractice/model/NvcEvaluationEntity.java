@@ -75,6 +75,14 @@ public class NvcEvaluationEntity {
     @Builder.Default
     private NvcEvaluationType evaluationType = NvcEvaluationType.REALTIME;
 
+    /**
+     * 是否为降级评估（关键词匹配评分）
+     * 降级评估结果仅供参考，服务恢复后可触发 LLM 重新评估
+     */
+    @Column(name = "degraded")
+    @Builder.Default
+    private Boolean degraded = false;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 

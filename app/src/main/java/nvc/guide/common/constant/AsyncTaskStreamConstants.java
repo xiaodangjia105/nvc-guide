@@ -87,4 +87,21 @@ public final class AsyncTaskStreamConstants {
      * NVC 语音会话ID字段
      */
     public static final String FIELD_NVC_VOICE_SESSION_ID = "nvcVoiceSessionId";
+
+    // ========== Agent 指标采集 Stream 配置 ==========
+
+    /**
+     * Agent 指标采集 Stream Key
+     */
+    public static final String METRICS_STREAM_KEY = "nvc:metrics:stream";
+
+    /**
+     * Agent 指标采集 Consumer Group 名称
+     */
+    public static final String METRICS_GROUP_NAME = "nvc-metrics-group";
+
+    /**
+     * Agent 指标采集 Consumer 名称前缀
+     */
+    public static final String METRICS_CONSUMER_PREFIX = "nvc-metrics-consumer-";
 }

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import nvc.guide.modules.nvcassistant.metrics.MetricsCollector;
 import nvc.guide.modules.nvcpractice.tool.NvcTool;
 import nvc.guide.modules.nvcpractice.tool.NvcToolContext;
 import nvc.guide.modules.nvcpractice.tool.NvcToolRegistry;
@@ -28,6 +29,7 @@ public class ToolExecutor {
     private final NvcToolRegistry toolRegistry;
     private final List<NvcToolHook> hooks;
     private final ObjectMapper objectMapper;
+    private final MetricsCollector metricsCollector;
 
     /** 单个工具超时（毫秒） */
     private static final long TOOL_TIMEOUT_MS = 30_000;
@@ -59,8 +61,8 @@ public class ToolExecutor {
         // 等待所有完成
         CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
 
-        // 收集结果（保持顺序）
-        return futures.stream()
+        // 收集结果（保持顺序）并记录指标
+        List<ToolCallResult> results = futures.stream()
             .map(f -> {
                 try {
                     return f.get(1, TimeUnit.SECONDS);
@@ -69,6 +71,22 @@ public class ToolExecutor {
                 }
             })
             .toList();
+
+        // 采集工具调用指标
+        for (ToolCallResult result : results) {
+            try {
+                metricsCollector.recordToolCall(
+                    String.valueOf(sessionId),
+                    result.toolName(),
+                    result.success(),
+                    result.durationMs(),
+                    null);
+            } catch (Exception e) {
+                log.debug("[ToolExecutor] Failed to record tool metric: {}", e.getMessage());
+            }
+        }
+
+        return results;
     }
 
     /**
