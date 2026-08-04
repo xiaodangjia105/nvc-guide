@@ -4,6 +4,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import nvc.guide.common.ai.LlmProviderRegistry;
 import nvc.guide.modules.nvcassistant.dto.ToolCallRecord;
+import nvc.guide.modules.nvcassistant.fallback.LlmCallContext;
+import nvc.guide.modules.nvcassistant.fallback.LlmFallbackHandler;
 import nvc.guide.modules.nvcassistant.metrics.MetricsCollector;
 import nvc.guide.modules.nvcassistant.trace.AgentSpanEntity;
 import nvc.guide.modules.nvcassistant.trace.TraceManager;
@@ -52,6 +54,7 @@ public class AgentLoop {
     private final NvcAgentConfigRepository agentConfigRepository;
     private final MetricsCollector metricsCollector;
     private final TraceManager traceManager;
+    private final LlmFallbackHandler fallbackHandler;
 
     /** 最大工具调用轮数 */
     private static final int MAX_TOOL_CALL_TURNS = 10;
@@ -137,12 +140,20 @@ public class AgentLoop {
                         break;
                     }
 
-                    // 调用 LLM（含 Trace 埋点）
+                    // 调用 LLM（含 Trace 埋点 + Fallback 降级）
                     long llmStartTime = System.currentTimeMillis();
                     AgentSpanEntity llmSpan = traceManager.startSpan("LLM_CALL", "AgentLoop");
                     ChatResponse response;
                     try {
-                        response = callLlm(messages);
+                        LlmCallContext fallbackCtx = LlmCallContext.builder()
+                            .sessionId(String.valueOf(conversationId))
+                            .componentName("AgentLoop")
+                            .scene("dialog")
+                            .build();
+                        response = fallbackHandler.executeWithFallback(
+                            () -> callLlm(messages),
+                            () -> buildFallbackResponse(),
+                            fallbackCtx);
                         llmSpan.setDurationMs(System.currentTimeMillis() - llmStartTime);
                         // 采集 Token 消耗
                         if (response != null && response.getMetadata() != null
@@ -332,6 +343,20 @@ public class AgentLoop {
     private String truncateResult(String result) {
         if (result == null) return "";
         return result.length() > 2000 ? result.substring(0, 2000) + "..." : result;
+    }
+
+    /**
+     * 构建降级响应（LLM 调用失败时使用）
+     */
+    private ChatResponse buildFallbackResponse() {
+        // 返回一个简单的降级响应，让循环正常结束
+        AssistantMessage output = new AssistantMessage(
+            "【降级模式】AI 服务暂时不可用，以下是 NVC 引导提示：\n\n"
+            + "让我们先停下来，客观描述一下刚才发生了什么？注意区分事实和评价哦。");
+        Generation generation = new Generation(output);
+        return org.springframework.ai.chat.model.ChatResponse.builder()
+            .generations(List.of(generation))
+            .build();
     }
 
     /**
