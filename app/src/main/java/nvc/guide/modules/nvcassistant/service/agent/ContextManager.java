@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import nvc.guide.common.ai.LlmProviderRegistry;
+import nvc.guide.modules.nvcassistant.metrics.MetricsCollector;
 import nvc.guide.modules.nvcassistant.model.NvcAssistantMessageEntity;
 import nvc.guide.modules.nvcassistant.model.NvcAssistantMessageRole;
 import nvc.guide.modules.nvcassistant.service.NvcAssistantMessageService;
@@ -32,6 +33,7 @@ public class ContextManager {
     private final NvcAssistantMessageService messageService;
     private final LlmProviderRegistry llmProviderRegistry;
     private final ObjectMapper objectMapper;
+    private final MetricsCollector metricsCollector;
 
     /** 消息轮数阈值，超过此值触发压缩 */
     private static final int COMPRESSION_THRESHOLD = 20;
@@ -97,6 +99,18 @@ public class ContextManager {
 
         log.info("Context compressed: conversationId={}, total={}, early={}, recent={}, summaryLength={}",
             conversationId, allMessages.size(), earlyMessages.size(), recentMessages.size(), summary.length());
+
+        // 采集压缩指标（用字符数近似 Token 数）
+        try {
+            int beforeChars = earlyMessages.stream()
+                .mapToInt(m -> m.getContent() != null ? m.getContent().length() : 0)
+                .sum();
+            int afterChars = summary.length();
+            metricsCollector.recordCompression(
+                String.valueOf(conversationId), beforeChars, afterChars, summary);
+        } catch (Exception e) {
+            log.debug("[ContextManager] Failed to record compression metric: {}", e.getMessage());
+        }
 
         return new ContextResult(messages, summary);
     }

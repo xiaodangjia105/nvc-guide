@@ -2,6 +2,7 @@ package nvc.guide.modules.nvcassistant.service.agent;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import nvc.guide.modules.nvcassistant.metrics.MetricsCollector;
 import nvc.guide.modules.nvcpractice.tool.NvcTool;
 import nvc.guide.modules.nvcpractice.tool.NvcToolContext;
 import nvc.guide.modules.nvcpractice.tool.NvcToolRegistry;
@@ -25,12 +26,13 @@ class ToolExecutorTest {
     private NvcToolRegistry toolRegistry;
     private ToolExecutor executor;
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final MetricsCollector metricsCollector = mock(MetricsCollector.class);
 
     @BeforeEach
     void setUp() {
         toolRegistry = mock(NvcToolRegistry.class);
         // 默认不注入 hooks（空列表）
-        executor = new ToolExecutor(toolRegistry, List.of(), objectMapper);
+        executor = new ToolExecutor(toolRegistry, List.of(), objectMapper, metricsCollector);
     }
 
     private AssistantMessage.ToolCall toolCall(String name, String args) {
@@ -121,7 +123,7 @@ class ToolExecutorTest {
             when(tool.execute(anyString(), any(NvcToolContext.class)))
                 .thenReturn(NvcToolResult.success("ok"));
 
-            ToolExecutor executorWithHook = new ToolExecutor(toolRegistry, List.of(hook), objectMapper);
+            ToolExecutor executorWithHook = new ToolExecutor(toolRegistry, List.of(hook), objectMapper, metricsCollector);
             List<ToolCallResult> results = executorWithHook.execute(
                 List.of(toolCall("my_tool", "{}")), 1L, 100L);
 
@@ -140,7 +142,7 @@ class ToolExecutorTest {
             NvcTool tool = mock(NvcTool.class);
             when(toolRegistry.getTool("my_tool")).thenReturn(tool);
 
-            ToolExecutor executorWithHook = new ToolExecutor(toolRegistry, List.of(hook), objectMapper);
+            ToolExecutor executorWithHook = new ToolExecutor(toolRegistry, List.of(hook), objectMapper, metricsCollector);
             List<ToolCallResult> results = executorWithHook.execute(
                 List.of(toolCall("my_tool", "{}")), 1L, 100L);
 
@@ -161,7 +163,7 @@ class ToolExecutorTest {
             when(tool.execute(anyString(), any(NvcToolContext.class)))
                 .thenReturn(NvcToolResult.success("ok"));
 
-            ToolExecutor executorWithHook = new ToolExecutor(toolRegistry, List.of(hook), objectMapper);
+            ToolExecutor executorWithHook = new ToolExecutor(toolRegistry, List.of(hook), objectMapper, metricsCollector);
             List<ToolCallResult> results = executorWithHook.execute(
                 List.of(toolCall("my_tool", "{}")), 1L, 100L);
 
@@ -183,7 +185,7 @@ class ToolExecutorTest {
             when(tool.execute(anyString(), any(NvcToolContext.class)))
                 .thenReturn(NvcToolResult.success("original"));
 
-            ToolExecutor executorWithHook = new ToolExecutor(toolRegistry, List.of(hook), objectMapper);
+            ToolExecutor executorWithHook = new ToolExecutor(toolRegistry, List.of(hook), objectMapper, metricsCollector);
             List<ToolCallResult> results = executorWithHook.execute(
                 List.of(toolCall("my_tool", "{}")), 1L, 100L);
 

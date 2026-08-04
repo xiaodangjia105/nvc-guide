@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import nvc.guide.common.ai.LlmProviderRegistry;
 import nvc.guide.modules.nvcassistant.dto.ToolCallRecord;
+import nvc.guide.modules.nvcassistant.metrics.MetricsCollector;
 import nvc.guide.modules.nvcpractice.model.NvcAgentConfigEntity;
 import nvc.guide.modules.nvcpractice.model.NvcAgentScene;
 import nvc.guide.modules.nvcpractice.repository.NvcAgentConfigRepository;
@@ -47,6 +48,7 @@ public class AgentLoop {
     private final ToolExecutor toolExecutor;
     private final IntentRouter intentRouter;
     private final NvcAgentConfigRepository agentConfigRepository;
+    private final MetricsCollector metricsCollector;
 
     /** 最大工具调用轮数 */
     private static final int MAX_TOOL_CALL_TURNS = 10;
@@ -133,7 +135,23 @@ public class AgentLoop {
                     }
 
                     // 调用 LLM
+                    long llmStartTime = System.currentTimeMillis();
                     ChatResponse response = callLlm(messages);
+
+                    // 采集 Token 消耗指标
+                    try {
+                        if (response != null && response.getMetadata() != null
+                            && response.getMetadata().getUsage() != null) {
+                            var usage = response.getMetadata().getUsage();
+                            int inputTokens = usage.getPromptTokens() != null ? usage.getPromptTokens() : 0;
+                            int outputTokens = usage.getCompletionTokens() != null ? usage.getCompletionTokens() : 0;
+                            metricsCollector.recordLlmCall(
+                                String.valueOf(conversationId), null,
+                                inputTokens, outputTokens, "default", false);
+                        }
+                    } catch (Exception e) {
+                        log.debug("[AgentLoop] Failed to record token metrics: {}", e.getMessage());
+                    }
 
                     // 检查是否有工具调用
                     AssistantMessage assistantMessage = getAssistantMessage(response);
@@ -210,6 +228,14 @@ public class AgentLoop {
                 if (turn >= MAX_TOOL_CALL_TURNS) {
                     log.warn("[AgentLoop] Max turns reached: userId={}, turns={}", userId, turn);
                     sink.next(AgentEvent.error("工具调用次数过多，请简化请求"));
+                }
+
+                // 记录端到端延迟
+                long e2eLatency = System.currentTimeMillis() - startTime;
+                try {
+                    metricsCollector.recordLatency(String.valueOf(conversationId), e2eLatency, "e2e");
+                } catch (Exception e) {
+                    log.debug("[AgentLoop] Failed to record latency metric: {}", e.getMessage());
                 }
 
                 sink.complete();

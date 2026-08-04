@@ -54,6 +54,7 @@ public class NvcAgentOrchestrator {
   private final NvcScenarioRepository scenarioRepository;
   private final NvcProfileService profileService;
   private final NvcRagService ragService;
+  private final NvcScenarioRecommendService recommendService;
   private final Map<NvcPracticeMode, ModeRouter> routers;
 
   public NvcAgentOrchestrator(
@@ -65,6 +66,7 @@ public class NvcAgentOrchestrator {
       NvcScenarioRepository scenarioRepository,
       NvcProfileService profileService,
       NvcRagService ragService,
+      NvcScenarioRecommendService recommendService,
       FreeDialogRouter freeDialogRouter,
       ScenarioRouter scenarioRouter,
       StructuredRouter structuredRouter) {
@@ -76,6 +78,7 @@ public class NvcAgentOrchestrator {
     this.scenarioRepository = scenarioRepository;
     this.profileService = profileService;
     this.ragService = ragService;
+    this.recommendService = recommendService;
 
     this.routers = new EnumMap<>(NvcPracticeMode.class);
     this.routers.put(NvcPracticeMode.FREE_DIALOG, freeDialogRouter);
@@ -284,6 +287,19 @@ public class NvcAgentOrchestrator {
         eval.getOverallScore());
 
     return agentChatService.chatPlain(evaluatorConfig, reflectPrompt, "");
+  }
+
+  // ==================== RECOMMEND：场景推荐 ====================
+
+  /**
+   * 推荐练习场景（基于用户薄弱维度）
+   *
+   * @param userId 用户 ID
+   * @param limit  返回数量
+   * @return 推荐的场景列表
+   */
+  public List<NvcScenarioEntity> recommendScenarios(Long userId, int limit) {
+    return recommendService.recommend(userId, limit);
   }
 
   // ==================== 内部工具方法 ====================

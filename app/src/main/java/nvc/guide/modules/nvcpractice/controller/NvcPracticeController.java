@@ -15,6 +15,7 @@ import nvc.guide.modules.nvcpractice.service.NvcEvaluationService;
 import nvc.guide.modules.nvcpractice.service.NvcPracticeSessionService.CompleteResult;
 import nvc.guide.modules.nvcpractice.service.NvcPracticeDialogueService;
 import nvc.guide.modules.nvcpractice.service.NvcPracticeSessionService;
+import nvc.guide.modules.nvcpractice.service.NvcAgentOrchestrator;
 import nvc.guide.modules.nvcpractice.service.NvcStructuredPracticeService;
 import nvc.guide.modules.nvcpractice.service.NvcSummaryService;
 import nvc.guide.modules.nvcpractice.model.NvcSummaryEntity;
@@ -48,6 +49,7 @@ public class NvcPracticeController {
   private final NvcEvaluationService evaluationService;
   private final NvcSummaryService summaryService;
   private final NvcScenarioRepository scenarioRepository;
+  private final NvcAgentOrchestrator agentOrchestrator;
 
   /**
    * 创建练习会话
@@ -235,5 +237,17 @@ public class NvcPracticeController {
         session.getCreatedAt(),
         evaluationFailed
     );
+  }
+
+  /**
+   * 获取推荐练习场景（基于用户薄弱维度）
+   */
+  @GetMapping("/recommendations")
+  public Result<List<NvcScenarioEntity>> getRecommendations(
+      @RequestParam Long userId,
+      @RequestParam(defaultValue = "5") int limit) {
+    List<NvcScenarioEntity> recommendations =
+        agentOrchestrator.recommendScenarios(userId, limit);
+    return Result.success(recommendations);
   }
 }
