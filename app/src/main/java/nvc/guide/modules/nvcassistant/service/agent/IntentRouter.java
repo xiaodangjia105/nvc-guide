@@ -1,6 +1,9 @@
 package nvc.guide.modules.nvcassistant.service.agent;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import nvc.guide.modules.nvcassistant.trace.AgentSpanEntity;
+import nvc.guide.modules.nvcassistant.trace.TraceManager;
 import org.springframework.stereotype.Service;
 
 import java.util.regex.Pattern;
@@ -20,7 +23,10 @@ import java.util.regex.Pattern;
  */
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class IntentRouter {
+
+    private final TraceManager traceManager;
 
     /**
      * 意图匹配结果
@@ -68,35 +74,55 @@ public class IntentRouter {
             return null;
         }
 
-        String trimmed = userMessage.trim();
+        // Trace 埋点
+        long startTime = System.currentTimeMillis();
+        AgentSpanEntity span = traceManager.startSpan("INTENT_ROUTING", "IntentRouter");
 
-        // 1. 检查是否是更新档案意图
-        if (PROFILE_UPDATE_PATTERN.matcher(trimmed).find()) {
-            // 进一步检查是否包含个人信息（职业、年龄、性别）
-            String personalInfo = extractPersonalInfo(trimmed);
-            if (personalInfo != null) {
-                String arguments = "{\"field\": \"communicationBackground\", \"value\": \"" + escapeJson(personalInfo) + "\"}";
-                log.info("[IntentRouter] Detected profile_update intent: message={}, info={}", trimmed, personalInfo);
-                return new IntentMatch("profile_update", arguments, "用户描述了个人信息");
+        try {
+            String trimmed = userMessage.trim();
+
+            // 1. 检查是否是更新档案意图
+            if (PROFILE_UPDATE_PATTERN.matcher(trimmed).find()) {
+                // 进一步检查是否包含个人信息（职业、年龄、性别）
+                String personalInfo = extractPersonalInfo(trimmed);
+                if (personalInfo != null) {
+                    String arguments = "{\"field\": \"communicationBackground\", \"value\": \"" + escapeJson(personalInfo) + "\"}";
+                    log.info("[IntentRouter] Detected profile_update intent: message={}, info={}", trimmed, personalInfo);
+                    span.setDurationMs(System.currentTimeMillis() - startTime);
+                    traceManager.endSpan(span, "SUCCESS", null);
+                    return new IntentMatch("profile_update", arguments, "用户描述了个人信息");
+                }
+                // 如果只是说"更新档案"但没有具体信息，返回 null 让 LLM 处理
+                log.info("[IntentRouter] Detected profile_update intent but no personal info found: {}", trimmed);
+                span.setDurationMs(System.currentTimeMillis() - startTime);
+                traceManager.endSpan(span, "SUCCESS", null);
+                return null;
             }
-            // 如果只是说"更新档案"但没有具体信息，返回 null 让 LLM 处理
-            log.info("[IntentRouter] Detected profile_update intent but no personal info found: {}", trimmed);
+
+            // 2. 检查是否是查看档案意图
+            if (PROFILE_QUERY_PATTERN.matcher(trimmed).find()) {
+                log.info("[IntentRouter] Detected profile_query intent: {}", trimmed);
+                span.setDurationMs(System.currentTimeMillis() - startTime);
+                traceManager.endSpan(span, "SUCCESS", null);
+                return new IntentMatch("profile_query", "{}", "用户想查看档案");
+            }
+
+            // 3. 检查是否是查看练习数据意图
+            if (DASHBOARD_QUERY_PATTERN.matcher(trimmed).find()) {
+                log.info("[IntentRouter] Detected dashboard_query intent: {}", trimmed);
+                span.setDurationMs(System.currentTimeMillis() - startTime);
+                traceManager.endSpan(span, "SUCCESS", null);
+                return new IntentMatch("dashboard_query", "{}", "用户想查看练习数据");
+            }
+
+            span.setDurationMs(System.currentTimeMillis() - startTime);
+            traceManager.endSpan(span, "SUCCESS", null);
+            return null;
+        } catch (Exception e) {
+            span.setDurationMs(System.currentTimeMillis() - startTime);
+            traceManager.endSpan(span, "FAILED", e.getMessage());
             return null;
         }
-
-        // 2. 检查是否是查看档案意图
-        if (PROFILE_QUERY_PATTERN.matcher(trimmed).find()) {
-            log.info("[IntentRouter] Detected profile_query intent: {}", trimmed);
-            return new IntentMatch("profile_query", "{}", "用户想查看档案");
-        }
-
-        // 3. 检查是否是查看练习数据意图
-        if (DASHBOARD_QUERY_PATTERN.matcher(trimmed).find()) {
-            log.info("[IntentRouter] Detected dashboard_query intent: {}", trimmed);
-            return new IntentMatch("dashboard_query", "{}", "用户想查看练习数据");
-        }
-
-        return null;
     }
 
     /**

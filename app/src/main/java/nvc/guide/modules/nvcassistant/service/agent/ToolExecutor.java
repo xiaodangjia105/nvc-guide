@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import nvc.guide.modules.nvcassistant.metrics.MetricsCollector;
+import nvc.guide.modules.nvcassistant.trace.AgentSpanEntity;
+import nvc.guide.modules.nvcassistant.trace.TraceManager;
 import nvc.guide.modules.nvcpractice.tool.NvcTool;
 import nvc.guide.modules.nvcpractice.tool.NvcToolContext;
 import nvc.guide.modules.nvcpractice.tool.NvcToolRegistry;
@@ -30,6 +32,7 @@ public class ToolExecutor {
     private final List<NvcToolHook> hooks;
     private final ObjectMapper objectMapper;
     private final MetricsCollector metricsCollector;
+    private final TraceManager traceManager;
 
     /** 单个工具超时（毫秒） */
     private static final long TOOL_TIMEOUT_MS = 30_000;
@@ -72,7 +75,7 @@ public class ToolExecutor {
             })
             .toList();
 
-        // 采集工具调用指标
+        // 采集工具调用指标 + Trace 埋点
         for (ToolCallResult result : results) {
             try {
                 metricsCollector.recordToolCall(
@@ -81,6 +84,13 @@ public class ToolExecutor {
                     result.success(),
                     result.durationMs(),
                     null);
+
+                // Trace 埋点
+                AgentSpanEntity toolSpan = traceManager.startSpan("TOOL_CALL", "ToolExecutor");
+                toolSpan.setDurationMs(result.durationMs());
+                traceManager.endSpan(toolSpan,
+                    result.success() ? "SUCCESS" : "FAILED",
+                    result.success() ? null : result.result());
             } catch (Exception e) {
                 log.debug("[ToolExecutor] Failed to record tool metric: {}", e.getMessage());
             }

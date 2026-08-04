@@ -1,5 +1,7 @@
 package nvc.guide.modules.nvcassistant.service.agent;
 
+import nvc.guide.modules.nvcassistant.trace.AgentSpanEntity;
+import nvc.guide.modules.nvcassistant.trace.TraceManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -9,6 +11,9 @@ import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 @DisplayName("IntentRouter 意图预路由")
 class IntentRouterTest {
@@ -17,7 +22,10 @@ class IntentRouterTest {
 
     @BeforeEach
     void setUp() {
-        router = new IntentRouter();
+        TraceManager traceManager = mock(TraceManager.class);
+        when(traceManager.startSpan(anyString(), anyString()))
+            .thenReturn(AgentSpanEntity.builder().spanId("test-span").status("SUCCESS").build());
+        router = new IntentRouter(traceManager);
     }
 
     // ==================== null / 空输入 ====================

@@ -5,6 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 import nvc.guide.common.ai.LlmProviderRegistry;
 import nvc.guide.modules.nvcassistant.dto.ToolCallRecord;
 import nvc.guide.modules.nvcassistant.metrics.MetricsCollector;
+import nvc.guide.modules.nvcassistant.trace.AgentSpanEntity;
+import nvc.guide.modules.nvcassistant.trace.TraceManager;
 import nvc.guide.modules.nvcpractice.model.NvcAgentConfigEntity;
 import nvc.guide.modules.nvcpractice.model.NvcAgentScene;
 import nvc.guide.modules.nvcpractice.repository.NvcAgentConfigRepository;
@@ -49,6 +51,7 @@ public class AgentLoop {
     private final IntentRouter intentRouter;
     private final NvcAgentConfigRepository agentConfigRepository;
     private final MetricsCollector metricsCollector;
+    private final TraceManager traceManager;
 
     /** 最大工具调用轮数 */
     private static final int MAX_TOOL_CALL_TURNS = 10;
@@ -134,23 +137,30 @@ public class AgentLoop {
                         break;
                     }
 
-                    // 调用 LLM
+                    // 调用 LLM（含 Trace 埋点）
                     long llmStartTime = System.currentTimeMillis();
-                    ChatResponse response = callLlm(messages);
-
-                    // 采集 Token 消耗指标
+                    AgentSpanEntity llmSpan = traceManager.startSpan("LLM_CALL", "AgentLoop");
+                    ChatResponse response;
                     try {
+                        response = callLlm(messages);
+                        llmSpan.setDurationMs(System.currentTimeMillis() - llmStartTime);
+                        // 采集 Token 消耗
                         if (response != null && response.getMetadata() != null
                             && response.getMetadata().getUsage() != null) {
                             var usage = response.getMetadata().getUsage();
                             int inputTokens = usage.getPromptTokens() != null ? usage.getPromptTokens() : 0;
                             int outputTokens = usage.getCompletionTokens() != null ? usage.getCompletionTokens() : 0;
+                            llmSpan.setInputTokens(inputTokens);
+                            llmSpan.setOutputTokens(outputTokens);
                             metricsCollector.recordLlmCall(
                                 String.valueOf(conversationId), null,
                                 inputTokens, outputTokens, "default", false);
                         }
+                        traceManager.endSpan(llmSpan, "SUCCESS", null);
                     } catch (Exception e) {
-                        log.debug("[AgentLoop] Failed to record token metrics: {}", e.getMessage());
+                        llmSpan.setDurationMs(System.currentTimeMillis() - llmStartTime);
+                        traceManager.endSpan(llmSpan, "FAILED", e.getMessage());
+                        throw e;
                     }
 
                     // 检查是否有工具调用

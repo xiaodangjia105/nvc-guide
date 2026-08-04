@@ -5,6 +5,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import nvc.guide.common.ai.LlmProviderRegistry;
 import nvc.guide.modules.nvcassistant.metrics.MetricsCollector;
+import nvc.guide.modules.nvcassistant.trace.AgentSpanEntity;
+import nvc.guide.modules.nvcassistant.trace.TraceManager;
 import nvc.guide.modules.nvcassistant.model.NvcAssistantMessageEntity;
 import nvc.guide.modules.nvcassistant.model.NvcAssistantMessageRole;
 import nvc.guide.modules.nvcassistant.service.NvcAssistantMessageService;
@@ -34,6 +36,7 @@ public class ContextManager {
     private final LlmProviderRegistry llmProviderRegistry;
     private final ObjectMapper objectMapper;
     private final MetricsCollector metricsCollector;
+    private final TraceManager traceManager;
 
     /** 消息轮数阈值，超过此值触发压缩 */
     private static final int COMPRESSION_THRESHOLD = 20;
@@ -86,8 +89,11 @@ public class ContextManager {
         List<NvcAssistantMessageEntity> recentMessages = allMessages.subList(
             allMessages.size() - KEEP_RECENT_MESSAGES, allMessages.size());
 
-        // 3. 生成早期消息的摘要
+        // 3. 生成早期消息的摘要（含 Trace 埋点）
+        long compressionStart = System.currentTimeMillis();
+        AgentSpanEntity compressionSpan = traceManager.startSpan("COMPRESSION", "ContextManager");
         String summary = generateSummary(earlyMessages);
+        compressionSpan.setDurationMs(System.currentTimeMillis() - compressionStart);
 
         // 4. 构建上下文：最近消息（摘要由 PromptBuilder 注入系统提示词）
         for (NvcAssistantMessageEntity msg : recentMessages) {
@@ -100,7 +106,7 @@ public class ContextManager {
         log.info("Context compressed: conversationId={}, total={}, early={}, recent={}, summaryLength={}",
             conversationId, allMessages.size(), earlyMessages.size(), recentMessages.size(), summary.length());
 
-        // 采集压缩指标（用字符数近似 Token 数）
+        // 采集压缩指标 + 完成 Trace Span
         try {
             int beforeChars = earlyMessages.stream()
                 .mapToInt(m -> m.getContent() != null ? m.getContent().length() : 0)
@@ -108,8 +114,10 @@ public class ContextManager {
             int afterChars = summary.length();
             metricsCollector.recordCompression(
                 String.valueOf(conversationId), beforeChars, afterChars, summary);
+            traceManager.endSpan(compressionSpan, "SUCCESS", null);
         } catch (Exception e) {
             log.debug("[ContextManager] Failed to record compression metric: {}", e.getMessage());
+            traceManager.endSpan(compressionSpan, "FAILED", e.getMessage());
         }
 
         return new ContextResult(messages, summary);
