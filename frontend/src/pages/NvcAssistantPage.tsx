@@ -38,13 +38,17 @@ export default function NvcAssistantPage() {
     setLoadingMessages(true);
     try {
       const raw = await assistantApi.getMessages(userId, conversationId);
-      const display: DisplayMessage[] = raw.map((m) => ({
-        id: `msg-${m.id}`,
-        role: m.role as 'USER' | 'ASSISTANT' | 'TOOL',
-        content: m.content,
-        toolCalls: m.toolCalls || [],
-        practicePreview: null,
-      }));
+      const display: DisplayMessage[] = raw
+        .filter((m) => m.role === 'USER' || m.role === 'ASSISTANT')
+        .map((m) => ({
+          id: `msg-${m.id}`,
+          role: m.role as 'USER' | 'ASSISTANT',
+          content: m.content,
+          toolCalls: m.toolCalls || [],
+          practicePreview: null,
+          dbMessageId: m.id,
+          sessionId: activeConversationId ?? undefined,
+        }));
       setMessages(display);
     } catch (err) {
       console.error('Failed to load messages:', err);
@@ -263,25 +267,35 @@ export default function NvcAssistantPage() {
           }
 
           case 'done': {
+            // 解析 done 事件数据（包含 messageId 和 conversationId）
+            let doneMessageId: number | undefined;
+            let doneConversationId: number | undefined;
+            try {
+              const doneData = typeof event.data === 'string'
+                ? JSON.parse(event.data)
+                : event.data;
+              doneMessageId = doneData.messageId as number | undefined;
+              doneConversationId = doneData.conversationId as number | undefined;
+              if (doneConversationId && !activeConversationId) {
+                setActiveConversationId(doneConversationId);
+              }
+            } catch { /* ignore */ }
+
             setMessages((prev) =>
               prev.map((m) =>
                 m.id === aiMsgId
-                  ? { ...m, isStreaming: false, isThinking: false }
+                  ? {
+                      ...m,
+                      isStreaming: false,
+                      isThinking: false,
+                      dbMessageId: doneMessageId ?? m.dbMessageId,
+                      sessionId: doneConversationId ?? activeConversationId ?? m.sessionId,
+                    }
                   : m
               )
             );
             setIsStreaming(false);
             streamAbortRef.current = null;
-
-            // 解析 conversationId 并更新当前对话
-            try {
-              const doneData = typeof event.data === 'string'
-                ? JSON.parse(event.data)
-                : event.data;
-              if (doneData.conversationId && !activeConversationId) {
-                setActiveConversationId(doneData.conversationId as number);
-              }
-            } catch { /* ignore */ }
 
             // 刷新对话列表（可能创建了新对话）
             assistantApi.getConversations(userId)

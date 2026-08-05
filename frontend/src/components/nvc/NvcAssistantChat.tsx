@@ -5,6 +5,7 @@ import remarkGfm from 'remark-gfm';
 import { Send, Loader2, Bot, User, StopCircle, RefreshCw } from 'lucide-react';
 import NvcToolCallCard from './NvcToolCallCard';
 import NvcPracticePreviewCard from './NvcPracticePreviewCard';
+import NvcFeedbackButtons from './NvcFeedbackButtons';
 import type { ToolCallRecord } from '../../api/nvc-assistant';
 
 /**
@@ -26,6 +27,12 @@ interface DisplayMessage {
   isStreaming?: boolean;
   isThinking?: boolean;
   practicePreview?: PracticePreviewData | null;
+  /** 数据库消息 ID（用于反馈） */
+  dbMessageId?: number;
+  /** 会话 ID（用于反馈） */
+  sessionId?: number;
+  /** Agent 场景（用于反馈） */
+  agentScene?: string;
 }
 
 interface PracticePreviewData {
@@ -182,27 +189,38 @@ export default function NvcAssistantChat({
                       <NvcPracticePreviewCard data={msg.practicePreview} />
                     )}
 
-                    {/* 文本消息气泡 */}
+                    {/* 文本消息气泡 + 反馈按钮 */}
                     {msg.content && (
-                      <div className={`px-4 py-3 rounded-2xl text-sm leading-relaxed ${
-                        isUser
-                          ? 'bg-primary-500 text-white rounded-br-md'
-                          : 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-bl-md'
-                      }`}>
-                        {isUser ? (
-                          <span className="whitespace-pre-wrap">{msg.content}</span>
-                        ) : (
-                          <div className="prose prose-sm dark:prose-invert max-w-none">
-                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                              {normalizeLlmNewlines(msg.content)}
-                            </ReactMarkdown>
-                          </div>
-                        )}
-                        {msg.isStreaming && (
-                          <motion.span
-                            className="inline-block w-1.5 h-4 bg-primary-400 ml-0.5 align-middle"
-                            animate={{ opacity: [1, 0.25, 1] }}
-                            transition={{ duration: 0.8, repeat: Infinity }}
+                      <div className="flex flex-col">
+                        <div className={`px-4 py-3 rounded-2xl text-sm leading-relaxed ${
+                          isUser
+                            ? 'bg-primary-500 text-white rounded-br-md'
+                            : 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-bl-md'
+                        }`}>
+                          {isUser ? (
+                            <span className="whitespace-pre-wrap">{msg.content}</span>
+                          ) : (
+                            <div className="prose prose-sm dark:prose-invert max-w-none">
+                              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                {normalizeLlmNewlines(msg.content)}
+                              </ReactMarkdown>
+                            </div>
+                          )}
+                          {msg.isStreaming && (
+                            <motion.span
+                              className="inline-block w-1.5 h-4 bg-primary-400 ml-0.5 align-middle"
+                              animate={{ opacity: [1, 0.25, 1] }}
+                              transition={{ duration: 0.8, repeat: Infinity }}
+                            />
+                          )}
+                        </div>
+                        {/* 👍/👎 反馈按钮 — 仅对已完成的 AI 消息显示 */}
+                        {!isUser && !msg.isStreaming && !msg.isThinking && msg.dbMessageId && msg.sessionId && (
+                          <NvcFeedbackButtons
+                            messageId={msg.dbMessageId}
+                            sessionId={msg.sessionId}
+                            messageSource="ASSISTANT"
+                            agentScene={msg.agentScene}
                           />
                         )}
                       </div>

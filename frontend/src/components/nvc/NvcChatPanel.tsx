@@ -5,6 +5,7 @@ import remarkGfm from 'remark-gfm';
 import { Send, Loader2, Bot, User } from 'lucide-react';
 import { practiceApi } from '../../api/nvc';
 import { consumeSSEEvents } from '../../utils/sse';
+import NvcFeedbackButtons from './NvcFeedbackButtons';
 
 interface NvcChatPanelProps {
   sessionId: number;
@@ -24,6 +25,8 @@ interface DisplayMessage {
   content: string;
   agentScene?: string;
   isStreaming?: boolean;
+  /** 数据库消息 ID（历史消息有，流式消息完成后更新） */
+  dbMessageId?: number;
 }
 
 /**
@@ -97,6 +100,7 @@ export default function NvcChatPanel({
             role: m.role as 'USER' | 'ASSISTANT',
             content: m.role === 'ASSISTANT' ? cleanAiResponse(m.content) : m.content,
             agentScene: m.agentScene ?? undefined,
+            dbMessageId: m.id,
           }));
         setMessages(display);
       })
@@ -163,6 +167,21 @@ export default function NvcChatPanel({
                 : m
             )
           );
+          // 重新加载消息以获取数据库 ID（用于反馈按钮）
+          practiceApi.getMessages(sessionId)
+            .then((msgs) => {
+              const lastAiMsg = [...msgs].reverse().find((m) => m.role === 'ASSISTANT');
+              if (lastAiMsg) {
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === aiMsgId
+                      ? { ...m, dbMessageId: lastAiMsg.id, agentScene: lastAiMsg.agentScene ?? undefined }
+                      : m
+                  )
+                );
+              }
+            })
+            .catch(() => {}); // 静默失败，不影响用户体验
         },
         onError: (err) => {
           throw err;
@@ -242,26 +261,37 @@ export default function NvcChatPanel({
                     {isUser ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
                   </div>
 
-                  {/* 消息气泡 */}
-                  <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
-                    isUser
-                      ? 'bg-primary-500 text-white rounded-br-md'
-                      : 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-bl-md'
-                  }`}>
-                    {isUser ? (
-                      msg.content
-                    ) : (
-                      <div className="prose prose-sm dark:prose-invert max-w-none">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                          {msg.content}
-                        </ReactMarkdown>
-                      </div>
-                    )}
-                    {msg.isStreaming && (
-                      <motion.span
-                        className="inline-block w-1.5 h-4 bg-primary-400 ml-0.5"
-                        animate={{ opacity: [1, 0.25, 1] }}
-                        transition={{ duration: 0.8, repeat: Infinity }}
+                  {/* 消息气泡 + 反馈按钮 */}
+                  <div className="flex flex-col">
+                    <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
+                      isUser
+                        ? 'bg-primary-500 text-white rounded-br-md'
+                        : 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-bl-md'
+                    }`}>
+                      {isUser ? (
+                        msg.content
+                      ) : (
+                        <div className="prose prose-sm dark:prose-invert max-w-none">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {msg.content}
+                          </ReactMarkdown>
+                        </div>
+                      )}
+                      {msg.isStreaming && (
+                        <motion.span
+                          className="inline-block w-1.5 h-4 bg-primary-400 ml-0.5"
+                          animate={{ opacity: [1, 0.25, 1] }}
+                          transition={{ duration: 0.8, repeat: Infinity }}
+                        />
+                      )}
+                    </div>
+                    {/* 👍/👎 反馈按钮 — 仅对已完成的 AI 消息显示 */}
+                    {!isUser && !msg.isStreaming && msg.dbMessageId && (
+                      <NvcFeedbackButtons
+                        messageId={msg.dbMessageId}
+                        sessionId={sessionId}
+                        messageSource="PRACTICE"
+                        agentScene={msg.agentScene}
                       />
                     )}
                   </div>
