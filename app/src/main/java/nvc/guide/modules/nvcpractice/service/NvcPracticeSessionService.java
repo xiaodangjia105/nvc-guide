@@ -1,6 +1,7 @@
 package nvc.guide.modules.nvcpractice.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import nvc.guide.common.event.PracticeCompletedEvent;
 import nvc.guide.common.exception.BusinessException;
 import nvc.guide.common.exception.ErrorCode;
 import nvc.guide.infrastructure.redis.RedisService;
@@ -19,6 +20,7 @@ import nvc.guide.modules.nvcscenario.repository.NvcScenarioRepository;
 import nvc.guide.modules.nvcscenario.service.NvcScenarioService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -52,6 +54,7 @@ public class NvcPracticeSessionService {
   private final NvcScenarioService scenarioService;
   private final RedisService redisService;
   private final ObjectMapper objectMapper;
+  private final ApplicationEventPublisher eventPublisher;
 
   private static final String CACHE_KEY_PREFIX = "nvc:practice:session:";
   private static final Duration CACHE_TTL = Duration.ofHours(24);
@@ -235,6 +238,10 @@ public class NvcPracticeSessionService {
       log.error("Final evaluation failed: sessionId={}", sessionId, e);
       evaluationFailed = true;
     }
+
+    // 发布练习完成事件
+    eventPublisher.publishEvent(
+        new PracticeCompletedEvent(this, sessionId, userId, evaluationFailed));
 
     return new CompleteResult(session, evaluationFailed);
   }
