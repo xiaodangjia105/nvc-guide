@@ -28,4 +28,6 @@ public class PracticeContext {
   /** RAG 检索到的知识（注入到系统提示词），后续知识库模块接入 */
   private String ragContext;
   private NvcScenarioEntity scenario;
+  /** 过往练习记忆（反思结果摘要，注入到系统提示词） */
+  private String pastPracticeMemory;
 }

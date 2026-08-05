@@ -55,6 +55,7 @@ public class NvcAgentOrchestrator {
   private final NvcProfileService profileService;
   private final NvcRagService ragService;
   private final NvcScenarioRecommendService recommendService;
+  private final NvcReflectionService reflectionService;
   private final Map<NvcPracticeMode, ModeRouter> routers;
 
   public NvcAgentOrchestrator(
@@ -67,6 +68,7 @@ public class NvcAgentOrchestrator {
       NvcProfileService profileService,
       NvcRagService ragService,
       NvcScenarioRecommendService recommendService,
+      NvcReflectionService reflectionService,
       FreeDialogRouter freeDialogRouter,
       ScenarioRouter scenarioRouter,
       StructuredRouter structuredRouter) {
@@ -79,6 +81,7 @@ public class NvcAgentOrchestrator {
     this.profileService = profileService;
     this.ragService = ragService;
     this.recommendService = recommendService;
+    this.reflectionService = reflectionService;
 
     this.routers = new EnumMap<>(NvcPracticeMode.class);
     this.routers.put(NvcPracticeMode.FREE_DIALOG, freeDialogRouter);
@@ -160,6 +163,18 @@ public class NvcAgentOrchestrator {
       ragContext = ragService.formatForPrompt(ragResults);
     }
 
+    // 上下文记忆：最近 3 次练习的反思
+    String pastMemory = null;
+    try {
+      pastMemory = reflectionService.getRecentMemory(userId, 3);
+      if (pastMemory != null) {
+        log.info("Past practice memory loaded: userId={}, length={}",
+            userId, pastMemory.length());
+      }
+    } catch (Exception e) {
+      log.debug("Failed to load past memory: {}", e.getMessage());
+    }
+
     return PracticeContext.builder()
         .session(session)
         .recentMessages(recentMessages)
@@ -169,6 +184,7 @@ public class NvcAgentOrchestrator {
         .scenario(scenario)
         .userProfileSummary(userProfileSummary)
         .ragContext(ragContext)
+        .pastPracticeMemory(pastMemory)
         .build();
   }
 
