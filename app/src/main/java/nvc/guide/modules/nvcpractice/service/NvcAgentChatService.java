@@ -181,6 +181,11 @@ public class NvcAgentChatService {
       systemPrompt += "\n\n[参考资料]\n" + context.getRagContext();
     }
 
+    // 4.5 注入过往练习记忆（如有）
+    if (context.getPastPracticeMemory() != null) {
+      systemPrompt += "\n\n[过往练习记忆]\n" + context.getPastPracticeMemory();
+    }
+
     // 5. 注入路由变量（mode、covered_elements 等）
     if (promptVariables != null && !promptVariables.isEmpty()) {
       StringBuilder sb = new StringBuilder("\n\n[当前配置]");

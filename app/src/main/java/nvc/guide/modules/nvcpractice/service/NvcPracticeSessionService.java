@@ -6,6 +6,7 @@ import nvc.guide.common.exception.BusinessException;
 import nvc.guide.common.exception.ErrorCode;
 import nvc.guide.infrastructure.redis.RedisService;
 import nvc.guide.modules.nvcpractice.dto.CreatePracticeSessionRequest;
+import nvc.guide.modules.nvcpractice.dto.PracticeContext;
 import nvc.guide.modules.nvcpractice.model.NvcAgentScene;
 import nvc.guide.modules.nvcpractice.model.NvcDifficulty;
 import nvc.guide.modules.nvcpractice.model.NvcPracticeMessageEntity;
@@ -55,12 +56,15 @@ public class NvcPracticeSessionService {
   private final RedisService redisService;
   private final ObjectMapper objectMapper;
   private final ApplicationEventPublisher eventPublisher;
+  private final NvcReflectionService reflectionService;
+  private final NvcAgentOrchestrator orchestrator;
 
   private static final String CACHE_KEY_PREFIX = "nvc:practice:session:";
   private static final Duration CACHE_TTL = Duration.ofHours(24);
 
   /**
    * 创建练习会话
+   * 支持自适应难度：未指定难度时，基于上次反思建议自动调整
    */
   public NvcPracticeSessionEntity createSession(Long userId,
       CreatePracticeSessionRequest request) {
@@ -70,12 +74,17 @@ public class NvcPracticeSessionService {
       scenarioId = pickRandomScenario(request.difficulty());
     }
 
+    // 自适应难度：用户未指定时，使用反思建议的难度
+    NvcDifficulty difficulty = request.difficulty();
+    if (difficulty == null) {
+      difficulty = suggestDifficulty(userId);
+    }
+
     NvcPracticeSessionEntity session = NvcPracticeSessionEntity.builder()
         .userId(userId)
         .practiceMode(request.practiceMode())
         .scenarioId(scenarioId)
-        .difficulty(request.difficulty() != null
-            ? request.difficulty() : NvcDifficulty.MEDIUM)
+        .difficulty(difficulty)
         .currentPhase(NvcSessionPhase.CREATED)
         .currentStep(request.practiceMode()
             == NvcPracticeMode.STRUCTURED_FOUR_STEP
@@ -239,6 +248,16 @@ public class NvcPracticeSessionService {
       evaluationFailed = true;
     }
 
+    // 练习后反思（异步，不阻塞主流程）
+    try {
+      PracticeContext context = orchestrator.buildPracticeContext(sessionId, userId);
+      reflectionService.reflectAndSave(context);
+      log.info("Reflection completed: sessionId={}", sessionId);
+    } catch (Exception e) {
+      log.warn("Reflection failed (non-blocking): sessionId={}, error={}",
+          sessionId, e.getMessage());
+    }
+
     // 发布练习完成事件
     eventPublisher.publishEvent(
         new PracticeCompletedEvent(this, sessionId, userId, evaluationFailed));
@@ -253,6 +272,24 @@ public class NvcPracticeSessionService {
       NvcPracticeSessionEntity session,
       boolean evaluationFailed
   ) {}
+
+  /**
+   * 基于反思历史建议难度
+   * 连续3次高分(>=80)→升级，连续3次低分(<40)→降级
+   */
+  private NvcDifficulty suggestDifficulty(Long userId) {
+    try {
+      var reflection = reflectionService.getLatestReflection(userId);
+      if (reflection != null && reflection.getSuggestedDifficulty() != null) {
+        log.info("Adaptive difficulty: userId={}, suggested={}",
+            userId, reflection.getSuggestedDifficulty());
+        return reflection.getSuggestedDifficulty();
+      }
+    } catch (Exception e) {
+      log.debug("Failed to get difficulty suggestion: {}", e.getMessage());
+    }
+    return NvcDifficulty.MEDIUM;
+  }
 
   /**
    * 从 DB 中按难度随机分配一个场景
