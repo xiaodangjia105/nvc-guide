@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import nvc.guide.common.exception.BusinessException;
 import nvc.guide.common.exception.ErrorCode;
 import nvc.guide.common.result.Result;
+import nvc.guide.common.security.InputSanitizer;
 import nvc.guide.modules.nvcassistant.dto.AssistantRequest;
 import nvc.guide.modules.nvcassistant.dto.AssistantResponse;
 import nvc.guide.modules.nvcassistant.dto.ConversationResponse;
@@ -37,6 +38,7 @@ public class NvcAssistantController {
     private final NvcAssistantService assistantService;
     private final NvcAssistantMessageService messageService;
     private final ObjectMapper objectMapper;
+    private final InputSanitizer inputSanitizer;
 
     /**
      * 非流式对话（同步等待完成）
@@ -45,6 +47,8 @@ public class NvcAssistantController {
     public Result<AssistantResponse> chat(
             @RequestParam Long userId,
             @Validated @RequestBody AssistantRequest request) {
+        inputSanitizer.validateAssistantMessage(request.getMessage());
+
         NvcAssistantService.ChatStreamResult result = assistantService.chatStreamRaw(userId, request);
 
         // 收集所有事件，提取最终内容
@@ -92,6 +96,7 @@ public class NvcAssistantController {
     public Flux<ServerSentEvent<String>> chatStream(
             @RequestParam Long userId,
             @Validated @RequestBody AssistantRequest request) {
+        inputSanitizer.validateAssistantMessage(request.getMessage());
 
         NvcAssistantService.ChatStreamResult result = assistantService.chatStreamRaw(userId, request);
         long convId = result.conversationId();
