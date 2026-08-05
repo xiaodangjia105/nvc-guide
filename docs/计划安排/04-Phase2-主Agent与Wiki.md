@@ -1,5 +1,7 @@
 # Phase 2：主 Agent + 个人 Wiki（7 天）
 
+> **⚠️ 此文档已过时，仅供参考。** Phase 2 主体内容（主 Agent、Wiki、质量加固）已完成并合并 master。语音出题功能尚未实现。
+
 > 前置条件：Phase 1 完成（Agent 工具调用框架 + RAG + Skill）
 >
 > 简历亮点：主 Agent 全能对话入口、个人知识 Wiki 系统、语音出题练习

@@ -1,5 +1,7 @@
 # 主 Agent 深度改进计划
 
+> **⚠️ 此文档已过时，仅供参考。** 主 Agent 深度改进（AgentLoop + 7层Hook + 上下文压缩 + CoT引导）已完成并合并 master（commit 11acfdd）。
+
 > 编写日期：2026-07-28
 > 参考项目：`D:\code\pi`（Pi Agent Harness）
 > 前置条件：NvcAssistant 基础版已完成（feat/nvc-assistant 分支）

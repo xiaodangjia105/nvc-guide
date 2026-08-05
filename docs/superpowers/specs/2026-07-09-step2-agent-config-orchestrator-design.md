@@ -111,6 +111,14 @@ PracticeContext buildPracticeContext(Long sessionId, Long userId)
 
 ### 5.2 调度决策
 
+> **架构演进说明（2026-07-12）**：此节描述的 if/switch 规则引擎已被 `ModeRouter` 策略模式替代。
+> 实际实现中，`NvcAgentOrchestrator.decideNextAgent()` 委托给三个 Router：
+> - `FreeDialogRouter` — 自由对话路由
+> - `ScenarioRouter` — 场景练习路由
+> - `StructuredRouter` — 结构化练习路由
+>
+> 详见 `2026-07-12-mode-boundary-fix-design.md`。
+
 ```java
 AgentDecision decideNextAgent(PracticeContext context)
 ```
@@ -347,11 +355,12 @@ Step 1 已定义 `NVC_AGENT_CONFIG_NOT_FOUND(3006)`，Step 2 直接使用，无�
 
 ### Q6: Orchestrator 用规则引擎还是 LLM？
 
-**决策**：规则引擎（代码实现的 if/switch）。
+**决策**：规则引擎（代码实现的 if/switch），后演进为 ModeRouter 策略模式。
 - 当前调度逻辑清晰、可枚举
 - 更可控、更快、无额外 LLM 调用开销
 - Reflect 阶段用 LLM（需要自然语言理解能力）
 - 未来可在 decideNextAgent 中加入 LLM 调用做更复杂的 Plan
+- **演进**：2026-07-12 引入 `ModeRouter` 接口 + 三个 Router 实现（FreeDialogRouter / ScenarioRouter / StructuredRouter），将模式路由逻辑从 Orchestrator 中解耦。详见 `mode-boundary-fix-design.md`。
 
 ---
 

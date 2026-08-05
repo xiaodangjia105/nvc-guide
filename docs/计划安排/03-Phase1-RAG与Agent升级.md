@@ -1,5 +1,7 @@
 # Phase 1：RAG + Agent 升级（7 天）
 
+> **⚠️ 此文档已过时，仅供参考。** Phase 1 全部内容（RAG 集成 + Agent 工具调用 + Skill 标准化）已完成并合并 master。
+
 > 前置条件：Phase 0 完成
 >
 > 简历亮点：RAG 知识检索系统、Agent 工具调用框架、可扩展 Skill 体系
