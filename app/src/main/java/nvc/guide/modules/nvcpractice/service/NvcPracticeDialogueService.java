@@ -1,6 +1,7 @@
 package nvc.guide.modules.nvcpractice.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import nvc.guide.common.security.InputSanitizer;
 import nvc.guide.modules.nvcpractice.dto.AgentDecision;
 import nvc.guide.modules.nvcpractice.dto.DialogueResponse;
 import nvc.guide.modules.nvcpractice.dto.MessageResponse;
@@ -35,12 +36,15 @@ public class NvcPracticeDialogueService {
   private final NvcEvaluationService evaluationService;
   private final NvcSummaryService summaryService;
   private final NvcStructuredPracticeService structuredPracticeService;
+  private final InputSanitizer inputSanitizer;
 
   /**
    * 发送消息并获取 AI 回复（非流式）
    */
   public DialogueResponse sendMessage(Long sessionId,
       String userMessage) {
+    // 输入安全校验
+    inputSanitizer.validatePracticeMessage(userMessage);
     // 1. 获取会话
     NvcPracticeSessionEntity session =
         sessionService.getSession(sessionId);
@@ -137,6 +141,9 @@ public class NvcPracticeDialogueService {
    */
   public Flux<ServerSentEvent<String>> sendMessageStream(Long sessionId,
       String userMessage) {
+    // 输入安全校验
+    inputSanitizer.validatePracticeMessage(userMessage);
+
     // 1. 获取会话
     NvcPracticeSessionEntity session =
         sessionService.getSession(sessionId);
