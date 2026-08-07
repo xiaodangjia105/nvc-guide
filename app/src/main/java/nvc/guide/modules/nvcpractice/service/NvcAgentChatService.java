@@ -122,10 +122,9 @@ public class NvcAgentChatService {
     }
 
     return spec.stream().content()
-        .onErrorResume(e -> {
+        .doOnError(e -> {
           log.error("[NvcAgentChatService] Stream error: provider={}",
               request.getAgentConfig().getModelProvider(), e);
-          return Flux.just("【错误】AI 服务调用失败: " + e.getMessage());
         });
   }
 

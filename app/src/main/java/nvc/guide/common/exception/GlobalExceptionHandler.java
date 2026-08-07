@@ -175,9 +175,10 @@ public class GlobalExceptionHandler {
         if (accept != null && accept.contains("text/event-stream")) {
             return true;
         }
-        // 2. 检查 URL 路径（SSE 端点以 /stream 结尾）
+        // 2. 检查 URL 路径（SSE 端点以 /stream 结尾，且在 /api/ 路径下）
         String description = request.getDescription(false);
-        if (description != null && description.contains("/stream")) {
+        if (description != null && description.contains("uri=/api/")
+            && description.endsWith("/stream")) {
             return true;
         }
         return false;

@@ -119,6 +119,10 @@ public class NvcEvaluationService {
      */
     private String buildRealtimeUserPrompt(String userMessage, String aiContext,
                                             NvcPracticeStep currentStep) {
+        if (userMessage == null || userMessage.isBlank()) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "用户消息不能为空");
+        }
+
         StringBuilder conversation = new StringBuilder();
         if (aiContext != null && !aiContext.isBlank()) {
             conversation.append("[AI 上一轮回复]\n").append(aiContext).append("\n\n");
@@ -138,10 +142,15 @@ public class NvcEvaluationService {
      * 构建最终评估的用户提示词
      */
     private String buildFinalUserPrompt(List<NvcPracticeMessageEntity> messages) {
+        if (messages == null || messages.isEmpty()) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "评估消息列表不能为空");
+        }
+
         StringBuilder dialogue = new StringBuilder();
         for (NvcPracticeMessageEntity msg : messages) {
             String role = msg.getRole() == NvcMessageRole.USER ? "用户" : "AI";
-            dialogue.append(String.format("[%s] %s\n", role, msg.getContent()));
+            String content = msg.getContent() != null ? msg.getContent() : "";
+            dialogue.append(String.format("[%s] %s\n", role, content));
         }
 
         return loadPrompt("prompts/nvc-evaluation-summary-user.st")
@@ -183,7 +192,9 @@ public class NvcEvaluationService {
     private String loadPrompt(String path) {
         try {
             ClassPathResource resource = new ClassPathResource(path);
-            return new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+            try (var is = resource.getInputStream()) {
+                return new String(is.readAllBytes(), StandardCharsets.UTF_8);
+            }
         } catch (IOException e) {
             log.error("Failed to load prompt: {}", path, e);
             throw new BusinessException(ErrorCode.INTERNAL_ERROR,
