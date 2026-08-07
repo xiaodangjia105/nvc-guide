@@ -68,11 +68,10 @@ public class StructuredOutputInvoker {
     ) {
         long startNanos = System.nanoTime();
         String contextTag = normalizeContextTag(logContext);
-        // 自动注入 BeanOutputConverter 的格式指令，确保 LLM 返回符合目标结构的 JSON
-        String formatInstructions = outputConverter.getFormat();
+        // 注意：调用者已将 outputConverter.getFormat() 添加到 systemPromptWithFormat 中
+        // 此处不再重复添加，仅追加安全指令
         String securedSystemPrompt = systemPromptWithFormat
-            + "\n\n" + formatInstructions
-            + PromptSecurityConstants.ANTI_INJECTION_INSTRUCTION;
+            + "\n\n" + PromptSecurityConstants.ANTI_INJECTION_INSTRUCTION;
         Exception lastError = null;
         for (int attempt = 1; attempt <= maxAttempts; attempt++) {
             String attemptSystemPrompt = attempt == 1

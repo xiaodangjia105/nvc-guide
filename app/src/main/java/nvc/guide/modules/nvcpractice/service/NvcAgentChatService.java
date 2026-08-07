@@ -161,6 +161,14 @@ public class NvcAgentChatService {
   private List<Message> buildMessages(
       NvcAgentConfigEntity config, PracticeContext context,
       String userMessage, Map<String, String> promptVariables) {
+    // 防御性校验
+    if (config == null) {
+      throw new IllegalArgumentException("agentConfig must not be null");
+    }
+    if (context == null) {
+      context = PracticeContext.builder().build();
+    }
+
     List<Message> messages = new ArrayList<>();
 
     // 1. 系统提示词
@@ -208,12 +216,14 @@ public class NvcAgentChatService {
     }
 
     // 7. 当前用户消息（防御性去重）
-    boolean alreadyIncluded = context.getRecentMessages() != null
-        && !context.getRecentMessages().isEmpty()
-        && context.getRecentMessages().getLast().getRole() == NvcMessageRole.USER
-        && context.getRecentMessages().getLast().getContent().equals(userMessage);
-    if (!alreadyIncluded) {
-      messages.add(new UserMessage(userMessage));
+    if (userMessage != null && !userMessage.isBlank()) {
+      boolean alreadyIncluded = context.getRecentMessages() != null
+          && !context.getRecentMessages().isEmpty()
+          && context.getRecentMessages().getLast().getRole() == NvcMessageRole.USER
+          && userMessage.equals(context.getRecentMessages().getLast().getContent());
+      if (!alreadyIncluded) {
+        messages.add(new UserMessage(userMessage));
+      }
     }
 
     return messages;

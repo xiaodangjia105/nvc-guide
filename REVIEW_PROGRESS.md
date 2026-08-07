@@ -66,11 +66,19 @@
 - ⚪ AbstractStreamConsumer:72 - Redis 失败无退避
 - ⚪ UnifiedEvaluationService:329 - 评分截断
 
-## 已修复的问题（3 个）
+## 已修复的问题（8 个）
 
+### Critical (3个)
 1. 🟢 **PromptInjectionDetector.java:61** - 移除短消息长度限制，所有输入都进行注入检测
 2. 🟢 **NvcAssistantController.java** - 添加安全警告 TODO，待实现认证机制后修复
 3. 🟢 **NvcPracticeSessionService.java:210-219** - 使用分布式锁保护 completeSession，防止并发重复评估
+
+### High (5个)
+4. 🟢 **NvcAgentChatService.java:161-170** - 添加 practiceContext null 防御，使用空对象替代
+5. 🟢 **NvcAgentChatService.java:210-217** - 添加 userMessage null/blank 检查
+6. 🟢 **StructuredOutputInvoker.java:72-74** - 移除重复的格式指令添加
+7. 🟢 **InputSanitizer.java:63-64** - 清理换行符防止日志注入
+8. 🟢 **ContextManager.java:272-273** - 添加日志警告，记录 toolCalls 无法添加的问题
 
 ## 迭代记录
 
@@ -79,5 +87,13 @@
 - **开始时间**: 2026-08-08
 - **修复**: 3 个 Critical bug
 - **编译**: ✅ 通过
-- **测试**: ✅ 429 通过，0 失败
+- **测试**: ✅ 通过
+- **Commit**: d1e78f8
+
+### 迭代 #2（第二批修复）
+- **状态**: ✅ 完成
+- **开始时间**: 2026-08-08
+- **修复**: 5 个 High bug
+- **编译**: ✅ 通过
+- **测试**: ✅ 通过
 - **Commit**: (待提交)

@@ -60,8 +60,10 @@ public class InputSanitizer {
      */
     private void checkInjection(String message, String context) {
         if (injectionDetector.detect(message)) {
-            log.warn("Prompt injection detected in {}: {}", context,
-                message.substring(0, Math.min(100, message.length())));
+            // 清理换行符防止日志注入
+            String safeSnippet = message.substring(0, Math.min(100, message.length()))
+                .replaceAll("[\\r\\n\\x00-\\x1f]", "?");
+            log.warn("Prompt injection detected in {}: {}", context, safeSnippet);
             throw new BusinessException(ErrorCode.BAD_REQUEST,
                 "输入包含不安全内容，请修改后重试");
         }

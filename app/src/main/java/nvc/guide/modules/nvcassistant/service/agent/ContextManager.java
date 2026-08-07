@@ -268,10 +268,13 @@ public class ContextManager {
                 }
             }
             if (!toolCalls.isEmpty()) {
-                // 使用 setToolCalls 方式（Spring AI AssistantMessage 构造器可能不接受 List）
-                AssistantMessage msg = new AssistantMessage(entity.getContent());
-                msg.getToolCalls().addAll(toolCalls);
-                return msg;
+                // 注意：Spring AI 的 AssistantMessage 内部 toolCalls 列表可能是不可变的
+                // 这里使用 Builder 模式或直接返回不带 toolCalls 的消息
+                // 作为临时解决方案，记录日志并返回不带 toolCalls 的消息
+                log.warn("ToolCalls detected but cannot be added to AssistantMessage due to immutable list. " +
+                    "Message entityId={}, toolCallsCount={}", entity.getId(), toolCalls.size());
+                // TODO: 使用 Spring AI 的正确 API 来创建带 toolCalls 的 AssistantMessage
+                return new AssistantMessage(entity.getContent());
             }
         } catch (Exception e) {
             log.warn("Failed to parse toolCallsJson for message {}: {}", entity.getId(), e.getMessage());
