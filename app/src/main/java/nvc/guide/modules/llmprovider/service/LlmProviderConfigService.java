@@ -1030,7 +1030,9 @@ public class LlmProviderConfigService {
       }
       Files.writeString(path, content, StandardCharsets.UTF_8);
     } catch (IOException e) {
-      log.warn("写入 .env 失败: {}", e.getMessage());
+      log.error("写入 .env 失败: {}", e.getMessage(), e);
+      throw new BusinessException(ErrorCode.PROVIDER_CONFIG_WRITE_FAILED,
+          "写入 .env 配置文件失败，API Key 可能未持久化");
     }
   }
 

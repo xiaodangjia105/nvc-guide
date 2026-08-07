@@ -8,6 +8,8 @@ import com.alibaba.dashscope.audio.omni.OmniRealtimeParam;
 import com.alibaba.dashscope.audio.omni.OmniRealtimeTranscriptionParam;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import nvc.guide.common.exception.BusinessException;
+import nvc.guide.common.exception.ErrorCode;
 import nvc.guide.modules.nvcvoice.config.NvcVoiceProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -126,16 +128,19 @@ public class QwenAsrService implements AsrProvider {
     public void sendAudio(String sessionId, byte[] pcmData) {
         AsrSession session = sessions.get(sessionId);
         if (session == null) {
-            throw new IllegalStateException("No active session found: " + sessionId);
+            throw new BusinessException(ErrorCode.NVC_VOICE_SESSION_NOT_FOUND,
+                "No active ASR session found: " + sessionId);
         }
 
         try {
             if (!session.awaitReady(1200)) {
-                throw new IllegalStateException("ASR session not ready: " + sessionId);
+                throw new BusinessException(ErrorCode.VOICE_CONFIG_TEST_FAILED,
+                    "ASR session not ready: " + sessionId);
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new IllegalStateException("ASR session ready wait interrupted: " + sessionId, e);
+            throw new BusinessException(ErrorCode.VOICE_CONFIG_TEST_FAILED,
+                "ASR session ready wait interrupted: " + sessionId);
         }
 
         try {
@@ -144,7 +149,8 @@ public class QwenAsrService implements AsrProvider {
             log.trace("[Session: {}] Sent {} bytes of audio data", sessionId, pcmData.length);
         } catch (Exception e) {
             log.error("[Session: {}] appendAudio failed (upstream may reconnect)", sessionId, e);
-            throw new IllegalStateException("ASR append failed: " + sessionId, e);
+            throw new BusinessException(ErrorCode.VOICE_CONFIG_TEST_FAILED,
+                "ASR append failed: " + sessionId);
         }
     }
 

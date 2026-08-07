@@ -259,7 +259,7 @@ public class NvcAgentOrchestrator {
     } catch (Exception e) {
       log.error("[NvcAgentOrchestrator] Failed to execute agent stream: scene={}",
           decision.scene(), e);
-      return Flux.just("【错误】Agent 配置异常: " + e.getMessage());
+      return Flux.just("抱歉，AI 服务暂时不可用，请稍后重试。");
     }
   }
 

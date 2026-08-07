@@ -144,7 +144,7 @@ public class KnowledgeBaseQueryService {
 
         } catch (Exception e) {
             log.error("知识库问答失败: {}", e.getMessage(), e);
-            throw new BusinessException(ErrorCode.KNOWLEDGE_BASE_QUERY_FAILED, "知识库查询失败：" + e.getMessage());
+            throw new BusinessException(ErrorCode.KNOWLEDGE_BASE_QUERY_FAILED, "知识库查询失败，请稍后重试");
         }
     }
 
@@ -252,7 +252,7 @@ public class KnowledgeBaseQueryService {
 
         } catch (Exception e) {
             log.error("知识库流式问答失败: {}", e.getMessage(), e);
-            return Flux.just("【错误】知识库查询失败：" + e.getMessage());
+            return Flux.just("【错误】知识库查询失败，AI 服务暂时不可用，请稍后重试。");
         }
     }
 
