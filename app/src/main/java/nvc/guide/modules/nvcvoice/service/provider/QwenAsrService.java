@@ -353,7 +353,13 @@ public class QwenAsrService implements AsrProvider {
             java.util.function.Consumer<String> onPartial,
             java.util.function.Consumer<Throwable> onError) {
         try {
-            String eventType = message.get("type").getAsString();
+            // 防御性检查：外部 WebSocket 服务可能发送没有 type 字段的消息
+            com.google.gson.JsonElement typeElement = message.get("type");
+            if (typeElement == null || typeElement.isJsonNull()) {
+                log.warn("[Session: {}] Received event without type field: {}", sessionId, message);
+                return;
+            }
+            String eventType = typeElement.getAsString();
 
             log.trace("[Session: {}] Received event: {}", sessionId, eventType);
 

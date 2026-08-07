@@ -166,8 +166,13 @@ public class KnowledgeBaseListService {
         if (keyword == null || keyword.isBlank()) {
             return listKnowledgeBases();
         }
+        // 转义 LIKE 通配符，防止 % 和 _ 被解释为通配符
+        String escaped = keyword.trim()
+            .replace("\\", "\\\\")
+            .replace("%", "\\%")
+            .replace("_", "\\_");
         return knowledgeBaseMapper.toListItemDTOList(
-            knowledgeBaseRepository.searchByKeyword(keyword.trim())
+            knowledgeBaseRepository.searchByKeyword(escaped)
         );
     }
 

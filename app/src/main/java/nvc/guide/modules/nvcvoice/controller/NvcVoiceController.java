@@ -3,6 +3,7 @@ package nvc.guide.modules.nvcvoice.controller;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -36,7 +37,7 @@ public class NvcVoiceController {
    */
   @PostMapping("/sessions")
   public Result<VoiceSessionResponse> createSession(
-      @RequestBody CreateVoiceSessionRequest request) {
+      @Validated @RequestBody CreateVoiceSessionRequest request) {
     log.info("Creating NVC voice session: mode={}, scenario={}",
         request.practiceMode(), request.scenarioId());
     return Result.success(voiceService.createSession(request));

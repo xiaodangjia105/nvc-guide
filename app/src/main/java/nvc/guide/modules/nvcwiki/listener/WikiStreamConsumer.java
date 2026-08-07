@@ -110,6 +110,6 @@ public class WikiStreamConsumer extends AbstractStreamConsumer<WikiStreamProduce
                 "sessionId", String.valueOf(task.sessionId()),
                 "userId", String.valueOf(task.userId()),
                 "retryCount", String.valueOf(retryCount)
-        ));
+        ), nvc.guide.common.constant.AsyncTaskStreamConstants.STREAM_MAX_LEN);
     }
 }

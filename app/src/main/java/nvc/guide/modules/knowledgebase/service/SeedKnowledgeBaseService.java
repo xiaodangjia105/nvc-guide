@@ -277,7 +277,8 @@ public class SeedKnowledgeBaseService {
             byte[] hash = digest.digest(content.getBytes(StandardCharsets.UTF_8));
             return HexFormat.of().formatHex(hash);
         } catch (Exception e) {
-            throw new RuntimeException("Failed to calculate hash", e);
+            throw new nvc.guide.common.exception.BusinessException(
+                nvc.guide.common.exception.ErrorCode.INTERNAL_ERROR, "Failed to calculate hash");
         }
     }
 }
