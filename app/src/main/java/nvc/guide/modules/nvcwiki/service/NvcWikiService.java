@@ -47,9 +47,37 @@ public class NvcWikiService {
      * 创建 Wiki 条目
      */
     @Transactional
+    /**
+     * 创建 Wiki 条目
+     *
+     * <p>设计：DB 操作在事务内，向量化（外部 API）在事务外。
+     */
     public WikiResponse createWiki(Long userId, WikiCreateRequest request) {
         log.info("Creating wiki: userId={}, title={}, category={}", userId, request.title(), request.category());
 
+        // 阶段 1：事务内的 DB 操作
+        KnowledgeBaseEntity entity = createWikiInTransaction(userId, request);
+
+        // 阶段 2：事务外的向量化（外部 API 调用）
+        if (request.content() != null && !request.content().isBlank()) {
+            try {
+                vectorService.vectorizeAndStore(entity.getId(), request.content());
+                entity.setVectorStatus(VectorStatus.COMPLETED);
+                entity.setChunkCount(1);
+            } catch (Exception e) {
+                log.error("Wiki vectorization failed: wikiId={}", entity.getId(), e);
+                entity.setVectorStatus(VectorStatus.FAILED);
+                entity.setVectorError(e.getMessage());
+            }
+            knowledgeBaseRepository.save(entity);
+        }
+
+        log.info("Wiki created: wikiId={}", entity.getId());
+        return toResponse(entity, request.content(), request.tags(), request.sessionId());
+    }
+
+    @Transactional
+    protected KnowledgeBaseEntity createWikiInTransaction(Long userId, WikiCreateRequest request) {
         KnowledgeBaseEntity entity = new KnowledgeBaseEntity();
         entity.setUserId(userId);
         entity.setType(KnowledgeBaseType.PERSONAL_WIKI);
@@ -61,26 +89,7 @@ public class NvcWikiService {
         entity.setFileHash(generateContentHash(userId, request.title(), request.content()));
         entity.setContent(request.content());
         entity.setVectorStatus(VectorStatus.PENDING);
-        entity.setContent(request.content());
-
-        entity = knowledgeBaseRepository.save(entity);
-
-        // 异步向量化（内容非空时）
-        if (request.content() != null && !request.content().isBlank()) {
-            try {
-                vectorService.vectorizeAndStore(entity.getId(), request.content());
-                entity.setVectorStatus(VectorStatus.COMPLETED);
-                entity.setChunkCount(1); // 简化：单条目不细分 chunk
-            } catch (Exception e) {
-                log.error("Wiki vectorization failed: wikiId={}", entity.getId(), e);
-                entity.setVectorStatus(VectorStatus.FAILED);
-                entity.setVectorError(e.getMessage());
-            }
-            knowledgeBaseRepository.save(entity);
-        }
-
-        log.info("Wiki created: wikiId={}", entity.getId());
-        return toResponse(entity, request.content(), request.tags(), request.sessionId());
+        return knowledgeBaseRepository.save(entity);
     }
 
     /**

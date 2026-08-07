@@ -90,6 +90,7 @@ public class NvcProfileService {
     /**
      * 更新用户档案
      */
+    @Transactional
     public NvcUserProfileEntity updateProfile(Long userId, UserProfileUpdateRequest request) {
         NvcUserProfileEntity profile = getOrCreateProfile(userId);
 

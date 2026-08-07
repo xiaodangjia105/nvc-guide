@@ -459,8 +459,14 @@ public class NvcVoiceService {
         .orElse(false);
   }
 
+  /**
+   * 获取下一个序列号
+   * 使用 SELECT MAX + 1 避免并发竞态
+   */
   private int getNextSequenceNum(Long sessionId) {
-    return (int) messageRepository.countBySessionId(sessionId) + 1;
+    return messageRepository.findMaxSequenceNumBySessionId(sessionId)
+        .map(max -> max + 1)
+        .orElse(1);
   }
 
   private String trimToNull(String text) {

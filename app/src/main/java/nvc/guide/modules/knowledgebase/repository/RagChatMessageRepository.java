@@ -4,6 +4,7 @@ import nvc.guide.modules.knowledgebase.model.RagChatMessageEntity;
 import nvc.guide.modules.knowledgebase.model.RagChatMessageEntity.MessageType;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -47,7 +48,9 @@ public interface RagChatMessageRepository extends JpaRepository<RagChatMessageEn
     /**
      * 删除会话的所有消息
      */
-    void deleteBySessionId(Long sessionId);
+    @Modifying(clearAutomatically = true)
+    @Query("DELETE FROM RagChatMessageEntity m WHERE m.session.id = :sessionId")
+    void deleteBySessionId(@Param("sessionId") Long sessionId);
 
     /**
      * 统计所有用户消息数（即总提问次数）
