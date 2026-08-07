@@ -17,6 +17,8 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.converter.BeanOutputConverter;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -36,7 +38,11 @@ public class NvcEvaluationService {
 
     /**
      * 实时评估：评估用户单轮回复的 NVC 表达质量
+     *
+     * <p>使用 NOT_SUPPORTED 传播，防止调用者意外将 LLM 调用包裹在 DB 事务中。
+     * LLM 调用是远程 I/O，不应占用 DB 连接。
      */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public NvcEvaluationEntity evaluateRealtime(Long sessionId, Long userId,
                                                  String userMessage, String aiContext,
                                                  NvcPracticeStep currentStep) {
@@ -57,7 +63,10 @@ public class NvcEvaluationService {
 
     /**
      * 最终评估：对整个练习对话进行综合评估
+     *
+     * <p>使用 NOT_SUPPORTED 传播，防止调用者意外将 LLM 调用包裹在 DB 事务中。
      */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public NvcEvaluationEntity evaluateFinal(Long sessionId, Long userId,
                                               List<NvcPracticeMessageEntity> messages) {
         String systemPrompt = loadPrompt("prompts/nvc-evaluation-summary-system.st");

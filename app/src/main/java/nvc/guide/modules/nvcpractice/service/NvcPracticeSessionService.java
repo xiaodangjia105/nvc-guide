@@ -126,25 +126,12 @@ public class NvcPracticeSessionService {
 
   /**
    * 获取会话（始终返回 JPA 托管实体）
-   * 缓存仅用于快速判断会话是否存在，避免缓存反序列化后的
-   * 非托管实体在 save() 时触发 merge() 导致生命周期回调异常。
+   *
+   * <p>注意：此方法始终从 DB 加载，确保返回的是 JPA 托管实体。
+   * 不使用 Redis 缓存实体，因为缓存反序列化后的非托管实体在 save() 时
+   * 会触发 merge() 导致生命周期回调异常。
    */
   public NvcPracticeSessionEntity getSession(Long sessionId) {
-    String cacheKey = CACHE_KEY_PREFIX + sessionId;
-
-    String cached = redisService.get(cacheKey);
-    if (cached == null) {
-      // 缓存未命中，说明会话不存在（或缓存过期），直接查 DB
-      NvcPracticeSessionEntity session = sessionRepository
-          .findById(sessionId)
-          .orElseThrow(() -> new BusinessException(
-              ErrorCode.NVC_SESSION_NOT_FOUND,
-              "Practice session not found: " + sessionId));
-      cacheSession(session);
-      return session;
-    }
-
-    // 缓存命中，仍从 DB 加载托管实体
     return sessionRepository
         .findById(sessionId)
         .orElseThrow(() -> new BusinessException(

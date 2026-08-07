@@ -317,26 +317,6 @@ class NvcPracticeSessionServiceTest {
         void getSession_cacheMiss_loadsFromDbAndCaches() {
             // Arrange
             NvcPracticeSessionEntity session = buildSession(1L, NvcSessionPhase.IN_PROGRESS);
-            when(redisService.get("nvc:practice:session:1")).thenReturn(null);
-            when(sessionRepository.findById(1L)).thenReturn(Optional.of(session));
-            try { when(objectMapper.writeValueAsString(any())).thenReturn("{}"); } catch (Exception ignored) {}
-
-            // Act
-            NvcPracticeSessionEntity result = sessionService.getSession(1L);
-
-            // Assert
-            assertNotNull(result);
-            assertEquals(1L, result.getId());
-            verify(sessionRepository).findById(1L);
-            verify(redisService).set(anyString(), anyString(), any());
-        }
-
-        @Test
-        @DisplayName("缓存命中时仍从 DB 加载托管实体")
-        void getSession_cacheHit_stillLoadsFromDb() {
-            // Arrange
-            NvcPracticeSessionEntity session = buildSession(1L, NvcSessionPhase.IN_PROGRESS);
-            when(redisService.get("nvc:practice:session:1")).thenReturn("{\"id\":1}");
             when(sessionRepository.findById(1L)).thenReturn(Optional.of(session));
 
             // Act
@@ -346,15 +326,12 @@ class NvcPracticeSessionServiceTest {
             assertNotNull(result);
             assertEquals(1L, result.getId());
             verify(sessionRepository).findById(1L);
-            // 缓存命中时不重新缓存
-            verify(redisService, never()).set(anyString(), anyString(), any());
         }
 
         @Test
         @DisplayName("会话不存在时抛 BusinessException")
         void getSession_notFound_throwsException() {
             // Arrange
-            when(redisService.get("nvc:practice:session:999")).thenReturn(null);
             when(sessionRepository.findById(999L)).thenReturn(Optional.empty());
 
             // Act & Assert
