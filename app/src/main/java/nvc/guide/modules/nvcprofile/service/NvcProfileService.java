@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @Slf4j
@@ -68,6 +69,21 @@ public class NvcProfileService {
      * 保存用户档案（用于 preferences 等直接修改场景）
      */
     public NvcUserProfileEntity saveProfile(NvcUserProfileEntity profile) {
+        return profileRepository.save(profile);
+    }
+
+    /**
+     * 原子更新用户偏好（读-改-写）
+     *
+     * <p>使用 @Transactional 确保并发安全，防止丢失更新
+     */
+    @Transactional
+    public NvcUserProfileEntity updatePreferences(Long userId, Map<String, Object> newPreferences) {
+        NvcUserProfileEntity profile = getOrCreateProfile(userId);
+        Map<String, Object> existing = profile.getPreferences() != null
+            ? profile.getPreferences() : new java.util.HashMap<>();
+        existing.putAll(newPreferences);
+        profile.setPreferences(existing);
         return profileRepository.save(profile);
     }
 

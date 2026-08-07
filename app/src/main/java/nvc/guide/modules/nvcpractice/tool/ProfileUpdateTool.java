@@ -68,16 +68,10 @@ public class ProfileUpdateTool implements NvcTool {
                 case "relationshipTypes" ->
                     new UserProfileUpdateRequest(null, null, null, null, null, value);
                 case "preferences" -> {
-                    // preferences 存到 JSONB 字段，需要单独处理
-                    NvcUserProfileEntity profile = profileService.getOrCreateProfile(userId);
-                    @SuppressWarnings("unchecked")
-                    Map<String, Object> existing = profile.getPreferences() != null
-                        ? profile.getPreferences() : new java.util.HashMap<>();
+                    // preferences 存到 JSONB 字段，使用原子更新方法防止并发丢失
                     @SuppressWarnings("unchecked")
                     Map<String, Object> incoming = objectMapper.readValue(value, Map.class);
-                    existing.putAll(incoming);
-                    profile.setPreferences(existing);
-                    profileService.saveProfile(profile);
+                    profileService.updatePreferences(userId, incoming);
                     yield null; // 已单独处理，下面会返回成功
                 }
                 default -> null;

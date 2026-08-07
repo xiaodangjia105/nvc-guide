@@ -38,6 +38,15 @@ public class WikiWriteTool implements NvcTool {
     @Override
     public NvcToolResult execute(String input, NvcToolContext context) {
         try {
+            Long userId = context.getUserId();
+            Long sessionId = context.getSessionId();
+            if (userId == null) {
+                return NvcToolResult.failure("缺少用户ID");
+            }
+            if (sessionId == null) {
+                return NvcToolResult.failure("缺少会话ID");
+            }
+
             WikiWriteInput params = parseInput(input);
 
             NvcWikiCategory category;
@@ -53,13 +62,13 @@ public class WikiWriteTool implements NvcTool {
                     NvcWikiSourceType.AI_ASSISTED,
                     params.content(),
                     params.tags() != null ? params.tags() : java.util.List.of(),
-                    context.getSessionId()
+                    sessionId
             );
 
-            WikiResponse wiki = wikiService.createWiki(context.getUserId(), request);
+            WikiResponse wiki = wikiService.createWiki(userId, request);
 
             log.info("Wiki written by agent: wikiId={}, userId={}, title={}",
-                    wiki.id(), context.getUserId(), wiki.title());
+                    wiki.id(), userId, wiki.title());
 
             return NvcToolResult.success(
                     "已保存到你的个人知识库：「" + wiki.title() + "」(ID: " + wiki.id() + ")");

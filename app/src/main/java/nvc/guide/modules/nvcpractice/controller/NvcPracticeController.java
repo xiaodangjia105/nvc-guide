@@ -96,7 +96,7 @@ public class NvcPracticeController {
   @PostMapping("/sessions/{sessionId}/messages")
   public Result<DialogueResponse> sendMessage(
       @PathVariable Long sessionId,
-      @RequestBody SendMessageRequest request) {
+      @Valid @RequestBody SendMessageRequest request) {
     DialogueResponse response =
         dialogueService.sendMessage(
             sessionId, request.content());
@@ -112,7 +112,7 @@ public class NvcPracticeController {
       produces = MediaType.TEXT_EVENT_STREAM_VALUE)
   public Flux<ServerSentEvent<String>> sendMessageStream(
       @PathVariable Long sessionId,
-      @RequestBody SendMessageRequest request) {
+      @Valid @RequestBody SendMessageRequest request) {
     return dialogueService.sendMessageStream(sessionId, request.content())
         .onErrorResume(e -> {
           log.error("Practice stream error: sessionId={}", sessionId, e);

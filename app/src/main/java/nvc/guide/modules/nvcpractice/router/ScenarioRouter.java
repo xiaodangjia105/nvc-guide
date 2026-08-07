@@ -78,6 +78,6 @@ public class ScenarioRouter implements ModeRouter {
         if (eval.getFeelingScore() != null) { sum += eval.getFeelingScore(); count++; }
         if (eval.getNeedScore() != null) { sum += eval.getNeedScore(); count++; }
         if (eval.getRequestScore() != null) { sum += eval.getRequestScore(); count++; }
-        return count > 0 && (sum / count) < LOW_SCORE_THRESHOLD;
+        return count > 0 && ((double) sum / count) < LOW_SCORE_THRESHOLD;
     }
 }

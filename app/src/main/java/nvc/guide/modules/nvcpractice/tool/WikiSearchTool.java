@@ -37,11 +37,16 @@ public class WikiSearchTool implements NvcTool {
     @Override
     public NvcToolResult execute(String input, NvcToolContext context) {
         try {
+            Long userId = context.getUserId();
+            if (userId == null) {
+                return NvcToolResult.failure("缺少用户ID");
+            }
+
             WikiSearchInput params = parseInput(input);
             int topK = params.topK() != null ? Math.min(params.topK(), 10) : 5;
 
             List<WikiSearchResult> results = wikiService.searchWikis(
-                    context.getUserId(), params.query(), topK);
+                    userId, params.query(), topK);
 
             if (results.isEmpty()) {
                 return NvcToolResult.success("在你的个人知识库中没有找到相关内容。");
