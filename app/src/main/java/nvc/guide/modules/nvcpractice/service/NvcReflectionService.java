@@ -168,14 +168,21 @@ public class NvcReflectionService {
      */
     private String formatReflectionMemory(NvcPracticeReflectionEntity r) {
         StringBuilder sb = new StringBuilder();
-        sb.append("练习反思（").append(r.getCreatedAt().toLocalDate()).append("）：\n");
+        // null 安全的日期格式化
+        String dateStr = r.getCreatedAt() != null ? r.getCreatedAt().toLocalDate().toString() : "未知日期";
+        sb.append("练习反思（").append(dateStr).append("）：\n");
 
-        if (r.getObservationScore() != null) {
+        // null 安全的评分格式化
+        if (r.getObservationScore() != null && r.getFeelingScore() != null
+            && r.getNeedScore() != null && r.getRequestScore() != null) {
             sb.append("  评分：观察").append(r.getObservationScore())
               .append(" 感受").append(r.getFeelingScore())
               .append(" 需求").append(r.getNeedScore())
-              .append(" 请求").append(r.getRequestScore())
-              .append(" 综合").append(r.getOverallScore()).append("\n");
+              .append(" 请求").append(r.getRequestScore());
+            if (r.getOverallScore() != null) {
+                sb.append(" 综合").append(r.getOverallScore());
+            }
+            sb.append("\n");
         }
 
         if (r.getWeakElements() != null && !r.getWeakElements().equals("[]")) {

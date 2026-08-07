@@ -1,5 +1,6 @@
 package nvc.guide.modules.nvcassistant.service.agent;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import nvc.guide.common.ai.LlmProviderRegistry;
 import nvc.guide.modules.nvcassistant.fallback.LlmFallbackHandler;
 import nvc.guide.modules.nvcassistant.metrics.MetricsCollector;
@@ -43,7 +44,7 @@ class AgentLoopTest {
         toolRegistry = mock(NvcToolRegistry.class);
         toolExecutor = mock(ToolExecutor.class);
         traceManager = mock(TraceManager.class);
-        intentRouter = spy(new IntentRouter(traceManager));
+        intentRouter = spy(new IntentRouter(traceManager, new ObjectMapper()));
         agentConfigRepository = mock(NvcAgentConfigRepository.class);
         metricsCollector = mock(MetricsCollector.class);
         fallbackHandler = new LlmFallbackHandler();

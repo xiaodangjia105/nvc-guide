@@ -1,5 +1,7 @@
 package nvc.guide.modules.nvcassistant.service.agent;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import nvc.guide.modules.nvcassistant.trace.AgentSpanEntity;
@@ -28,6 +30,7 @@ import java.util.regex.Pattern;
 public class IntentRouter {
 
     private final TraceManager traceManager;
+    private final ObjectMapper objectMapper;
 
     /**
      * 非职业词汇黑名单
@@ -96,7 +99,11 @@ public class IntentRouter {
                 // 进一步检查是否包含个人信息（职业、年龄、性别）
                 String personalInfo = extractPersonalInfo(trimmed);
                 if (personalInfo != null) {
-                    String arguments = "{\"field\": \"communicationBackground\", \"value\": \"" + escapeJson(personalInfo) + "\"}";
+                    // 使用 ObjectMapper 构建 JSON，避免注入风险
+                    ObjectNode argsNode = objectMapper.createObjectNode();
+                    argsNode.put("field", "communicationBackground");
+                    argsNode.put("value", personalInfo);
+                    String arguments = objectMapper.writeValueAsString(argsNode);
                     log.info("[IntentRouter] Detected profile_update intent: message={}, info={}", trimmed, personalInfo);
                     span.setDurationMs(System.currentTimeMillis() - startTime);
                     traceManager.endSpan(span, "SUCCESS", null);

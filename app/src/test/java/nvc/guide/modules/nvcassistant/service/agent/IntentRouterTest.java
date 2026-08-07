@@ -1,5 +1,6 @@
 package nvc.guide.modules.nvcassistant.service.agent;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import nvc.guide.modules.nvcassistant.trace.AgentSpanEntity;
 import nvc.guide.modules.nvcassistant.trace.TraceManager;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,7 +26,7 @@ class IntentRouterTest {
         TraceManager traceManager = mock(TraceManager.class);
         when(traceManager.startSpan(anyString(), anyString()))
             .thenReturn(AgentSpanEntity.builder().spanId("test-span").status("SUCCESS").build());
-        router = new IntentRouter(traceManager);
+        router = new IntentRouter(traceManager, new ObjectMapper());
     }
 
     // ==================== null / 空输入 ====================

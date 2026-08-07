@@ -112,9 +112,11 @@ public class MetricsStatsService {
         }
 
         double totalReduction = 0, totalPercent = 0;
+        int parsedCount = 0;
         for (AgentMetricsEntity m : metrics) {
             Map<String, Object> payload = parsePayload(m.getPayload());
             if (payload == null) continue;
+            parsedCount++;
 
             long before = getLong(payload, "beforeTokens");
             long after = getLong(payload, "afterTokens");
@@ -122,11 +124,11 @@ public class MetricsStatsService {
             totalPercent += getDouble(payload, "reductionPercent");
         }
 
-        int count = metrics.size();
+        // 使用实际解析成功的数量作为除数，而非总数量
         return CompressionStats.builder()
-            .compressionTriggerCount(count)
-            .avgTokenReduction(count == 0 ? 0 : Math.round(totalReduction / count * 100) / 100.0)
-            .avgReductionPercent(count == 0 ? 0 : Math.round(totalPercent / count * 100) / 100.0)
+            .compressionTriggerCount(parsedCount)
+            .avgTokenReduction(parsedCount == 0 ? 0 : Math.round(totalReduction / parsedCount * 100) / 100.0)
+            .avgReductionPercent(parsedCount == 0 ? 0 : Math.round(totalPercent / parsedCount * 100) / 100.0)
             .build();
     }
 
