@@ -279,9 +279,9 @@ public class AgentLoop {
     private ChatResponse callLlm(List<Message> messages) {
         ChatClient client = llmProviderRegistry.getDefaultChatClient();
 
-        // 调试日志：显示可用工具
+        // 调试日志：显示可用工具（降级为 debug，避免热路径过度日志）
         List<org.springframework.ai.tool.ToolCallback> toolCallbacks = toolRegistry.toFunctionCallbacks();
-        log.info("[AgentLoop] Available tools: {}", toolCallbacks.stream()
+        log.debug("[AgentLoop] Available tools: {}", toolCallbacks.stream()
             .map(tc -> tc.getToolDefinition().name())
             .toList());
 
@@ -297,7 +297,7 @@ public class AgentLoop {
                 temperature = config.getTemperature() != null ? config.getTemperature() : temperature;
                 maxTokens = config.getMaxTokens() != null ? config.getMaxTokens() : maxTokens;
                 topP = config.getTopP() != null ? config.getTopP() : topP;
-                log.info("[AgentLoop] Using DB config: temperature={}, maxTokens={}, topP={}",
+                log.debug("[AgentLoop] Using DB config: temperature={}, maxTokens={}, topP={}",
                     temperature, maxTokens, topP);
             }
         } catch (Exception e) {

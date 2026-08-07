@@ -123,7 +123,7 @@ class NvcPracticeSessionServiceTest {
     class CreateSessionTests {
 
         @Test
-        @DisplayName("自由对话模式：创建会话并缓存")
+        @DisplayName("自由对话模式：创建会话")
         void createSession_freeDialog_createsAndCaches() {
             // Arrange
             CreatePracticeSessionRequest request = new CreatePracticeSessionRequest(
@@ -141,7 +141,6 @@ class NvcPracticeSessionServiceTest {
             assertEquals(1L, result.getId());
             assertEquals(NvcSessionPhase.CREATED, result.getCurrentPhase());
             verify(sessionRepository).save(any());
-            verify(redisService).set(anyString(), anyString(), any());
         }
 
         @Test
@@ -562,7 +561,7 @@ class NvcPracticeSessionServiceTest {
         }
 
         @Test
-        @DisplayName("更新后同步写入 Redis 缓存")
+        @DisplayName("更新阶段")
         void updatePhase_syncsCache() {
             // Arrange
             NvcPracticeSessionEntity session = buildSession(1L, NvcSessionPhase.CREATED);
@@ -576,7 +575,7 @@ class NvcPracticeSessionServiceTest {
             sessionService.updatePhase(1L, NvcSessionPhase.IN_PROGRESS);
 
             // Assert
-            verify(redisService, atLeast(1)).set(anyString(), anyString(), any());
+            verify(sessionRepository).save(any());
         }
     }
 
@@ -587,7 +586,7 @@ class NvcPracticeSessionServiceTest {
     class UpdateStepTests {
 
         @Test
-        @DisplayName("更新当前步骤并缓存")
+        @DisplayName("更新当前步骤")
         void updateStep_updatesAndCaches() {
             // Arrange
             NvcPracticeSessionEntity session = buildSessionWithMode(
@@ -609,7 +608,6 @@ class NvcPracticeSessionServiceTest {
             // Assert
             assertEquals(NvcPracticeStep.FEELING, result.getCurrentStep());
             verify(sessionRepository).save(any());
-            verify(redisService, atLeast(1)).set(anyString(), anyString(), any());
         }
     }
 
@@ -620,7 +618,7 @@ class NvcPracticeSessionServiceTest {
     class UpdateAgentSceneTests {
 
         @Test
-        @DisplayName("更新当前 Agent 场景并缓存")
+        @DisplayName("更新当前 Agent 场景")
         void updateAgentScene_updatesAndCaches() {
             // Arrange
             NvcPracticeSessionEntity session = buildSession(1L, NvcSessionPhase.IN_PROGRESS);
@@ -639,7 +637,6 @@ class NvcPracticeSessionServiceTest {
             // Assert
             assertEquals(NvcAgentScene.DIALOGUE_GUIDE, result.getAgentScene());
             verify(sessionRepository).save(any());
-            verify(redisService, atLeast(1)).set(anyString(), anyString(), any());
         }
     }
 

@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.BatchSize;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -50,6 +51,7 @@ public class RagChatSessionEntity {
         joinColumns = @JoinColumn(name = "session_id"),
         inverseJoinColumns = @JoinColumn(name = "knowledge_base_id")
     )
+    @BatchSize(size = 20)
     private Set<KnowledgeBaseEntity> knowledgeBases = new HashSet<>();
 
     /**
@@ -57,6 +59,7 @@ public class RagChatSessionEntity {
      */
     @OneToMany(mappedBy = "session", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("messageOrder ASC")
+    @BatchSize(size = 20)
     private List<RagChatMessageEntity> messages = new ArrayList<>();
 
     /**

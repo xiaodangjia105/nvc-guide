@@ -63,9 +63,6 @@ public class NvcPracticeSessionService {
   private final NvcReflectionService reflectionService;
   private final NvcAgentOrchestrator orchestrator;
 
-  private static final String CACHE_KEY_PREFIX = "nvc:practice:session:";
-  private static final Duration CACHE_TTL = Duration.ofHours(24);
-
   /**
    * 启动时校验 VALID_TRANSITIONS 覆盖所有枚举值
    */
@@ -120,7 +117,6 @@ public class NvcPracticeSessionService {
       scenarioService.incrementUsage(scenarioId);
     }
 
-    cacheSession(saved);
     return saved;
   }
 
@@ -181,9 +177,7 @@ public class NvcPracticeSessionService {
       session.setCompletedAt(LocalDateTime.now());
     }
 
-    NvcPracticeSessionEntity saved = sessionRepository.save(session);
-    cacheSession(saved);
-    return saved;
+    return sessionRepository.save(session);
   }
 
   /**
@@ -193,9 +187,7 @@ public class NvcPracticeSessionService {
       Long sessionId, NvcPracticeStep step) {
     NvcPracticeSessionEntity session = getSession(sessionId);
     session.setCurrentStep(step);
-    NvcPracticeSessionEntity saved = sessionRepository.save(session);
-    cacheSession(saved);
-    return saved;
+    return sessionRepository.save(session);
   }
 
   /**
@@ -205,9 +197,7 @@ public class NvcPracticeSessionService {
       Long sessionId, NvcAgentScene scene) {
     NvcPracticeSessionEntity session = getSession(sessionId);
     session.setAgentScene(scene);
-    NvcPracticeSessionEntity saved = sessionRepository.save(session);
-    cacheSession(saved);
-    return saved;
+    return sessionRepository.save(session);
   }
 
   /**
@@ -346,16 +336,5 @@ public class NvcPracticeSessionService {
         "Random scenario picked: id={}, title={}, difficulty={}",
         picked.getId(), picked.getTitle(), picked.getDifficulty());
     return picked.getId();
-  }
-
-  private void cacheSession(NvcPracticeSessionEntity session) {
-    try {
-      String json = objectMapper.writeValueAsString(session);
-      redisService.set(
-          CACHE_KEY_PREFIX + session.getId(), json, CACHE_TTL);
-    } catch (Exception e) {
-      log.warn("Failed to cache session: {}",
-          session.getId(), e);
-    }
   }
 }

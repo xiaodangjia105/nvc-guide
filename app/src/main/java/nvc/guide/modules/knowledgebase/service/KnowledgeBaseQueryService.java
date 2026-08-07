@@ -110,7 +110,8 @@ public class KnowledgeBaseQueryService {
      * @return AI回答
      */
     public String answerQuestion(List<Long> knowledgeBaseIds, String question) {
-        log.info("收到知识库提问: kbIds={}, question={}", knowledgeBaseIds, question);
+        log.info("收到知识库提问: kbIds={}, questionLength={}", knowledgeBaseIds,
+            question != null ? question.length() : 0);
         if (knowledgeBaseIds == null || knowledgeBaseIds.isEmpty() || normalizeQuestion(question).isBlank()) {
             return NO_RESULT_RESPONSE;
         }
@@ -202,7 +203,8 @@ public class KnowledgeBaseQueryService {
      * @return 流式响应
      */
     public Flux<String> answerQuestionStream(List<Long> knowledgeBaseIds, String question, List<Message> history) {
-        log.info("收到知识库流式提问: kbIds={}, question={}, historySize={}", knowledgeBaseIds, question,
+        log.info("收到知识库流式提问: kbIds={}, questionLength={}, historySize={}", knowledgeBaseIds,
+                question != null ? question.length() : 0,
                 history != null ? history.size() : 0);
         if (knowledgeBaseIds == null || knowledgeBaseIds.isEmpty() || normalizeQuestion(question).isBlank()) {
             return Flux.just(NO_RESULT_RESPONSE);
@@ -291,7 +293,7 @@ public class KnowledgeBaseQueryService {
                 queryContext.searchParams().topK(),
                 queryContext.searchParams().minScore()
             );
-            log.info("检索候选 query='{}'，命中 {} 条", candidateQuery, docs.size());
+            log.info("检索候选 queryLength={}，命中 {} 条", candidateQuery.length(), docs.size());
             if (hasEffectiveHit(docs)) {
                 return docs;
             }
@@ -329,7 +331,8 @@ public class KnowledgeBaseQueryService {
                 return question;
             }
             String normalized = rewritten.trim();
-            log.info("Query rewrite: origin='{}', rewritten='{}', historySize={}", question, normalized, history.size());
+            log.info("Query rewrite: originLength={}, rewrittenLength={}, historySize={}",
+                question.length(), normalized.length(), history.size());
             return normalized;
         } catch (Exception e) {
             log.warn("Query rewrite 失败，使用原问题继续检索: {}", e.getMessage());
