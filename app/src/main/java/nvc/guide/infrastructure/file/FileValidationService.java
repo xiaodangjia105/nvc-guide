@@ -78,17 +78,32 @@ public class FileValidationService {
     
     /**
      * 检查文件类型是否在允许列表中
+     *
+     * <p>使用精确匹配或前缀匹配，避免双向 contains() 导致的误报。
+     * 例如：allowedTypes 包含 "text" 时，不会匹配 "application/x-virus-text"。
      */
     private boolean isAllowedType(String contentType, List<String> allowedTypes) {
         if (contentType == null || allowedTypes == null || allowedTypes.isEmpty()) {
             return false;
         }
-        
+
         String lowerContentType = contentType.toLowerCase();
         return allowedTypes.stream()
             .anyMatch(allowed -> {
                 String lowerAllowed = allowed.toLowerCase();
-                return lowerContentType.contains(lowerAllowed) || lowerAllowed.contains(lowerContentType);
+                // 精确匹配
+                if (lowerContentType.equals(lowerAllowed)) {
+                    return true;
+                }
+                // 允许 "text" 匹配 "text/plain"、"text/html" 等
+                if (lowerContentType.startsWith(lowerAllowed + "/")) {
+                    return true;
+                }
+                // 允许 "pdf" 匹配 "application/pdf"
+                if (lowerContentType.endsWith("/" + lowerAllowed)) {
+                    return true;
+                }
+                return false;
             });
     }
     

@@ -65,14 +65,29 @@ public class RedisService {
 
     /**
      * 获取值，如果不存在则使用 loader 加载并缓存
+     *
+     * <p>使用分布式锁防止缓存踩踏（thundering herd）：
+     * 当缓存未命中时，只有一个线程执行 loader，其他线程等待结果。
      */
     public <T> T getOrLoad(String key, Duration ttl, Function<String, T> loader) {
         RBucket<T> bucket = redissonClient.getBucket(key);
         T value = bucket.get();
         if (value == null) {
-            value = loader.apply(key);
-            if (value != null) {
-                bucket.set(value, ttl);
+            RLock lock = redissonClient.getLock("lock:cache:" + key);
+            try {
+                lock.lock(5, java.util.concurrent.TimeUnit.SECONDS);
+                // 双重检查：获取锁后再次检查缓存
+                value = bucket.get();
+                if (value == null) {
+                    value = loader.apply(key);
+                    if (value != null) {
+                        bucket.set(value, ttl);
+                    }
+                }
+            } finally {
+                if (lock.isHeldByCurrentThread()) {
+                    lock.unlock();
+                }
             }
         }
         return value;

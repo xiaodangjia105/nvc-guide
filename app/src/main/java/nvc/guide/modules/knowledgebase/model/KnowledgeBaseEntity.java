@@ -91,7 +91,11 @@ public class KnowledgeBaseEntity {
     protected void onCreate() {
         uploadedAt = LocalDateTime.now();
         lastAccessedAt = LocalDateTime.now();
-        accessCount = 1;
+        // 不覆盖 accessCount，使用字段默认值 0
+        // 如果调用者设置了 accessCount，保留调用者的值
+        if (accessCount == null) {
+            accessCount = 0;
+        }
     }
     
     // Getters and Setters
