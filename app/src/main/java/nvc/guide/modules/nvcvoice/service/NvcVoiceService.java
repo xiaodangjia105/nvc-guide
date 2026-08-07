@@ -135,8 +135,12 @@ public class NvcVoiceService {
     session.setEndTime(LocalDateTime.now());
     session.setCurrentPhase(NvcVoiceSessionPhase.WRAP_UP);
     session.setStatus(NvcVoiceSessionStatus.COMPLETED);
-    session.setActualDuration(
-        (int) Duration.between(session.getStartTime(), LocalDateTime.now()).toSeconds());
+    if (session.getStartTime() != null) {
+        session.setActualDuration(
+            (int) Duration.between(session.getStartTime(), LocalDateTime.now()).toSeconds());
+    } else {
+        session.setActualDuration(0);
+    }
     session.setEvaluateStatus(AsyncTaskStatus.PENDING);
 
     sessionRepository.save(session);

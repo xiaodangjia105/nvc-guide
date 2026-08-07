@@ -80,7 +80,7 @@ public class NvcFeedbackService {
         List<SceneFeedbackStats> perScene = new ArrayList<>();
         for (Object[] row : sceneRows) {
             String scene = row[0] != null ? row[0].toString() : "UNKNOWN";
-            long count = ((Number) row[1]).longValue();
+            long count = row[1] != null ? ((Number) row[1]).longValue() : 0;
             long thumbsUp = row[2] != null ? ((Number) row[2]).longValue() : 0;
             double rate = count > 0 ? (double) thumbsUp / count : 0.0;
             perScene.add(new SceneFeedbackStats(scene, count, thumbsUp, rate));

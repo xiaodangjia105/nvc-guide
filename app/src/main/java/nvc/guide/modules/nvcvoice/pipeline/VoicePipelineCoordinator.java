@@ -317,7 +317,12 @@ public class VoicePipelineCoordinator {
     sendMessage(session, createControlMessage("error", errorMessage));
   }
 
-  private void sendMessage(WebSocketSession session, Object message) {
+  /**
+   * 发送 WebSocket 消息（线程安全）
+   *
+   * <p>使用 synchronized 确保并发写入不会破坏 WebSocket 帧
+   */
+  private synchronized void sendMessage(WebSocketSession session, Object message) {
     try {
       if (session != null && session.isOpen()) {
         String json = objectMapper.writeValueAsString(message);

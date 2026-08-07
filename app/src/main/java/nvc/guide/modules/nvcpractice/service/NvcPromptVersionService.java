@@ -97,6 +97,9 @@ public class NvcPromptVersionService {
     @Transactional
     public void setTrafficSplit(NvcAgentScene scene, Integer version1, Integer pct1,
                                  Integer version2, Integer pct2) {
+        if (pct1 == null || pct2 == null) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "流量百分比不能为空");
+        }
         if (pct1 + pct2 != 100) {
             throw new BusinessException(ErrorCode.BAD_REQUEST, "流量百分比之和必须为 100");
         }
@@ -143,7 +146,10 @@ public class NvcPromptVersionService {
         }
 
         // A/B 路由：userId 取模
-        int bucket = (int) (Math.abs(userId) % 100);
+        if (userId == null) {
+            return activeVersions.get(0);
+        }
+        int bucket = (int) ((userId & Long.MAX_VALUE) % 100);
         int cumulative = 0;
         for (NvcPromptVersionEntity v : activeVersions) {
             cumulative += v.getTrafficPercentage();

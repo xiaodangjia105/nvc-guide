@@ -2,6 +2,7 @@ package nvc.guide.modules.nvcassistant.service.agent;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import nvc.guide.modules.nvcassistant.metrics.MetricsCollector;
@@ -13,6 +14,11 @@ import nvc.guide.modules.nvcpractice.tool.NvcToolRegistry;
 import nvc.guide.modules.nvcpractice.tool.NvcToolResult;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.stereotype.Service;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -37,6 +43,31 @@ public class ToolExecutor {
     /** 单个工具超时（毫秒） */
     private static final long TOOL_TIMEOUT_MS = 30_000;
 
+    /** 工具执行专用线程池（避免使用 ForkJoinPool.commonPool） */
+    private final ExecutorService toolExecutorPool = new ThreadPoolExecutor(
+        4, 16, 60L, TimeUnit.SECONDS,
+        new LinkedBlockingQueue<>(100),
+        r -> {
+            Thread t = new Thread(r, "tool-executor");
+            t.setDaemon(true);
+            return t;
+        },
+        new ThreadPoolExecutor.CallerRunsPolicy()
+    );
+
+    @PreDestroy
+    public void shutdown() {
+        toolExecutorPool.shutdown();
+        try {
+            if (!toolExecutorPool.awaitTermination(10, TimeUnit.SECONDS)) {
+                toolExecutorPool.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            toolExecutorPool.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
+    }
+
     /**
      * 并行执行工具调用列表
      *
@@ -50,7 +81,7 @@ public class ToolExecutor {
             return List.of();
         }
 
-        // 并行执行所有工具调用（每个调用独立的 context，避免属性冲突）
+        // 并行执行所有工具调用（使用专用线程池，避免占用 ForkJoinPool）
         List<CompletableFuture<ToolCallResult>> futures = toolCalls.stream()
             .map(tc -> CompletableFuture.supplyAsync(() -> {
                 NvcToolContext ctx = NvcToolContext.builder()
@@ -58,7 +89,7 @@ public class ToolExecutor {
                     .sessionId(sessionId)
                     .build();
                 return executeSingle(tc, ctx);
-            }))
+            }, toolExecutorPool))
             .toList();
 
         // 收集结果（保持顺序），单个失败不影响其他结果

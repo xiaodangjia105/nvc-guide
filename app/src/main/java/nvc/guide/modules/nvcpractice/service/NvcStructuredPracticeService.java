@@ -55,6 +55,12 @@ public class NvcStructuredPracticeService {
         }
 
         NvcAgentConfigEntity config = agentConfigService.getConfig(stepToCoach(currentStep));
+        if (config == null) {
+            log.warn("Agent config not found for step: {}, using defaults", currentStep);
+            return new StepProgressDTO(
+                currentStep, getStepIndex(currentStep), 4,
+                null, false, getStepDescription(currentStep), 3, null, null, null);
+        }
         Integer threshold = config.getStepAdvanceThreshold() != null
             ? config.getStepAdvanceThreshold() : 70;
 

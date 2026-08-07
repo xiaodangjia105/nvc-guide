@@ -32,7 +32,7 @@ public interface NvcSemanticCacheRepository extends JpaRepository<NvcSemanticCac
     /**
      * 清理过期缓存
      */
-    @Modifying
+    @Modifying(clearAutomatically = true)
     @Query("DELETE FROM NvcSemanticCacheEntity c WHERE c.expiresAt < :now")
     int deleteExpired(@Param("now") LocalDateTime now);
 

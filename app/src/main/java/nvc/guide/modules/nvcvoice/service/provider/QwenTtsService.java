@@ -105,12 +105,16 @@ public class QwenTtsService implements TtsProvider {
             log.warn("[TTS] Empty text, skipping synthesis");
             return new byte[0];
         }
-        return doSynthesize(text);
+        return doSynthesize(text, timeoutSeconds);
     }
 
     // === 内部方法 ===
 
     private byte[] doSynthesize(String text) {
+        return doSynthesize(text, 30); // 默认 30 秒超时
+    }
+
+    private byte[] doSynthesize(String text, int timeoutSeconds) {
         if (text == null || text.trim().isEmpty()) {
             log.debug("Empty or null text provided, returning empty audio array");
             return new byte[0];
@@ -171,10 +175,10 @@ public class QwenTtsService implements TtsProvider {
 
                 log.info("[TTS] Text sent to TTS service, waiting for audio response...");
 
-                boolean completed = synthesisLatch.await(30, TimeUnit.SECONDS);
+                boolean completed = synthesisLatch.await(timeoutSeconds, TimeUnit.SECONDS);
 
                 if (!completed) {
-                    log.error("TTS synthesis timeout after 30 seconds");
+                    log.error("TTS synthesis timeout after {} seconds", timeoutSeconds);
                     return new byte[0];
                 }
 
