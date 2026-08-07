@@ -79,10 +79,12 @@ public class NvcVoiceController {
 
   /**
    * 列出会话
+   *
+   * <p>userId 为必填参数，防止未授权访问所有用户会话
    */
   @GetMapping("/sessions")
   public Result<List<VoiceSessionResponse>> listSessions(
-      @RequestParam(required = false) Long userId,
+      @RequestParam Long userId,
       @RequestParam(required = false) NvcVoiceSessionStatus status) {
     return Result.success(voiceService.listSessions(userId, status));
   }

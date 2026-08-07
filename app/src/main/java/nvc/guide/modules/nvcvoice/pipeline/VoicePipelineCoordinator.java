@@ -7,6 +7,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import lombok.extern.slf4j.Slf4j;
+import nvc.guide.common.exception.BusinessException;
+import nvc.guide.common.exception.ErrorCode;
 import org.springframework.stereotype.Service;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
@@ -171,11 +173,11 @@ public class VoicePipelineCoordinator {
                   triggerSentenceTts(sessionId, sentence, wsSession);
                 }
               },
-              voiceService.getSession(parseSessionId(sessionId)).getLlmProvider()
+              getLlmProvider(sessionId)
           );
         } else {
           aiText = llmService.chat(systemPrompt, userPrompt,
-              voiceService.getSession(parseSessionId(sessionId)).getLlmProvider());
+              getLlmProvider(sessionId));
         }
 
         // 4. TTS 合成（非分片模式或兜底）
@@ -319,7 +321,22 @@ public class VoicePipelineCoordinator {
   }
 
   private Long parseSessionId(String sessionId) {
-    return Long.parseLong(sessionId);
+    try {
+      return Long.parseLong(sessionId);
+    } catch (NumberFormatException e) {
+      throw new IllegalArgumentException("Invalid session ID: " + sessionId, e);
+    }
+  }
+
+  /**
+   * 获取会话的 LLM 提供商（含 null 检查）
+   */
+  private String getLlmProvider(String sessionId) {
+    var session = voiceService.getSession(parseSessionId(sessionId));
+    if (session == null) {
+      throw new BusinessException(ErrorCode.NVC_VOICE_SESSION_NOT_FOUND, "语音会话已失效: " + sessionId);
+    }
+    return session.getLlmProvider();
   }
 
   // ==================== 内部 DTO ====================

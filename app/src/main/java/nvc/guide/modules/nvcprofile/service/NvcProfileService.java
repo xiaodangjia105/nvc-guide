@@ -14,6 +14,7 @@ import nvc.guide.modules.nvcprofile.repository.NvcUserProfileRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -28,10 +29,24 @@ public class NvcProfileService {
 
     /**
      * 获取用户档案（不存在则创建默认档案）
+     *
+     * <p>使用 try-catch 处理并发创建的竞态条件：
+     * 两个并发请求可能都发现档案不存在，都尝试创建，
+     * 第二个会因唯一约束冲突抛出 DataIntegrityViolationException。
      */
+    @Transactional
     public NvcUserProfileEntity getOrCreateProfile(Long userId) {
         return profileRepository.findByUserId(userId)
-            .orElseGet(() -> createDefaultProfile(userId));
+            .orElseGet(() -> {
+                try {
+                    return createDefaultProfile(userId);
+                } catch (org.springframework.dao.DataIntegrityViolationException e) {
+                    // 并发创建冲突，重新读取已创建的档案
+                    log.debug("Profile creation race condition detected, re-reading: userId={}", userId);
+                    return profileRepository.findByUserId(userId)
+                        .orElseThrow(() -> e);
+                }
+            });
     }
 
     /**
@@ -88,6 +103,7 @@ public class NvcProfileService {
      * 练习结束后更新能力分数
      * 基于评估结果记录能力分数，并更新 NVC 等级
      */
+    @Transactional
     public void updateAbilityScore(Long userId, Long sessionId, NvcEvaluationEntity evaluation,
                                     NvcPracticeType practiceType) {
         // 1. 记录能力分数

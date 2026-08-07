@@ -463,6 +463,10 @@ public class LlmProviderConfigService {
   public void updateDefaultEmbeddingProvider(DefaultProviderDTO request) {
     rwLock.writeLock().lock();
     try {
+      if (!isDatabaseBacked()) {
+        updateDefaultEmbeddingProviderLegacy(request);
+        return;
+      }
       String providerId = trimOrNull(request.defaultEmbeddingProvider());
       if (providerId == null) {
         throw new BusinessException(ErrorCode.BAD_REQUEST, "defaultEmbeddingProvider 不能为空");
@@ -660,6 +664,17 @@ public class LlmProviderConfigService {
     getLegacyProviderConfigOrThrow(providerId);
     properties.setDefaultProvider(providerId);
     writeDefaultProviderToYaml(providerId);
+    registry.reload();
+  }
+
+  private void updateDefaultEmbeddingProviderLegacy(DefaultProviderDTO request) {
+    String providerId = trimOrNull(request.defaultEmbeddingProvider());
+    if (providerId == null) {
+      throw new BusinessException(ErrorCode.BAD_REQUEST, "defaultEmbeddingProvider 不能为空");
+    }
+    getLegacyProviderConfigOrThrow(providerId);
+    properties.setDefaultEmbeddingProvider(providerId);
+    writeDefaultEmbeddingProviderToYaml(providerId);
     registry.reload();
   }
 
@@ -923,6 +938,12 @@ public class LlmProviderConfigService {
     mutateYamlText(ErrorCode.PROVIDER_CONFIG_WRITE_FAILED, "写入默认 Provider 配置失败", editor -> {
       editor.setScalar(new String[]{"app", "ai", "default-provider"}, defaultProvider);
       editor.removeSection(new String[]{"app", "ai"}, "module-defaults");
+    });
+  }
+
+  private void writeDefaultEmbeddingProviderToYaml(String defaultEmbeddingProvider) {
+    mutateYamlText(ErrorCode.PROVIDER_CONFIG_WRITE_FAILED, "写入默认 Embedding Provider 配置失败", editor -> {
+      editor.setScalar(new String[]{"app", "ai", "default-embedding-provider"}, defaultEmbeddingProvider);
     });
   }
 
