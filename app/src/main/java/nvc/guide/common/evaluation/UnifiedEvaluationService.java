@@ -326,13 +326,13 @@ public class UnifiedEvaluationService {
         List<CategoryScore> categoryScores = categoryScoresMap.entrySet().stream()
             .map(e -> new CategoryScore(
                 e.getKey(),
-                (int) e.getValue().stream().mapToInt(Integer::intValue).average().orElse(0),
+                (int) Math.round(e.getValue().stream().mapToInt(Integer::intValue).average().orElse(0)),
                 e.getValue().size()
             ))
             .collect(Collectors.toList());
 
         int overallScore = answeredCount == 0 ? 0
-            : (int) questionDetails.stream().mapToInt(QuestionEvaluation::score).average().orElse(0);
+            : (int) Math.round(questionDetails.stream().mapToInt(QuestionEvaluation::score).average().orElse(0));
 
         return new EvaluationReport(
             sessionId, qaRecords.size(), overallScore, categoryScores, questionDetails,

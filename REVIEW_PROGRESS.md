@@ -66,7 +66,7 @@
 - ⚪ AbstractStreamConsumer:72 - Redis 失败无退避
 - ⚪ UnifiedEvaluationService:329 - 评分截断
 
-## 已修复的问题（23 个）
+## 已修复的问题（28 个）
 
 ### Critical (3个)
 1. 🟢 **PromptInjectionDetector.java:61** - 移除短消息长度限制，所有输入都进行注入检测
@@ -94,10 +94,15 @@
 19. 🟢 **RateLimitToolHook.java:49** - 添加定期清理过期计数器，防止内存泄漏
 20. 🟢 **AbstractStreamConsumer.java:52** - 添加 awaitTermination() 实现优雅关闭
 
-### Low (3个)
+### Low (8个)
 21. 🟢 **NvcPracticeDialogueService.java:235-245** - doOnError 添加 try-catch 防止遮蔽异常
 22. 🟢 **NvcPracticeSessionService.java:43-49** - 添加 @PostConstruct 校验 VALID_TRANSITIONS
 23. 🟢 **TraceController.java:38** - 添加 @Max(100) 限制分页大小
+24. 🟢 **NvcAgentChatService.java:179-194** - 修正步骤注释编号重复
+25. 🟢 **AgentLoop.java:249-262** - 错误事件后直接 return，不再发送完成事件
+26. 🟢 **UnifiedEvaluationService.java:329,335** - 评分使用 Math.round() 四舍五入
+27. 🟢 **NvcAssistantMessageService.java:116-122** - 使用数据库查询替代加载全部消息
+28. 🟢 **AbstractStreamConsumer.java:72-101** - Redis 失败时添加 2 秒退避延迟
 
 ## 迭代记录
 
@@ -137,6 +142,14 @@
 - **状态**: ✅ 完成
 - **开始时间**: 2026-08-08
 - **修复**: 5 个 Medium bug
+- **编译**: ✅ 通过
+- **测试**: ✅ 通过
+- **Commit**: 5ba64cb
+
+### 迭代 #6（第六批修复）
+- **状态**: ✅ 完成
+- **开始时间**: 2026-08-08
+- **修复**: 5 个 Low bug
 - **编译**: ✅ 通过
 - **测试**: ✅ 通过
 - **Commit**: (待提交)

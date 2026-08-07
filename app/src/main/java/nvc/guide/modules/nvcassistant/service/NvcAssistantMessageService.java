@@ -114,10 +114,8 @@ public class NvcAssistantMessageService {
      */
     @Transactional(readOnly = true)
     public Optional<String> getLastUserMessageContent(Long conversationId) {
-        return messageRepository.findByConversationIdOrderBySequenceNumAsc(conversationId)
-            .stream()
-            .filter(m -> m.getRole() == NvcAssistantMessageRole.USER)
-            .reduce((a, b) -> b) // 获取最后一条
+        return messageRepository.findTopByConversationIdAndRoleOrderBySequenceNumDesc(
+                conversationId, NvcAssistantMessageRole.USER)
             .map(NvcAssistantMessageEntity::getContent);
     }
 

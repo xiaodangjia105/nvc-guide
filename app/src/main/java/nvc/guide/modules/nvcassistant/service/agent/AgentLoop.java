@@ -249,6 +249,8 @@ public class AgentLoop {
                 if (turn >= MAX_TOOL_CALL_TURNS) {
                     log.warn("[AgentLoop] Max turns reached: userId={}, turns={}", userId, turn);
                     sink.next(AgentEvent.error("工具调用次数过多，请简化请求"));
+                    sink.complete();
+                    return;
                 }
 
                 // 记录端到端延迟

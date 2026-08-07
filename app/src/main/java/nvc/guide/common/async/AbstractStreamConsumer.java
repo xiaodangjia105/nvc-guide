@@ -97,6 +97,14 @@ public abstract class AbstractStreamConsumer<T> {
                     break;
                 }
                 log.error("Failed to consume message", e);
+                // Redis 暂时不可用时，添加退避延迟避免紧循环
+                try {
+                    Thread.sleep(2000);
+                } catch (InterruptedException ie) {
+                    log.info("Consumer thread interrupted during backoff");
+                    Thread.currentThread().interrupt();
+                    break;
+                }
             }
         }
     }
