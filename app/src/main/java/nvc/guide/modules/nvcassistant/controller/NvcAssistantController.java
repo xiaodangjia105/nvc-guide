@@ -28,6 +28,10 @@ import java.util.Map;
 
 /**
  * 主 Agent REST 控制器
+ *
+ * <p>TODO [安全] 所有端点的 userId 目前从 @RequestParam 获取，存在用户冒充风险。
+ * 待实现认证机制后，应从 SecurityContext/JWT 中提取 userId。
+ * 参考：添加 Spring Security + JWT 认证，或接入 OAuth2。
  */
 @RestController
 @RequestMapping("/api/nvc/assistant")

@@ -64,6 +64,7 @@ class NvcAgentOrchestratorTest {
   @Mock private NvcProfileService profileService;
   @Mock private NvcRagService ragService;
   @Mock private NvcScenarioRecommendService recommendService;
+  @Mock private NvcReflectionService reflectionService;
   @Mock private FreeDialogRouter freeDialogRouter;
   @Mock private ScenarioRouter scenarioRouter;
   @Mock private StructuredRouter structuredRouter;
@@ -77,6 +78,7 @@ class NvcAgentOrchestratorTest {
         sessionRepository, messageRepository,
         evaluationRepository, scenarioRepository,
         profileService, ragService, recommendService,
+        reflectionService,
         freeDialogRouter, scenarioRouter, structuredRouter);
   }
 

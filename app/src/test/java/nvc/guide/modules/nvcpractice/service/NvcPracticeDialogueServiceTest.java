@@ -1,6 +1,7 @@
 package nvc.guide.modules.nvcpractice.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import nvc.guide.common.security.InputSanitizer;
 import nvc.guide.modules.nvcpractice.dto.AgentDecision;
 import nvc.guide.modules.nvcpractice.dto.DialogueResponse;
 import nvc.guide.modules.nvcpractice.dto.MessageResponse;
@@ -55,6 +56,8 @@ class NvcPracticeDialogueServiceTest {
   private NvcSummaryService summaryService;
   @Mock
   private NvcStructuredPracticeService structuredPracticeService;
+  @Mock
+  private InputSanitizer inputSanitizer;
 
   private NvcPracticeDialogueService dialogueService;
 
@@ -63,7 +66,7 @@ class NvcPracticeDialogueServiceTest {
     dialogueService = new NvcPracticeDialogueService(
         sessionService, messageRepository, orchestrator,
         objectMapper, evaluationService, summaryService,
-        structuredPracticeService);
+        structuredPracticeService, inputSanitizer);
   }
 
   private NvcPracticeSessionEntity buildSession(

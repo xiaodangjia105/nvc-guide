@@ -57,11 +57,6 @@ public class PromptInjectionDetector {
             return false;
         }
 
-        // 长度超过阈值才检测（短消息不太可能是注入）
-        if (input.length() < 10) {
-            return false;
-        }
-
         for (Pattern pattern : INJECTION_PATTERNS) {
             if (pattern.matcher(input).find()) {
                 log.debug("Injection pattern matched: {}", pattern.pattern());

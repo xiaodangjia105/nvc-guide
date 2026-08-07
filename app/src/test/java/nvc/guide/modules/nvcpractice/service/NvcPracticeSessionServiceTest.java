@@ -23,11 +23,15 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -37,12 +41,14 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeast;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 @DisplayName("NvcPracticeSessionService 测试")
 class NvcPracticeSessionServiceTest {
 
@@ -60,6 +66,12 @@ class NvcPracticeSessionServiceTest {
     private RedisService redisService;
     @Mock
     private ObjectMapper objectMapper;
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
+    @Mock
+    private NvcReflectionService reflectionService;
+    @Mock
+    private NvcAgentOrchestrator orchestrator;
 
     private NvcPracticeSessionService sessionService;
 
@@ -67,7 +79,15 @@ class NvcPracticeSessionServiceTest {
     void setUp() {
         sessionService = new NvcPracticeSessionService(
             sessionRepository, messageRepository, evaluationService,
-            scenarioRepository, scenarioService, redisService, objectMapper);
+            scenarioRepository, scenarioService, redisService, objectMapper,
+            eventPublisher, reflectionService, orchestrator);
+
+        // Mock executeWithLock to execute the operation directly (no real locking in tests)
+        when(redisService.executeWithLock(anyString(), anyLong(), anyLong(), any(TimeUnit.class), any(RedisService.LockedOperation.class)))
+            .thenAnswer(invocation -> {
+                RedisService.LockedOperation<?> operation = invocation.getArgument(4);
+                return operation.execute();
+            });
     }
 
     private NvcPracticeSessionEntity buildSession(Long id, NvcSessionPhase phase) {

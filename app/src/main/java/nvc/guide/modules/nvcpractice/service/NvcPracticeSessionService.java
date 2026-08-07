@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @Slf4j
@@ -206,17 +207,21 @@ public class NvcPracticeSessionService {
 
   /**
    * 结束会话（含重复调用校验）
+   * 使用分布式锁防止并发请求重复评估
    */
   public NvcPracticeSessionEntity completeSession(Long sessionId) {
-    NvcPracticeSessionEntity session = getSession(sessionId);
-    // 已完成或已评估则直接返回，防止重复调用
-    if (session.getCurrentPhase() == NvcSessionPhase.COMPLETED
-        || session.getCurrentPhase() == NvcSessionPhase.EVALUATED) {
-      log.info("Session already completed/evaluated, skipping: sessionId={}, phase={}",
-          sessionId, session.getCurrentPhase());
-      return session;
-    }
-    return updatePhase(sessionId, NvcSessionPhase.COMPLETED);
+    String lockKey = "nvc:practice:complete:" + sessionId;
+    return redisService.executeWithLock(lockKey, 5, 10, TimeUnit.SECONDS, () -> {
+      NvcPracticeSessionEntity session = getSession(sessionId);
+      // 已完成或已评估则直接返回，防止重复调用
+      if (session.getCurrentPhase() == NvcSessionPhase.COMPLETED
+          || session.getCurrentPhase() == NvcSessionPhase.EVALUATED) {
+        log.info("Session already completed/evaluated, skipping: sessionId={}, phase={}",
+            sessionId, session.getCurrentPhase());
+        return session;
+      }
+      return updatePhase(sessionId, NvcSessionPhase.COMPLETED);
+    });
   }
 
   /**
