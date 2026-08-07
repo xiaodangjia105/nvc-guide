@@ -191,10 +191,14 @@ public class KnowledgeBaseVectorService {
     /**
      * 删除指定知识库的所有向量数据
      * 委托给 VectorRepository 处理
-     * 
+     *
+     * <p>注意：此方法不使用 @Transactional，因为调用者（KnowledgeBaseDeleteService）
+     * 已经管理事务。如果此处也添加 @Transactional，当内部 repository 抛出异常时，
+     * 会将共享事务标记为 rollback-only，但异常被吞掉后调用者不知道，
+     * 导致最终提交时抛出 UnexpectedRollbackException。
+     *
      * @param knowledgeBaseId 知识库ID
      */
-    @Transactional(rollbackFor = Exception.class)
     public void deleteByKnowledgeBaseId(Long knowledgeBaseId) {
         try {
             vectorRepository.deleteByKnowledgeBaseId(knowledgeBaseId);

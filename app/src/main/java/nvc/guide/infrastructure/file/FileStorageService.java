@@ -76,6 +76,8 @@ public class FileStorageService {
                     .bucket(storageConfig.getBucket())
                     .key(fileKey)
                     .build();
+            // 注意：ResponseBytes 内部管理 HTTP 连接，asByteArray() 完成后连接会自动释放
+            // 对于大文件，应考虑使用 getObject() 返回 InputStream 进行流式处理
             return s3Client.getObjectAsBytes(getRequest).asByteArray();
         } catch (S3Exception e) {
             log.error("下载文件失败: {} - {}", fileKey, e.getMessage(), e);

@@ -14,6 +14,8 @@ import com.itextpdf.layout.element.Table;
 import com.itextpdf.layout.properties.TextAlignment;
 import com.itextpdf.layout.properties.UnitValue;
 import lombok.extern.slf4j.Slf4j;
+import nvc.guide.common.exception.BusinessException;
+import nvc.guide.common.exception.ErrorCode;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
@@ -58,7 +60,7 @@ public class PdfExportService {
             try {
                 return PdfFontFactory.createFont("Helvetica");
             } catch (Exception ex) {
-                throw new RuntimeException("无法创建PDF字体", ex);
+                throw new BusinessException(ErrorCode.EXPORT_PDF_FAILED, "无法创建PDF字体");
             }
         }
     }
@@ -126,9 +128,9 @@ public class PdfExportService {
      * 导出 NVC 练习报告为 PDF
      */
     public byte[] exportNvcReport(nvc.guide.modules.nvcpractice.dto.NvcPracticeReport report) {
-        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
-            PdfDocument pdf = createPdfDocument(outputStream);
-            Document document = new Document(pdf);
+        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+             PdfDocument pdf = createPdfDocument(outputStream);
+             Document document = new Document(pdf)) {
             PdfFont font = createChineseFont();
 
             // 1. 标题
@@ -194,7 +196,6 @@ public class PdfExportService {
                 document.add(createBody(report.summary(), font));
             }
 
-            document.close();
             return outputStream.toByteArray();
         } catch (Exception e) {
             log.error("NVC报告PDF导出失败: sessionId={}", report.sessionId(), e);

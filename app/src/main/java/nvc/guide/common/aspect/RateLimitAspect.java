@@ -219,24 +219,17 @@ public class RateLimitAspect {
         }
 
         HttpServletRequest request = attributes.getRequest();
-        String ip = request.getHeader("X-Forwarded-For");
 
-        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getHeader("X-Real-IP");
-        }
-        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getHeader("Proxy-Client-IP");
-        }
-        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getHeader("WL-Proxy-Client-IP");
-        }
-        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getRemoteAddr();
-        }
+        // 优先使用 getRemoteAddr()，这是不可伪造的
+        // 只有在确认有可信代理时才应使用 X-Forwarded-For
+        String ip = request.getRemoteAddr();
 
-        if (ip != null && ip.contains(",")) {
-            ip = ip.split(",")[0].trim();
-        }
+        // TODO: 如果部署在可信反向代理后面，可以取消下面的注释来支持代理头
+        // 注意：必须确保代理会剥离/覆盖客户端发送的 X-Forwarded-For 头
+        // String forwarded = request.getHeader("X-Forwarded-For");
+        // if (forwarded != null && !forwarded.isEmpty() && !"unknown".equalsIgnoreCase(forwarded)) {
+        //     ip = forwarded.split(",")[0].trim();
+        // }
 
         return ip != null ? ip : "unknown";
     }
@@ -249,16 +242,14 @@ public class RateLimitAspect {
 
         HttpServletRequest request = attributes.getRequest();
 
+        // 只信任由认证过滤器设置的 userId 属性
+        // 不信任客户端发送的 X-User-Id 头（可被伪造绕过限流）
         Object userId = request.getAttribute("userId");
         if (userId != null) {
             return userId.toString();
         }
 
-        userId = request.getHeader("X-User-Id");
-        if (userId != null) {
-            return userId.toString();
-        }
-
+        // 未认证用户使用 "anonymous" 作为统一身份
         return "anonymous";
     }
 }
