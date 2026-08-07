@@ -123,6 +123,8 @@ public class NvcProfileService {
         NvcUserProfileEntity profile = getOrCreateProfile(userId);
         profile.setTotalPracticeCount(profile.getTotalPracticeCount() + 1);
         profile.setLastPracticeAt(LocalDateTime.now());
+        // TODO: totalPracticeMinutes 应在会话完成时更新，需要传入会话时长
+        // 当前由 NvcDashboardService.getUserStats() 动态计算
 
         // 3. 计算 NVC 等级
         NvcLevel newLevel = calculateLevel(userId);
@@ -149,10 +151,19 @@ public class NvcProfileService {
         List<NvcUserAbilityScoreEntity> last10 = recentScores.subList(
             0, Math.min(10, recentScores.size()));
 
-        int avgObservation = (int) last10.stream().mapToInt(NvcUserAbilityScoreEntity::getObservation).average().orElse(0);
-        int avgFeeling = (int) last10.stream().mapToInt(NvcUserAbilityScoreEntity::getFeeling).average().orElse(0);
-        int avgNeed = (int) last10.stream().mapToInt(NvcUserAbilityScoreEntity::getNeed).average().orElse(0);
-        int avgRequest = (int) last10.stream().mapToInt(NvcUserAbilityScoreEntity::getRequest).average().orElse(0);
+        // 使用 null 安全的拆箱方式，防止 Integer 为 null 时 NPE
+        int avgObservation = (int) last10.stream()
+            .filter(s -> s.getObservation() != null)
+            .mapToInt(NvcUserAbilityScoreEntity::getObservation).average().orElse(0);
+        int avgFeeling = (int) last10.stream()
+            .filter(s -> s.getFeeling() != null)
+            .mapToInt(NvcUserAbilityScoreEntity::getFeeling).average().orElse(0);
+        int avgNeed = (int) last10.stream()
+            .filter(s -> s.getNeed() != null)
+            .mapToInt(NvcUserAbilityScoreEntity::getNeed).average().orElse(0);
+        int avgRequest = (int) last10.stream()
+            .filter(s -> s.getRequest() != null)
+            .mapToInt(NvcUserAbilityScoreEntity::getRequest).average().orElse(0);
         int avgEmpathy = (int) last10.stream()
             .filter(s -> s.getEmpathy() != null)
             .mapToInt(NvcUserAbilityScoreEntity::getEmpathy)
@@ -201,7 +212,14 @@ public class NvcProfileService {
 
         List<NvcUserAbilityScoreEntity> last10 = recent.subList(0, Math.min(10, recent.size()));
         double avgOverall = last10.stream()
-            .mapToInt(s -> (int) Math.round((s.getObservation() + s.getFeeling() + s.getNeed() + s.getRequest()) / 4.0))
+            .mapToInt(s -> {
+                // null 安全的拆箱
+                int obs = s.getObservation() != null ? s.getObservation() : 0;
+                int feel = s.getFeeling() != null ? s.getFeeling() : 0;
+                int need = s.getNeed() != null ? s.getNeed() : 0;
+                int req = s.getRequest() != null ? s.getRequest() : 0;
+                return (int) Math.round((obs + feel + need + req) / 4.0);
+            })
             .average()
             .orElse(0);
 

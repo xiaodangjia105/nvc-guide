@@ -55,7 +55,11 @@ public class RateLimitAspect {
         loadScript();
     }
 
-    private void loadScript() {
+    /**
+     * 加载 Lua 脚本到 Redis
+     * 使用 synchronized 防止并发 NOSCRIPT 恢复时的竞态条件
+     */
+    private synchronized void loadScript() {
         this.luaScriptSha = rScript.scriptLoad(LUA_SCRIPT);
         log.info("限流 Lua 脚本加载完成, SHA1: {}", luaScriptSha);
     }
