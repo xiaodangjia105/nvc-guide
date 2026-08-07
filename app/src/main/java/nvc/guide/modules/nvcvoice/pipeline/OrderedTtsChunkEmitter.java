@@ -3,7 +3,9 @@ package nvc.guide.modules.nvcvoice.pipeline;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import lombok.extern.slf4j.Slf4j;
@@ -23,11 +25,17 @@ public class OrderedTtsChunkEmitter {
   private final AtomicInteger submittedSeq = new AtomicInteger(0);
   private final Consumer<byte[]> onChunk;
   private final Consumer<byte[]> onComplete;
-  private final ExecutorService drainExecutor = Executors.newSingleThreadExecutor(r -> {
-    Thread t = new Thread(r, "tts-chunk-drain");
-    t.setDaemon(true);
-    return t;
-  });
+  // 使用有界线程池，避免 OOM 风险
+  private final ExecutorService drainExecutor = new ThreadPoolExecutor(
+      1, 1, 0L, TimeUnit.MILLISECONDS,
+      new LinkedBlockingQueue<>(100),
+      r -> {
+        Thread t = new Thread(r, "tts-chunk-drain");
+        t.setDaemon(true);
+        return t;
+      },
+      new ThreadPoolExecutor.DiscardOldestPolicy()
+  );
 
   /**
    * 创建发射器

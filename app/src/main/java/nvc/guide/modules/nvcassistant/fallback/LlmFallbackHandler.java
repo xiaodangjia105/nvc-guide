@@ -1,6 +1,8 @@
 package nvc.guide.modules.nvcassistant.fallback;
 
 import lombok.extern.slf4j.Slf4j;
+import nvc.guide.common.exception.BusinessException;
+import nvc.guide.common.exception.ErrorCode;
 import org.springframework.stereotype.Component;
 
 import java.util.function.Supplier;
@@ -83,7 +85,8 @@ public class LlmFallbackHandler {
             return fallbackResult;
         } catch (Exception fallbackException) {
             log.error("[Fallback] Fallback also failed: scene={}", context.getScene(), fallbackException);
-            throw new RuntimeException("LLM 调用失败且降级也失败: " + context.getScene(), lastException);
+            throw new BusinessException(ErrorCode.AI_SERVICE_UNAVAILABLE,
+                "LLM 调用失败且降级也失败: " + context.getScene());
         }
     }
 

@@ -39,13 +39,6 @@ public interface RagChatSessionRepository extends JpaRepository<RagChatSessionEn
     List<RagChatSessionEntity> findByKnowledgeBaseIds(@Param("kbIds") List<Long> knowledgeBaseIds);
 
     /**
-     * 获取会话详情（带消息列表和知识库）
-     * 注意：使用 DISTINCT 避免笛卡尔积导致的重复数据
-     */
-    @Query("SELECT DISTINCT s FROM RagChatSessionEntity s LEFT JOIN FETCH s.knowledgeBases WHERE s.id = :id")
-    Optional<RagChatSessionEntity> findByIdWithMessagesAndKnowledgeBases(@Param("id") Long id);
-
-    /**
      * 获取会话（带知识库，不带消息）
      */
     @Query("SELECT s FROM RagChatSessionEntity s LEFT JOIN FETCH s.knowledgeBases WHERE s.id = :id")

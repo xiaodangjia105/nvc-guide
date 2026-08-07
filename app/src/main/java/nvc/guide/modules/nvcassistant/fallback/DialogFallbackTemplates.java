@@ -3,6 +3,7 @@ package nvc.guide.modules.nvcassistant.fallback;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -75,8 +76,8 @@ public class DialogFallbackTemplates {
         ));
     }
 
-    /** 已使用的模板索引（避免连续重复） */
-    private final Map<String, Integer> lastUsedIndex = new HashMap<>();
+    /** 已使用的模板索引（避免连续重复）- 使用 ConcurrentHashMap 确保线程安全 */
+    private final Map<String, Integer> lastUsedIndex = new ConcurrentHashMap<>();
 
     /**
      * 根据当前步骤选择降级话术
