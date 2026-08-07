@@ -161,6 +161,7 @@ public class NvcPracticeController {
   public Result<PracticeSessionResponse> completeSession(
       @PathVariable Long sessionId) {
     CompleteResult result = sessionService.completeAndEvaluate(sessionId);
+    // evaluationSkipped 表示没有消息需要评估，不是失败
     return Result.success(
         toSessionResponse(result.session(), result.evaluationFailed()));
   }

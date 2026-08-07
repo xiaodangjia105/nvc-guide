@@ -23,6 +23,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import jakarta.annotation.PostConstruct;
 
@@ -83,6 +84,7 @@ public class NvcPracticeSessionService {
    * 创建练习会话
    * 支持自适应难度：未指定难度时，基于上次反思建议自动调整
    */
+  @Transactional
   public NvcPracticeSessionEntity createSession(Long userId,
       CreatePracticeSessionRequest request) {
     Long scenarioId = request.scenarioId();
@@ -252,10 +254,11 @@ public class NvcPracticeSessionService {
 
     // 已评估则跳过
     if (session.getCurrentPhase() == NvcSessionPhase.EVALUATED) {
-      return new CompleteResult(session, false);
+      return new CompleteResult(session, false, false);
     }
 
     boolean evaluationFailed = false;
+    boolean evaluationSkipped = false;
     try {
       List<NvcPracticeMessageEntity> messages =
           messageRepository.findBySessionIdOrderBySequenceNumAsc(sessionId);
@@ -263,6 +266,9 @@ public class NvcPracticeSessionService {
         evaluationService.evaluateFinal(sessionId, userId, messages);
         session = updatePhase(sessionId, NvcSessionPhase.EVALUATED);
         log.info("Final evaluation completed: sessionId={}", sessionId);
+      } else {
+        evaluationSkipped = true;
+        log.info("No messages to evaluate, skipping final evaluation: sessionId={}", sessionId);
       }
     } catch (Exception e) {
       log.error("Final evaluation failed: sessionId={}", sessionId, e);
@@ -283,7 +289,7 @@ public class NvcPracticeSessionService {
     eventPublisher.publishEvent(
         new PracticeCompletedEvent(this, sessionId, userId, evaluationFailed));
 
-    return new CompleteResult(session, evaluationFailed);
+    return new CompleteResult(session, evaluationFailed, evaluationSkipped);
   }
 
   /**
@@ -291,7 +297,8 @@ public class NvcPracticeSessionService {
    */
   public record CompleteResult(
       NvcPracticeSessionEntity session,
-      boolean evaluationFailed
+      boolean evaluationFailed,
+      boolean evaluationSkipped
   ) {}
 
   /**

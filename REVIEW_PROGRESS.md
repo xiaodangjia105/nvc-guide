@@ -66,7 +66,7 @@
 - ⚪ AbstractStreamConsumer:72 - Redis 失败无退避
 - ⚪ UnifiedEvaluationService:329 - 评分截断
 
-## 已修复的问题（28 个）
+## 已修复的问题（33 个）
 
 ### Critical (3个)
 1. 🟢 **PromptInjectionDetector.java:61** - 移除短消息长度限制，所有输入都进行注入检测
@@ -80,7 +80,7 @@
 7. 🟢 **InputSanitizer.java:63-64** - 清理换行符防止日志注入
 8. 🟢 **ContextManager.java:272-273** - 添加日志警告，记录 toolCalls 无法添加的问题
 
-### Medium (12个)
+### Medium (17个)
 9. 🟢 **NvcAgentChatService.java:125-129** - 移除 onErrorResume，让错误正确传播
 10. 🟢 **NvcEvaluationService.java:186** - 使用 try-with-resources 关闭 InputStream
 11. 🟢 **NvcEvaluationService.java:126** - 添加 userMessage null/blank 检查
@@ -93,16 +93,21 @@
 18. 🟢 **CacheToolHook.java:61** - 添加定期清理过期缓存，防止内存泄漏
 19. 🟢 **RateLimitToolHook.java:49** - 添加定期清理过期计数器，防止内存泄漏
 20. 🟢 **AbstractStreamConsumer.java:52** - 添加 awaitTermination() 实现优雅关闭
+21. 🟢 **NvcPracticeDialogueService.java:84-88** - executeAgent 返回 null 时使用降级回复
+22. 🟢 **NvcPracticeSessionService.java:87-120** - createSession 添加 @Transactional
+23. 🟢 **NvcPracticeSessionService.java:260-272** - 添加 evaluationSkipped 标志，区分跳过和失败
+24. 🟢 **LlmProviderRegistry.java:149-154** - reload() 添加 synchronized 确保原子性
 
 ### Low (8个)
-21. 🟢 **NvcPracticeDialogueService.java:235-245** - doOnError 添加 try-catch 防止遮蔽异常
-22. 🟢 **NvcPracticeSessionService.java:43-49** - 添加 @PostConstruct 校验 VALID_TRANSITIONS
-23. 🟢 **TraceController.java:38** - 添加 @Max(100) 限制分页大小
-24. 🟢 **NvcAgentChatService.java:179-194** - 修正步骤注释编号重复
-25. 🟢 **AgentLoop.java:249-262** - 错误事件后直接 return，不再发送完成事件
-26. 🟢 **UnifiedEvaluationService.java:329,335** - 评分使用 Math.round() 四舍五入
-27. 🟢 **NvcAssistantMessageService.java:116-122** - 使用数据库查询替代加载全部消息
-28. 🟢 **AbstractStreamConsumer.java:72-101** - Redis 失败时添加 2 秒退避延迟
+25. 🟢 **NvcPracticeDialogueService.java:235-245** - doOnError 添加 try-catch 防止遮蔽异常
+26. 🟢 **NvcPracticeSessionService.java:43-49** - 添加 @PostConstruct 校验 VALID_TRANSITIONS
+27. 🟢 **TraceController.java:38** - 添加 @Max(100) 限制分页大小
+28. 🟢 **NvcAgentChatService.java:179-194** - 修正步骤注释编号重复
+29. 🟢 **AgentLoop.java:249-262** - 错误事件后直接 return，不再发送完成事件
+30. 🟢 **UnifiedEvaluationService.java:329,335** - 评分使用 Math.round() 四舍五入
+31. 🟢 **NvcAssistantMessageService.java:116-122** - 使用数据库查询替代加载全部消息
+32. 🟢 **AbstractStreamConsumer.java:72-101** - Redis 失败时添加 2 秒退避延迟
+33. 🟢 **NvcPracticeDialogueService.java:251** - 添加注释说明私有方法无法 AOP 代理
 
 ## 迭代记录
 
@@ -150,6 +155,14 @@
 - **状态**: ✅ 完成
 - **开始时间**: 2026-08-08
 - **修复**: 5 个 Low bug
+- **编译**: ✅ 通过
+- **测试**: ✅ 通过
+- **Commit**: b459e4b
+
+### 迭代 #7（第七批修复）
+- **状态**: ✅ 完成
+- **开始时间**: 2026-08-08
+- **修复**: 5 个 Medium/Low bug
 - **编译**: ✅ 通过
 - **测试**: ✅ 通过
 - **Commit**: (待提交)

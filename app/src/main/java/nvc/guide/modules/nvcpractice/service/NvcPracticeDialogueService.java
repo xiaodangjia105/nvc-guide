@@ -84,7 +84,14 @@ public class NvcPracticeDialogueService {
     String aiReply = orchestrator.executeAgent(
         decision, context, userMessage);
 
-    // 7.5 清理 AI 回复中的 JSON/代码块
+    // 7.5 防御性检查：executeAgent 返回 null 时使用降级回复
+    if (aiReply == null) {
+      log.warn("[NvcPracticeDialogueService] executeAgent returned null: sessionId={}, scene={}",
+          sessionId, decision.scene());
+      aiReply = "抱歉，AI 服务暂时无法生成回复，请稍后重试。";
+    }
+
+    // 7.6 清理 AI 回复中的 JSON/代码块
     aiReply = AiResponseCleaner.clean(aiReply);
 
     // 8. 保存 AI 回复

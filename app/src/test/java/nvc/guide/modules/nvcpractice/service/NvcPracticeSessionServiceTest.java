@@ -770,6 +770,7 @@ class NvcPracticeSessionServiceTest {
             assertNotNull(result);
             assertEquals(NvcSessionPhase.EVALUATED, result.session().getCurrentPhase());
             assertEquals(false, result.evaluationFailed());
+            assertEquals(false, result.evaluationSkipped());
             verify(evaluationService).evaluateFinal(1L, 100L, List.of(userMsg, aiMsg));
         }
 

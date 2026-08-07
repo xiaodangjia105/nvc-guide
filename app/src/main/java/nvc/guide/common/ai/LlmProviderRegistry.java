@@ -145,8 +145,9 @@ public class LlmProviderRegistry {
 
     /**
      * 清空缓存，重新加载所有 provider。
+     * 使用 synchronized 确保两个缓存的清空是原子操作。
      */
-    public void reload() {
+    public synchronized void reload() {
         int size = clientCache.size() + embeddingModelCache.size();
         clientCache.clear();
         embeddingModelCache.clear();
