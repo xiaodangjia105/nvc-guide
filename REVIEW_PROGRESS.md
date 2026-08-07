@@ -66,7 +66,7 @@
 - ⚪ AbstractStreamConsumer:72 - Redis 失败无退避
 - ⚪ UnifiedEvaluationService:329 - 评分截断
 
-## 已修复的问题（13 个）
+## 已修复的问题（18 个）
 
 ### Critical (3个)
 1. 🟢 **PromptInjectionDetector.java:61** - 移除短消息长度限制，所有输入都进行注入检测
@@ -80,12 +80,19 @@
 7. 🟢 **InputSanitizer.java:63-64** - 清理换行符防止日志注入
 8. 🟢 **ContextManager.java:272-273** - 添加日志警告，记录 toolCalls 无法添加的问题
 
-### Medium (5个)
+### Medium (7个)
 9. 🟢 **NvcAgentChatService.java:125-129** - 移除 onErrorResume，让错误正确传播
 10. 🟢 **NvcEvaluationService.java:186** - 使用 try-with-resources 关闭 InputStream
 11. 🟢 **NvcEvaluationService.java:126** - 添加 userMessage null/blank 检查
 12. 🟢 **NvcEvaluationService.java:140-142** - 添加 messages null/空检查和 content null 检查
 13. 🟢 **GlobalExceptionHandler.java:179-181** - 精确化 SSE 检测，要求 /api/ 前缀
+14. 🟢 **NvcEvaluationService.java:80-93** - 查询方法返回 Optional 而非 null
+15. 🟢 **NvcEvaluationService.java:155-178** - 添加 LLM 评分范围校验 (0-10)
+
+### Low (3个)
+16. 🟢 **NvcPracticeDialogueService.java:235-245** - doOnError 添加 try-catch 防止遮蔽异常
+17. 🟢 **NvcPracticeSessionService.java:43-49** - 添加 @PostConstruct 校验 VALID_TRANSITIONS
+18. 🟢 **TraceController.java:38** - 添加 @Max(100) 限制分页大小
 
 ## 迭代记录
 
@@ -109,6 +116,14 @@
 - **状态**: ✅ 完成
 - **开始时间**: 2026-08-08
 - **修复**: 5 个 Medium bug
+- **编译**: ✅ 通过
+- **测试**: ✅ 通过
+- **Commit**: 4eeb9e4
+
+### 迭代 #4（第四批修复）
+- **状态**: ✅ 完成
+- **开始时间**: 2026-08-08
+- **修复**: 5 个 Medium/Low bug
 - **编译**: ✅ 通过
 - **测试**: ✅ 通过
 - **Commit**: (待提交)

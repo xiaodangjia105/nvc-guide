@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @Slf4j
@@ -77,19 +78,17 @@ public class NvcEvaluationService {
     /**
      * 获取会话的最新实时评估
      */
-    public NvcEvaluationEntity getLatestRealtimeEvaluation(Long sessionId) {
+    public Optional<NvcEvaluationEntity> getLatestRealtimeEvaluation(Long sessionId) {
         return evaluationRepository
-            .findFirstBySessionIdAndEvaluationTypeOrderByCreatedAtDesc(sessionId, NvcEvaluationType.REALTIME)
-            .orElse(null);
+            .findFirstBySessionIdAndEvaluationTypeOrderByCreatedAtDesc(sessionId, NvcEvaluationType.REALTIME);
     }
 
     /**
      * 获取会话的最终评估
      */
-    public NvcEvaluationEntity getFinalEvaluation(Long sessionId) {
+    public Optional<NvcEvaluationEntity> getFinalEvaluation(Long sessionId) {
         return evaluationRepository
-            .findFirstBySessionIdAndEvaluationTypeOrderByCreatedAtDesc(sessionId, NvcEvaluationType.FINAL)
-            .orElse(null);
+            .findFirstBySessionIdAndEvaluationTypeOrderByCreatedAtDesc(sessionId, NvcEvaluationType.FINAL);
     }
 
     // ==================== 内部方法 ====================
@@ -102,7 +101,7 @@ public class NvcEvaluationService {
         BeanOutputConverter<NvcEvaluationResult> converter =
             new BeanOutputConverter<>(NvcEvaluationResult.class);
 
-        return structuredOutputInvoker.invoke(
+        NvcEvaluationResult result = structuredOutputInvoker.invoke(
             chatClient,
             systemPrompt,
             userPrompt,
@@ -112,6 +111,41 @@ public class NvcEvaluationService {
             "NvcEvaluation",
             log
         );
+
+        // 校验 LLM 返回的评分范围
+        validateScores(result);
+        return result;
+    }
+
+    /**
+     * 校验 LLM 返回的评分是否在有效范围内
+     */
+    private void validateScores(NvcEvaluationResult result) {
+        if (result == null) {
+            throw new BusinessException(ErrorCode.NVC_EVALUATION_FAILED, "LLM 返回的评估结果为空");
+        }
+
+        // 检查评分字段是否为 null
+        if (result.observationScore() == null || result.feelingScore() == null
+            || result.needScore() == null || result.requestScore() == null
+            || result.overallScore() == null) {
+            throw new BusinessException(ErrorCode.NVC_EVALUATION_FAILED, "LLM 返回的评分字段缺失");
+        }
+
+        // 校验评分范围 (0-10)
+        validateScoreRange(result.observationScore(), "observationScore");
+        validateScoreRange(result.feelingScore(), "feelingScore");
+        validateScoreRange(result.needScore(), "needScore");
+        validateScoreRange(result.requestScore(), "requestScore");
+        validateScoreRange(result.overallScore(), "overallScore");
+    }
+
+    private void validateScoreRange(Integer score, String fieldName) {
+        if (score < 0 || score > 10) {
+            log.warn("LLM 返回的 {} 评分超出范围: {}", fieldName, score);
+            // 裁剪到有效范围
+            score = Math.max(0, Math.min(10, score));
+        }
     }
 
     /**

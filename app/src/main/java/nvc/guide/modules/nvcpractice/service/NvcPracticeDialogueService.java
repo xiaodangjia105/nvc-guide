@@ -234,12 +234,16 @@ public class NvcPracticeDialogueService {
         })
         .doOnError(e -> {
           // 错误时也保存已接收的部分内容
-          String partialContent = streamingCleaner.getFinalCleaned();
-          if (partialContent != null && !partialContent.isEmpty()) {
-            saveStreamReply(sessionId, userId, partialContent, decision.scene(),
-                nextSeq, currentStep, userMessage, practiceMode, decision);
-            log.info("Partial reply saved on error: sessionId={}, length={}",
-                sessionId, partialContent.length());
+          try {
+            String partialContent = streamingCleaner.getFinalCleaned();
+            if (partialContent != null && !partialContent.isEmpty()) {
+              saveStreamReply(sessionId, userId, partialContent, decision.scene(),
+                  nextSeq, currentStep, userMessage, practiceMode, decision);
+              log.info("Partial reply saved on error: sessionId={}, length={}",
+                  sessionId, partialContent.length());
+            }
+          } catch (Exception saveError) {
+            log.error("Failed to save partial reply on error: sessionId={}", sessionId, saveError);
           }
           log.error("Stream error: sessionId={}", sessionId, e);
         });

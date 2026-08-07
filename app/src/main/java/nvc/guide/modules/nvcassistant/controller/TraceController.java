@@ -1,5 +1,7 @@
 package nvc.guide.modules.nvcassistant.controller;
 
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import nvc.guide.common.result.Result;
 import nvc.guide.modules.nvcassistant.evaluation.OfflineEvaluationService;
@@ -11,6 +13,7 @@ import nvc.guide.modules.nvcassistant.trace.dto.TraceStats;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -22,6 +25,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/nvc/traces")
 @RequiredArgsConstructor
+@Validated
 public class TraceController {
 
     private final AgentTraceRepository traceRepository;
@@ -34,8 +38,8 @@ public class TraceController {
     @GetMapping
     public Result<List<AgentTraceEntity>> listBySession(
             @RequestParam String sessionId,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
         Page<AgentTraceEntity> result = traceRepository.findBySessionIdOrderByCreatedAtDesc(
             sessionId, PageRequest.of(page, size));
         return Result.success(result.getContent());

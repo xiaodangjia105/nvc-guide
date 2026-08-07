@@ -24,6 +24,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
+import jakarta.annotation.PostConstruct;
+
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -62,6 +64,20 @@ public class NvcPracticeSessionService {
 
   private static final String CACHE_KEY_PREFIX = "nvc:practice:session:";
   private static final Duration CACHE_TTL = Duration.ofHours(24);
+
+  /**
+   * 启动时校验 VALID_TRANSITIONS 覆盖所有枚举值
+   */
+  @PostConstruct
+  public void validateTransitions() {
+    for (NvcSessionPhase phase : NvcSessionPhase.values()) {
+      if (!VALID_TRANSITIONS.containsKey(phase)) {
+        throw new IllegalStateException(
+            "VALID_TRANSITIONS 缺少枚举值: " + phase + "，请补充状态转换规则");
+      }
+    }
+    log.info("VALID_TRANSITIONS 校验通过，覆盖所有 {} 个枚举值", NvcSessionPhase.values().length);
+  }
 
   /**
    * 创建练习会话

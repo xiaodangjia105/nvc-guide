@@ -45,7 +45,7 @@ public class NvcReportService {
             return buildDefaultReport(session, messages);
         }
 
-        NvcEvaluationEntity finalEval = evaluationService.getFinalEvaluation(sessionId);
+        NvcEvaluationEntity finalEval = evaluationService.getFinalEvaluation(sessionId).orElse(null);
 
         // 如果还没有最终评估，先执行一次
         if (finalEval == null) {

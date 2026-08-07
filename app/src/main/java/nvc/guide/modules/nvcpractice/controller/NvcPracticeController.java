@@ -140,7 +140,7 @@ public class NvcPracticeController {
   public Result<NvcEvaluationEntity> getLatestEvaluation(
       @PathVariable Long sessionId) {
     NvcEvaluationEntity evaluation =
-        evaluationService.getLatestRealtimeEvaluation(sessionId);
+        evaluationService.getLatestRealtimeEvaluation(sessionId).orElse(null);
     return Result.success(evaluation);
   }
 

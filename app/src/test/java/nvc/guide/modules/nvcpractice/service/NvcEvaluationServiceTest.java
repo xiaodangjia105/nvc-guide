@@ -24,6 +24,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -193,18 +194,18 @@ class NvcEvaluationServiceTest {
                 .thenReturn(Optional.of(entity));
 
             // Act
-            NvcEvaluationEntity result =
+            Optional<NvcEvaluationEntity> result =
                 evaluationService.getLatestRealtimeEvaluation(1L);
 
             // Assert
-            assertNotNull(result);
-            assertEquals(78, result.getOverallScore());
-            assertEquals(NvcEvaluationType.REALTIME, result.getEvaluationType());
+            assertTrue(result.isPresent());
+            assertEquals(78, result.get().getOverallScore());
+            assertEquals(NvcEvaluationType.REALTIME, result.get().getEvaluationType());
         }
 
         @Test
-        @DisplayName("不存在实时评估时返回 null")
-        void notFound_returnsNull() {
+        @DisplayName("不存在实时评估时返回 empty Optional")
+        void notFound_returnsEmptyOptional() {
             // Arrange
             when(evaluationRepository
                 .findFirstBySessionIdAndEvaluationTypeOrderByCreatedAtDesc(
@@ -212,11 +213,11 @@ class NvcEvaluationServiceTest {
                 .thenReturn(Optional.empty());
 
             // Act
-            NvcEvaluationEntity result =
+            Optional<NvcEvaluationEntity> result =
                 evaluationService.getLatestRealtimeEvaluation(99L);
 
             // Assert
-            assertNull(result);
+            assertTrue(result.isEmpty());
         }
     }
 
@@ -238,18 +239,18 @@ class NvcEvaluationServiceTest {
                 .thenReturn(Optional.of(entity));
 
             // Act
-            NvcEvaluationEntity result =
+            Optional<NvcEvaluationEntity> result =
                 evaluationService.getFinalEvaluation(1L);
 
             // Assert
-            assertNotNull(result);
-            assertEquals(82, result.getOverallScore());
-            assertEquals(NvcEvaluationType.FINAL, result.getEvaluationType());
+            assertTrue(result.isPresent());
+            assertEquals(82, result.get().getOverallScore());
+            assertEquals(NvcEvaluationType.FINAL, result.get().getEvaluationType());
         }
 
         @Test
-        @DisplayName("不存在最终评估时返回 null")
-        void notFound_returnsNull() {
+        @DisplayName("不存在最终评估时返回 empty Optional")
+        void notFound_returnsEmptyOptional() {
             // Arrange
             when(evaluationRepository
                 .findFirstBySessionIdAndEvaluationTypeOrderByCreatedAtDesc(
@@ -257,11 +258,11 @@ class NvcEvaluationServiceTest {
                 .thenReturn(Optional.empty());
 
             // Act
-            NvcEvaluationEntity result =
+            Optional<NvcEvaluationEntity> result =
                 evaluationService.getFinalEvaluation(99L);
 
             // Assert
-            assertNull(result);
+            assertTrue(result.isEmpty());
         }
     }
 
