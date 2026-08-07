@@ -1,6 +1,8 @@
 package nvc.guide.modules.nvcassistant.service.agent;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import nvc.guide.modules.nvcpractice.tool.NvcToolContext;
 import org.springframework.core.annotation.Order;
@@ -9,6 +11,9 @@ import org.springframework.stereotype.Component;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -47,6 +52,51 @@ public class RateLimitToolHook implements NvcToolHook {
      * value: 窗口信息（窗口开始时间 + 计数）
      */
     private final ConcurrentHashMap<String, WindowCounter> counters = new ConcurrentHashMap<>();
+
+    /** 定期清理过期计数器的调度器 */
+    private final ScheduledExecutorService cleanupScheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+        Thread t = new Thread(r, "rate-limit-cleanup");
+        t.setDaemon(true);
+        return t;
+    });
+
+    @PostConstruct
+    public void init() {
+        // 每 10 分钟清理一次过期计数器
+        cleanupScheduler.scheduleAtFixedRate(this::cleanupExpiredCounters, 10, 10, TimeUnit.MINUTES);
+        log.info("[RateLimitToolHook] Initialized with periodic cleanup every 10 minutes");
+    }
+
+    @PreDestroy
+    public void destroy() {
+        cleanupScheduler.shutdown();
+        try {
+            if (!cleanupScheduler.awaitTermination(5, TimeUnit.SECONDS)) {
+                cleanupScheduler.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            cleanupScheduler.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
+        log.info("[RateLimitToolHook] Shutdown complete, counters cleared");
+    }
+
+    /**
+     * 清理过期计数器（窗口已过期的条目）
+     */
+    private void cleanupExpiredCounters() {
+        int before = counters.size();
+        long now = System.currentTimeMillis();
+        counters.entrySet().removeIf(entry -> {
+            WindowCounter counter = entry.getValue();
+            // 使用最大窗口时间（1 小时）作为清理阈值
+            return now - counter.windowStart > 3_600_000L;
+        });
+        int after = counters.size();
+        if (before != after) {
+            log.debug("[RateLimitToolHook] Cleaned up {} expired counters: {} -> {}", before - after, before, after);
+        }
+    }
 
     @Override
     public CompletableFuture<ToolCallDecision> beforeToolCall(String toolName, JsonNode arguments, NvcToolContext context) {

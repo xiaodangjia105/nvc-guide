@@ -1,6 +1,8 @@
 package nvc.guide.modules.nvcassistant.service.agent;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import nvc.guide.modules.nvcpractice.tool.NvcToolContext;
 import org.springframework.core.annotation.Order;
@@ -13,6 +15,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 缓存钩子 — 对高频查询工具提供内存缓存
@@ -59,6 +64,46 @@ public class CacheToolHook implements NvcToolHook {
 
     /** 缓存存储 */
     private final ConcurrentHashMap<String, CacheEntry> cache = new ConcurrentHashMap<>();
+
+    /** 定期清理过期缓存的调度器 */
+    private final ScheduledExecutorService cleanupScheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+        Thread t = new Thread(r, "cache-cleanup");
+        t.setDaemon(true);
+        return t;
+    });
+
+    @PostConstruct
+    public void init() {
+        // 每 5 分钟清理一次过期缓存
+        cleanupScheduler.scheduleAtFixedRate(this::cleanupExpiredEntries, 5, 5, TimeUnit.MINUTES);
+        log.info("[CacheToolHook] Initialized with periodic cleanup every 5 minutes");
+    }
+
+    @PreDestroy
+    public void destroy() {
+        cleanupScheduler.shutdown();
+        try {
+            if (!cleanupScheduler.awaitTermination(5, TimeUnit.SECONDS)) {
+                cleanupScheduler.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            cleanupScheduler.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
+        log.info("[CacheToolHook] Shutdown complete, cache cleared");
+    }
+
+    /**
+     * 清理过期缓存条目
+     */
+    private void cleanupExpiredEntries() {
+        int before = cache.size();
+        cache.entrySet().removeIf(entry -> entry.getValue().isExpired());
+        int after = cache.size();
+        if (before != after) {
+            log.debug("[CacheToolHook] Cleaned up {} expired entries: {} -> {}", before - after, before, after);
+        }
+    }
 
     @Override
     public CompletableFuture<ToolCallDecision> beforeToolCall(String toolName, JsonNode arguments, NvcToolContext context) {

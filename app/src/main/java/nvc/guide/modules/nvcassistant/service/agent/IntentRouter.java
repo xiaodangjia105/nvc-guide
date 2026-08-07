@@ -6,6 +6,7 @@ import nvc.guide.modules.nvcassistant.trace.AgentSpanEntity;
 import nvc.guide.modules.nvcassistant.trace.TraceManager;
 import org.springframework.stereotype.Service;
 
+import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
@@ -27,6 +28,15 @@ import java.util.regex.Pattern;
 public class IntentRouter {
 
     private final TraceManager traceManager;
+
+    /**
+     * 非职业词汇黑名单
+     */
+    private static final Set<String> NON_OCCUPATION_WORDS = Set.of(
+        "人", "自己", "大家", "我们", "你们", "他们", "她们", "它们",
+        "男人", "女人", "男孩", "女孩", "朋友", "同事", "家人",
+        "什么", "怎么", "为什么", "哪里", "谁", "哪个"
+    );
 
     /**
      * 意图匹配结果
@@ -168,9 +178,8 @@ public class IntentRouter {
         if (matcher.find()) {
             String occupation = matcher.group(1).trim();
             // 排除非职业词汇：长度合理，且不是无意义的占位词
-            // 注意：&& 优先级高于 ||，必须加括号确保逻辑正确
             if (!occupation.isEmpty() && occupation.length() <= 10
-                && (!occupation.equals("程序员") || occupation.contains("程序"))) {
+                && !NON_OCCUPATION_WORDS.contains(occupation)) {
                 return occupation;
             }
         }

@@ -61,16 +61,13 @@ public class ToolExecutor {
             }))
             .toList();
 
-        // 等待所有完成
-        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-
-        // 收集结果（保持顺序）并记录指标
+        // 收集结果（保持顺序），单个失败不影响其他结果
         List<ToolCallResult> results = futures.stream()
             .map(f -> {
                 try {
-                    return f.get(1, TimeUnit.SECONDS);
+                    return f.get(TOOL_TIMEOUT_MS + 5000, TimeUnit.MILLISECONDS);
                 } catch (Exception e) {
-                    return ToolCallResult.failure("unknown", "{}", "执行超时: " + e.getMessage(), 0);
+                    return ToolCallResult.failure("unknown", "{}", "执行超时或失败: " + e.getMessage(), 0);
                 }
             })
             .toList();

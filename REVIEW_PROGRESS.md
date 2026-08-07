@@ -66,7 +66,7 @@
 - ⚪ AbstractStreamConsumer:72 - Redis 失败无退避
 - ⚪ UnifiedEvaluationService:329 - 评分截断
 
-## 已修复的问题（18 个）
+## 已修复的问题（23 个）
 
 ### Critical (3个)
 1. 🟢 **PromptInjectionDetector.java:61** - 移除短消息长度限制，所有输入都进行注入检测
@@ -80,7 +80,7 @@
 7. 🟢 **InputSanitizer.java:63-64** - 清理换行符防止日志注入
 8. 🟢 **ContextManager.java:272-273** - 添加日志警告，记录 toolCalls 无法添加的问题
 
-### Medium (7个)
+### Medium (12个)
 9. 🟢 **NvcAgentChatService.java:125-129** - 移除 onErrorResume，让错误正确传播
 10. 🟢 **NvcEvaluationService.java:186** - 使用 try-with-resources 关闭 InputStream
 11. 🟢 **NvcEvaluationService.java:126** - 添加 userMessage null/blank 检查
@@ -88,11 +88,16 @@
 13. 🟢 **GlobalExceptionHandler.java:179-181** - 精确化 SSE 检测，要求 /api/ 前缀
 14. 🟢 **NvcEvaluationService.java:80-93** - 查询方法返回 Optional 而非 null
 15. 🟢 **NvcEvaluationService.java:155-178** - 添加 LLM 评分范围校验 (0-10)
+16. 🟢 **IntentRouter.java:172-174** - 修复职业过滤器逻辑错误，使用黑名单替代恒真式
+17. 🟢 **ToolExecutor.java:65** - 移除 allOf().join()，单工具失败不丢失其他结果
+18. 🟢 **CacheToolHook.java:61** - 添加定期清理过期缓存，防止内存泄漏
+19. 🟢 **RateLimitToolHook.java:49** - 添加定期清理过期计数器，防止内存泄漏
+20. 🟢 **AbstractStreamConsumer.java:52** - 添加 awaitTermination() 实现优雅关闭
 
 ### Low (3个)
-16. 🟢 **NvcPracticeDialogueService.java:235-245** - doOnError 添加 try-catch 防止遮蔽异常
-17. 🟢 **NvcPracticeSessionService.java:43-49** - 添加 @PostConstruct 校验 VALID_TRANSITIONS
-18. 🟢 **TraceController.java:38** - 添加 @Max(100) 限制分页大小
+21. 🟢 **NvcPracticeDialogueService.java:235-245** - doOnError 添加 try-catch 防止遮蔽异常
+22. 🟢 **NvcPracticeSessionService.java:43-49** - 添加 @PostConstruct 校验 VALID_TRANSITIONS
+23. 🟢 **TraceController.java:38** - 添加 @Max(100) 限制分页大小
 
 ## 迭代记录
 
@@ -124,6 +129,14 @@
 - **状态**: ✅ 完成
 - **开始时间**: 2026-08-08
 - **修复**: 5 个 Medium/Low bug
+- **编译**: ✅ 通过
+- **测试**: ✅ 通过
+- **Commit**: db996a3
+
+### 迭代 #5（第五批修复）
+- **状态**: ✅ 完成
+- **开始时间**: 2026-08-08
+- **修复**: 5 个 Medium bug
 - **编译**: ✅ 通过
 - **测试**: ✅ 通过
 - **Commit**: (待提交)

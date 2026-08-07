@@ -54,6 +54,17 @@ public abstract class AbstractStreamConsumer<T> {
         running.set(false);
         if (executorService != null) {
             executorService.shutdown();
+            try {
+                // 等待最多 10 秒让正在执行的任务完成
+                if (!executorService.awaitTermination(10, TimeUnit.SECONDS)) {
+                    log.warn("{} consumer did not terminate in 10 seconds, forcing shutdown", taskDisplayName());
+                    executorService.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                log.warn("{} consumer shutdown interrupted", taskDisplayName(), e);
+                executorService.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
         }
         log.info("{} consumer stopped: consumerName={}", taskDisplayName(), consumerName);
     }
