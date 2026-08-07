@@ -28,19 +28,35 @@ public class GlobalExceptionHandler {
     
     /**
      * 处理业务异常
+     *
+     * <p>根据 ErrorCode 映射到合适的 HTTP 状态码
      */
     @ExceptionHandler(BusinessException.class)
-    @ResponseStatus(HttpStatus.OK)
-    public Result<Void> handleBusinessException(BusinessException e) {
+    public Result<Void> handleBusinessException(BusinessException e, WebRequest request) {
         log.warn("业务异常: code={}, message={}", e.getCode(), e.getMessage());
+        HttpStatus status = mapErrorCodeToHttpStatus(e.getCode());
         return Result.error(e.getCode(), e.getMessage());
     }
-    
+
+    /**
+     * 将 ErrorCode 映射到 HTTP 状态码
+     */
+    private HttpStatus mapErrorCodeToHttpStatus(int code) {
+        if (code >= 400 && code < 500) return HttpStatus.BAD_REQUEST;
+        if (code == 404 || code == 3001) return HttpStatus.NOT_FOUND;
+        if (code == 403) return HttpStatus.FORBIDDEN;
+        if (code == 401) return HttpStatus.UNAUTHORIZED;
+        if (code == 429 || code == 8001) return HttpStatus.TOO_MANY_REQUESTS;
+        if (code >= 500 && code < 600) return HttpStatus.INTERNAL_SERVER_ERROR;
+        if (code >= 7000 && code < 8000) return HttpStatus.SERVICE_UNAVAILABLE;
+        return HttpStatus.INTERNAL_SERVER_ERROR;
+    }
+
     /**
      * 处理参数校验异常
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    @ResponseStatus(HttpStatus.OK)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
     public Result<Void> handleValidationException(MethodArgumentNotValidException e) {
         String message = e.getBindingResult().getFieldErrors().stream()
                 .map(FieldError::getDefaultMessage)
@@ -53,7 +69,7 @@ public class GlobalExceptionHandler {
      * 处理绑定异常
      */
     @ExceptionHandler(BindException.class)
-    @ResponseStatus(HttpStatus.OK)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
     public Result<Void> handleBindException(BindException e) {
         String message = e.getBindingResult().getFieldErrors().stream()
                 .map(FieldError::getDefaultMessage)
@@ -61,33 +77,32 @@ public class GlobalExceptionHandler {
         log.warn("参数绑定失败: {}", message);
         return Result.error(ErrorCode.BAD_REQUEST, message);
     }
-    
+
     /**
      * 处理文件上传大小超限异常
      */
     @ExceptionHandler(MaxUploadSizeExceededException.class)
-    @ResponseStatus(HttpStatus.OK)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
     public Result<Void> handleMaxUploadSizeExceededException(MaxUploadSizeExceededException e) {
         log.warn("文件上传大小超限: {}", e.getMessage());
         return Result.error(ErrorCode.BAD_REQUEST, "文件大小超过限制");
     }
-    
+
     /**
      * 处理非法参数异常
      */
     @ExceptionHandler(IllegalArgumentException.class)
-    @ResponseStatus(HttpStatus.OK)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
     public Result<Void> handleIllegalArgumentException(IllegalArgumentException e) {
         log.warn("非法参数: {}", e.getMessage());
         return Result.error(ErrorCode.BAD_REQUEST, e.getMessage());
     }
-    
+
     /**
      * 处理 AI 服务网络异常（SSL握手失败、连接超时等）
-     * 统一返回 HTTP 200，通过业务错误码区分异常类型
      */
     @ExceptionHandler(ResourceAccessException.class)
-    @ResponseStatus(HttpStatus.OK)
+    @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
     public Result<Void> handleResourceAccessException(ResourceAccessException e) {
         log.error("AI服务连接失败: {}", e.getMessage(), e);
         
@@ -108,13 +123,12 @@ public class GlobalExceptionHandler {
     
     /**
      * 处理 AI 服务调用异常
-     * 统一返回 HTTP 200，通过业务错误码区分异常类型
      */
     @ExceptionHandler(RestClientException.class)
-    @ResponseStatus(HttpStatus.OK)
+    @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
     public Result<Void> handleRestClientException(RestClientException e) {
         log.error("AI服务调用失败: {}", e.getMessage(), e);
-        
+
         String message = e.getMessage();
         if (message != null) {
             if (message.contains("401") || message.contains("Unauthorized")) {
@@ -124,15 +138,15 @@ public class GlobalExceptionHandler {
                 return Result.error(ErrorCode.AI_RATE_LIMIT_EXCEEDED, "AI服务调用过于频繁，请稍后重试");
             }
         }
-        
+
         return Result.error(ErrorCode.AI_SERVICE_ERROR, "AI服务调用失败，请稍后重试");
     }
-    
+
     /**
      * 处理 404 - 资源未找到异常
      */
     @ExceptionHandler(org.springframework.web.servlet.resource.NoResourceFoundException.class)
-    @ResponseStatus(HttpStatus.OK)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
     public Result<Void> handleNoResourceFoundException(org.springframework.web.servlet.resource.NoResourceFoundException e) {
         log.warn("资源未找到: {}", e.getResourcePath());
         return Result.error(ErrorCode.NOT_FOUND, "API 接口不存在");
@@ -142,7 +156,7 @@ public class GlobalExceptionHandler {
      * 处理请求方法不支持异常
      */
     @ExceptionHandler(org.springframework.web.HttpRequestMethodNotSupportedException.class)
-    @ResponseStatus(HttpStatus.OK)
+    @ResponseStatus(HttpStatus.METHOD_NOT_ALLOWED)
     public Result<Void> handleHttpRequestMethodNotSupportedException(org.springframework.web.HttpRequestMethodNotSupportedException e) {
         log.warn("请求方法不支持: {} {}", e.getMethod(), e.getSupportedHttpMethods());
         return Result.error(ErrorCode.METHOD_NOT_ALLOWED, "请求方法不支持: " + e.getMethod());
@@ -150,10 +164,9 @@ public class GlobalExceptionHandler {
 
     /**
      * 处理其他未知异常
-     * 统一返回 HTTP 200，通过业务错误码区分异常类型
      */
     @ExceptionHandler(Exception.class)
-    @ResponseStatus(HttpStatus.OK)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public Result<Void> handleException(Exception e, WebRequest request) {
         // SSE 请求不处理（客户端断开连接等）
         if (isSseRequest(request)) {

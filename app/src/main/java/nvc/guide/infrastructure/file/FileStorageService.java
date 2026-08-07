@@ -81,7 +81,7 @@ public class FileStorageService {
             return s3Client.getObjectAsBytes(getRequest).asByteArray();
         } catch (S3Exception e) {
             log.error("下载文件失败: {} - {}", fileKey, e.getMessage(), e);
-            throw new BusinessException(ErrorCode.STORAGE_DOWNLOAD_FAILED, "文件下载失败: " + e.getMessage());
+            throw new BusinessException(ErrorCode.STORAGE_DOWNLOAD_FAILED, "文件下载失败: " + e.getMessage(), e);
         }
     }
 
@@ -110,7 +110,7 @@ public class FileStorageService {
             throw new BusinessException(ErrorCode.STORAGE_UPLOAD_FAILED, "文件读取失败");
         } catch (S3Exception e) {
             log.error("上传文件到RustFS失败: {}", e.getMessage(), e);
-            throw new BusinessException(ErrorCode.STORAGE_UPLOAD_FAILED, "文件存储失败: " + e.getMessage());
+            throw new BusinessException(ErrorCode.STORAGE_UPLOAD_FAILED, "文件存储失败: " + e.getMessage(), e);
         }
     }
 
@@ -131,7 +131,7 @@ public class FileStorageService {
             // 区分"文件不存在"和"网络/权限错误"
             // 只有 NoSuchKeyException 才表示文件不存在，其他 S3 错误应该抛出
             log.error("检查文件存在性时发生S3错误: {} - {}", fileKey, e.getMessage());
-            throw new BusinessException(ErrorCode.STORAGE_DOWNLOAD_FAILED, "检查文件失败: " + e.getMessage());
+            throw new BusinessException(ErrorCode.STORAGE_DOWNLOAD_FAILED, "检查文件失败: " + e.getMessage(), e);
         }
     }
 
@@ -176,7 +176,7 @@ public class FileStorageService {
             log.info("文件删除成功: {}", fileKey);
         } catch (S3Exception e) {
             log.error("删除文件失败: {} - {}", fileKey, e.getMessage(), e);
-            throw new BusinessException(ErrorCode.STORAGE_DELETE_FAILED, "文件删除失败: " + e.getMessage());
+            throw new BusinessException(ErrorCode.STORAGE_DELETE_FAILED, "文件删除失败: " + e.getMessage(), e);
         }
     }
 
@@ -203,7 +203,7 @@ public class FileStorageService {
             log.info("存储桶创建成功: {}", storageConfig.getBucket());
         } catch (S3Exception e) {
             log.error("检查存储桶失败: {}", e.getMessage(), e);
-            throw new BusinessException(ErrorCode.STORAGE_UPLOAD_FAILED, "检查存储桶失败: " + e.getMessage());
+            throw new BusinessException(ErrorCode.STORAGE_UPLOAD_FAILED, "检查存储桶失败: " + e.getMessage(), e);
         }
     }
 

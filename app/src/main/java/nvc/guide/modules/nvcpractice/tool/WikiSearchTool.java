@@ -76,7 +76,7 @@ public class WikiSearchTool implements NvcTool {
             com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
             return mapper.readValue(input, WikiSearchInput.class);
         } catch (Exception e) {
-            throw new BusinessException(ErrorCode.INTERNAL_ERROR, "解析 Wiki 搜索参数失败: " + e.getMessage());
+            throw new BusinessException(ErrorCode.INTERNAL_ERROR, "解析 Wiki 搜索参数失败: " + e.getMessage(), e);
         }
     }
 

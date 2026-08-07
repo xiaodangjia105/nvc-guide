@@ -145,7 +145,7 @@ app:
       # 小米 MiMo（OpenAI 兼容）
       mimo:
         base-url: https://api.xiaomimimo.com/v1
-        api-key: ${PROVIDER_MIMO_API_KEY:sk-cqtgohrrudni9hrhlqun888fx9m8k2ulpqy5itgp6pahymph}
+        api-key: ${PROVIDER_MIMO_API_KEY:}
         model: ${PROVIDER_MIMO_MODEL:mimo-v2.5}
         supports-embedding: false
       # 千问向量模型（RAG 知识库向量化）

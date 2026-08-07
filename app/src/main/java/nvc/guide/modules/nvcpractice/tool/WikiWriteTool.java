@@ -84,7 +84,7 @@ public class WikiWriteTool implements NvcTool {
             com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
             return mapper.readValue(input, WikiWriteInput.class);
         } catch (Exception e) {
-            throw new BusinessException(ErrorCode.INTERNAL_ERROR, "解析 Wiki 写入参数失败: " + e.getMessage());
+            throw new BusinessException(ErrorCode.INTERNAL_ERROR, "解析 Wiki 写入参数失败: " + e.getMessage(), e);
         }
     }
 
