@@ -68,17 +68,24 @@ public class OrderedTtsChunkEmitter {
 
   /**
    * 标记所有任务已提交，触发最终合并
+   *
+   * <p>添加最大等待超时（30秒），防止 TTS 任务挂起导致永久阻塞
    */
   public void markComplete() {
     drainExecutor.submit(() -> {
-      // 等待所有分片完成
-      while (!chunks.isEmpty()) {
+      // 等待所有分片完成，最多 30 秒
+      long deadline = System.currentTimeMillis() + 30_000;
+      while (!chunks.isEmpty() && System.currentTimeMillis() < deadline) {
         try {
           Thread.sleep(50);
         } catch (InterruptedException e) {
           Thread.currentThread().interrupt();
           return;
         }
+      }
+
+      if (!chunks.isEmpty()) {
+        log.warn("[TtsEmitter] markComplete timed out with {} chunks remaining", chunks.size());
       }
 
       // 合并所有音频

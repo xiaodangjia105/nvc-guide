@@ -47,6 +47,19 @@ public class VoicePipelineCoordinator {
   /** 阻塞 LLM/TTS 工作的虚拟线程池 */
   private final ExecutorService pipelineExecutor = Executors.newVirtualThreadPerTaskExecutor();
 
+  @jakarta.annotation.PreDestroy
+  public void destroy() {
+    pipelineExecutor.shutdown();
+    try {
+      if (!pipelineExecutor.awaitTermination(5, java.util.concurrent.TimeUnit.SECONDS)) {
+        pipelineExecutor.shutdownNow();
+      }
+    } catch (InterruptedException e) {
+      pipelineExecutor.shutdownNow();
+      Thread.currentThread().interrupt();
+    }
+  }
+
   public VoicePipelineCoordinator(
       AsrProvider asrProvider,
       TtsProvider ttsProvider,
@@ -134,6 +147,9 @@ public class VoicePipelineCoordinator {
 
     log.info("[Pipeline] Submit from session {}: {}", sessionId, userText);
 
+    // 只解析一次 sessionId
+    Long parsedSessionId = parseSessionId(sessionId);
+
     pipelineExecutor.submit(() -> {
       // CAS 防并发
       if (!state.processing.compareAndSet(false, true)) {
@@ -145,7 +161,7 @@ public class VoicePipelineCoordinator {
 
       try {
         // 1. 构建上下文 + Agent 调度
-        PracticeContext context = voiceService.buildVoiceContext(parseSessionId(sessionId));
+        PracticeContext context = voiceService.buildVoiceContext(parsedSessionId);
         AgentDecision decision = voiceService.decideNextAgent(context);
 
         log.info("[Pipeline] Agent decision: {}, reason: {}", decision.scene(), decision.reason());
@@ -188,13 +204,13 @@ public class VoicePipelineCoordinator {
 
         // 5. 保存消息
         voiceService.saveMessage(
-            parseSessionId(sessionId), userText, aiText, decision.scene().name());
+            parsedSessionId, userText, aiText, decision.scene().name());
 
         // 6. 发送最终文本
         sendTextResponse(wsSession, aiText, decision.scene().name());
 
         // 7. 触发实时评估
-        voiceService.triggerEvaluation(parseSessionId(sessionId));
+        voiceService.triggerEvaluation(parsedSessionId);
 
       } catch (Exception e) {
         log.error("[Pipeline] Error processing submit for session {}: {}",

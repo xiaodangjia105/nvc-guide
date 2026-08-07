@@ -77,7 +77,7 @@ public interface KnowledgeBaseRepository extends JpaRepository<KnowledgeBaseEnti
      * @param ids 知识库ID列表
      * @return 更新的行数
      */
-    @Modifying
+    @Modifying(clearAutomatically = true)
     @Query("UPDATE KnowledgeBaseEntity k SET k.questionCount = k.questionCount + 1 WHERE k.id IN :ids")
     int incrementQuestionCountBatch(@Param("ids") List<Long> ids);
 
