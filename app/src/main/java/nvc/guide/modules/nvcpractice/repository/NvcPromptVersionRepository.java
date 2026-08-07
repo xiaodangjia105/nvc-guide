@@ -3,6 +3,7 @@ package nvc.guide.modules.nvcpractice.repository;
 import nvc.guide.modules.nvcpractice.model.NvcAgentScene;
 import nvc.guide.modules.nvcpractice.model.NvcPromptVersionEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -41,4 +42,11 @@ public interface NvcPromptVersionRepository extends JpaRepository<NvcPromptVersi
      * 查找某个场景某个版本
      */
     Optional<NvcPromptVersionEntity> findByAgentSceneAndVersion(NvcAgentScene agentScene, Integer version);
+
+    /**
+     * 原子增加调用计数
+     */
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE NvcPromptVersionEntity v SET v.totalCalls = v.totalCalls + 1 WHERE v.id = :id")
+    void incrementCallCount(@Param("id") Long id);
 }

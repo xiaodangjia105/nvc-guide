@@ -1,6 +1,11 @@
 package nvc.guide.modules.nvcpractice.model;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
 
 import jakarta.persistence.*;
+import lombok.EqualsAndHashCode;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
@@ -10,7 +15,10 @@ import java.time.LocalDateTime;
 @Table(name = "nvc_practice_message", indexes = {
     @Index(name = "idx_nvc_message_session", columnList = "session_id, sequence_num")
 })
-@Data
+@Getter
+@Setter
+@ToString
+@EqualsAndHashCode(of = "id")
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

@@ -1,6 +1,11 @@
 package nvc.guide.modules.nvcassistant.model;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
 
 import jakarta.persistence.*;
+import lombok.EqualsAndHashCode;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -12,7 +17,10 @@ import java.time.LocalDateTime;
 @Table(name = "nvc_assistant_messages", indexes = {
     @Index(name = "idx_assistant_message_conv_seq", columnList = "conversation_id, sequence_num")
 })
-@Data
+@Getter
+@Setter
+@ToString
+@EqualsAndHashCode(of = "id")
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

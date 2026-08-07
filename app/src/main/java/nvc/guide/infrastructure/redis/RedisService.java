@@ -75,7 +75,11 @@ public class RedisService {
         if (value == null) {
             RLock lock = redissonClient.getLock("lock:cache:" + key);
             try {
-                lock.lock(5, java.util.concurrent.TimeUnit.SECONDS);
+                // 使用 tryLock：等待 5 秒获取锁，锁租期 30 秒（覆盖 loader 最大耗时）
+                if (!lock.tryLock(5, 30, java.util.concurrent.TimeUnit.SECONDS)) {
+                    // 获取锁超时，返回缓存中的值（可能仍为 null）
+                    return bucket.get();
+                }
                 // 双重检查：获取锁后再次检查缓存
                 value = bucket.get();
                 if (value == null) {
@@ -84,6 +88,9 @@ public class RedisService {
                         bucket.set(value, ttl);
                     }
                 }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.warn("Cache lock interrupted for key: {}", key);
             } finally {
                 if (lock.isHeldByCurrentThread()) {
                     lock.unlock();

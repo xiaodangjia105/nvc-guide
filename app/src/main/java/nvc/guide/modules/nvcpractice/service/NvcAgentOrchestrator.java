@@ -296,11 +296,11 @@ public class NvcAgentOrchestrator {
         """.formatted(
         context.getSession().getPracticeMode(),
         context.getRoundCount(),
-        eval.getObservationScore(),
-        eval.getFeelingScore(),
-        eval.getNeedScore(),
-        eval.getRequestScore(),
-        eval.getOverallScore());
+        eval.getObservationScore() != null ? eval.getObservationScore() : 0,
+        eval.getFeelingScore() != null ? eval.getFeelingScore() : 0,
+        eval.getNeedScore() != null ? eval.getNeedScore() : 0,
+        eval.getRequestScore() != null ? eval.getRequestScore() : 0,
+        eval.getOverallScore() != null ? eval.getOverallScore() : 0);
 
     return agentChatService.chatPlain(evaluatorConfig, reflectPrompt, "");
   }

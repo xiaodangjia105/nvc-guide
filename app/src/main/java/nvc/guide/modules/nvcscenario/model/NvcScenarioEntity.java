@@ -1,6 +1,11 @@
 package nvc.guide.modules.nvcscenario.model;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
 
 import jakarta.persistence.*;
+import lombok.EqualsAndHashCode;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
@@ -10,7 +15,10 @@ import java.time.LocalDateTime;
 @Table(name = "nvc_scenario", indexes = {
     @Index(name = "idx_nvc_scenario_type", columnList = "scenario_type, difficulty")
 })
-@Data
+@Getter
+@Setter
+@ToString
+@EqualsAndHashCode(of = "id")
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

@@ -157,14 +157,11 @@ public class NvcPromptVersionService {
     }
 
     /**
-     * 增加调用计数
+     * 原子增加调用计数
      */
     @Transactional
     public void incrementCallCount(Long versionId) {
-        versionRepository.findById(versionId).ifPresent(v -> {
-            v.setTotalCalls(v.getTotalCalls() + 1);
-            versionRepository.save(v);
-        });
+        versionRepository.incrementCallCount(versionId);
     }
 
     private void clearAgentConfigCache(NvcAgentScene scene) {

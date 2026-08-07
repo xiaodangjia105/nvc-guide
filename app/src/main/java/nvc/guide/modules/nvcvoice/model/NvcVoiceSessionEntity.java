@@ -1,4 +1,8 @@
 package nvc.guide.modules.nvcvoice.model;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -11,9 +15,13 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
+import lombok.EqualsAndHashCode;
 import lombok.AllArgsConstructor;
+import lombok.EqualsAndHashCode;
 import lombok.Builder;
+import lombok.EqualsAndHashCode;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import nvc.guide.common.model.AsyncTaskStatus;
 import nvc.guide.modules.nvcpractice.model.NvcAgentScene;
@@ -25,7 +33,10 @@ import nvc.guide.modules.nvcpractice.model.NvcPracticeMode;
  */
 @Entity
 @Table(name = "nvc_voice_sessions")
-@Data
+@Getter
+@Setter
+@ToString
+@EqualsAndHashCode(of = "id")
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

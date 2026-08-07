@@ -1,6 +1,11 @@
 package nvc.guide.modules.nvcpractice.model;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
 
 import jakarta.persistence.*;
+import lombok.EqualsAndHashCode;
 import lombok.*;
 import java.time.LocalDateTime;
 
@@ -12,7 +17,10 @@ import java.time.LocalDateTime;
 @Table(name = "nvc_prompt_version", indexes = {
     @Index(name = "idx_prompt_version_scene", columnList = "agent_scene, is_active")
 })
-@Data
+@Getter
+@Setter
+@ToString
+@EqualsAndHashCode(of = "id")
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

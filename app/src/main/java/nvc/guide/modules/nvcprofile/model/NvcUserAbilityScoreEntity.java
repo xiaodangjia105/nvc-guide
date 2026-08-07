@@ -1,6 +1,11 @@
 package nvc.guide.modules.nvcprofile.model;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
 
 import jakarta.persistence.*;
+import lombok.EqualsAndHashCode;
 import lombok.*;
 import java.time.LocalDateTime;
 import nvc.guide.modules.nvcpractice.model.NvcPracticeType;
@@ -9,7 +14,10 @@ import nvc.guide.modules.nvcpractice.model.NvcPracticeType;
 @Table(name = "nvc_user_ability_score", indexes = {
     @Index(name = "idx_nvc_ability_user", columnList = "user_id, scored_at")
 })
-@Data
+@Getter
+@Setter
+@ToString
+@EqualsAndHashCode(of = "id")
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

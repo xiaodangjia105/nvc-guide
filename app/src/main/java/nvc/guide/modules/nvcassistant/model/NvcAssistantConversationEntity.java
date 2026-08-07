@@ -1,6 +1,11 @@
 package nvc.guide.modules.nvcassistant.model;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
 
 import jakarta.persistence.*;
+import lombok.EqualsAndHashCode;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -10,7 +15,10 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(name = "nvc_assistant_conversations")
-@Data
+@Getter
+@Setter
+@ToString
+@EqualsAndHashCode(of = "id")
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

@@ -1,6 +1,11 @@
 package nvc.guide.modules.nvcpractice.model;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
 
 import jakarta.persistence.*;
+import lombok.EqualsAndHashCode;
 import lombok.*;
 import java.time.LocalDateTime;
 
@@ -14,7 +19,10 @@ import java.time.LocalDateTime;
     @Index(name = "idx_feedback_session", columnList = "session_id"),
     @Index(name = "idx_feedback_scene", columnList = "agent_scene")
 })
-@Data
+@Getter
+@Setter
+@ToString
+@EqualsAndHashCode(of = "id")
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

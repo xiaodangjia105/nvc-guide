@@ -233,13 +233,40 @@ public class NvcPracticeSessionService {
    * 结束会话并执行最终评估
    * 从 Controller 上移的业务逻辑
    *
-   * <p>注意：此方法使用 @Transactional 确保数据库操作的原子性。
+   * <p>设计：DB 操作在事务内，外部 API 调用（LLM、RAG）在事务外。
    * evaluationService.evaluateFinal 使用 NOT_SUPPORTED 传播，LLM 调用在事务外执行。
    *
    * @return 包含评估状态的会话实体
    */
-  @Transactional
   public CompleteResult completeAndEvaluate(Long sessionId) {
+    // 阶段 1：事务内的 DB 操作
+    CompleteResult result = completeAndEvaluateInTransaction(sessionId);
+
+    // 阶段 2：事务外的外部 API 调用（反思、事件发布）
+    Long userId = result.session().getUserId();
+
+    // 练习后反思（异步，不阻塞主流程）
+    try {
+      PracticeContext context = orchestrator.buildPracticeContext(sessionId, userId);
+      reflectionService.reflectAndSave(context);
+      log.info("Reflection completed: sessionId={}", sessionId);
+    } catch (Exception e) {
+      log.warn("Reflection failed (non-blocking): sessionId={}, error={}",
+          sessionId, e.getMessage());
+    }
+
+    // 发布练习完成事件
+    eventPublisher.publishEvent(
+        new PracticeCompletedEvent(this, sessionId, userId, result.evaluationFailed()));
+
+    return result;
+  }
+
+  /**
+   * 事务内的 DB 操作部分
+   */
+  @Transactional
+  protected CompleteResult completeAndEvaluateInTransaction(Long sessionId) {
     NvcPracticeSessionEntity session = completeSession(sessionId);
     Long userId = session.getUserId();
 
@@ -265,20 +292,6 @@ public class NvcPracticeSessionService {
       log.error("Final evaluation failed: sessionId={}", sessionId, e);
       evaluationFailed = true;
     }
-
-    // 练习后反思（异步，不阻塞主流程）
-    try {
-      PracticeContext context = orchestrator.buildPracticeContext(sessionId, userId);
-      reflectionService.reflectAndSave(context);
-      log.info("Reflection completed: sessionId={}", sessionId);
-    } catch (Exception e) {
-      log.warn("Reflection failed (non-blocking): sessionId={}, error={}",
-          sessionId, e.getMessage());
-    }
-
-    // 发布练习完成事件
-    eventPublisher.publishEvent(
-        new PracticeCompletedEvent(this, sessionId, userId, evaluationFailed));
 
     return new CompleteResult(session, evaluationFailed, evaluationSkipped);
   }
