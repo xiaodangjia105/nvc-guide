@@ -211,9 +211,10 @@ public class AgentLoop {
                                 .build());
 
                             // 工具结果消息（注入明确指令，防止 LLM 幻觉）
+                            // 注意：ToolExecutor 已经为失败结果添加了 "Error: " 前缀，此处不再重复
                             String responseText = result.skipped()
                                 ? "跳过: " + result.skipReason()
-                                : (result.success() ? result.result() : "Error: " + result.result());
+                                : result.result();
 
                             // 当工具返回空结果或"没有找到"时，注入明确指令
                             if (result.success() && isEmptyResult(result.result())) {

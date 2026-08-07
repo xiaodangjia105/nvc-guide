@@ -76,6 +76,13 @@ public class TraceStreamConsumer extends AbstractStreamConsumer<TraceStreamProdu
                 .finalStatus(data.get("finalStatus"))
                 .build();
 
+            // 检查是否是生产者序列化失败发送的降级消息
+            if (data.containsKey("error")) {
+                log.error("Received degraded trace message: traceId={}, error={}",
+                    data.get("traceId"), data.get("error"));
+                return null; // 返回 null 让框架 ack 并丢弃
+            }
+
             List<AgentSpanEntity> spans = objectMapper.readValue(
                 data.get("spans"), new TypeReference<>() {});
 

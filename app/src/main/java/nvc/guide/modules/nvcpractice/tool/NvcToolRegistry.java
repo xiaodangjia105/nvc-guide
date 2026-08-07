@@ -106,9 +106,25 @@ public class NvcToolRegistry {
         }
         Map<String, Object> map = aiContext.getContext();
         return NvcToolContext.builder()
-            .userId((Long) map.get("nvc.userId"))
-            .sessionId((Long) map.get("nvc.sessionId"))
+            .userId(toLong(map.get("nvc.userId")))
+            .sessionId(toLong(map.get("nvc.sessionId")))
             .practiceContext((PracticeContext) map.get("nvc.practiceContext"))
             .build();
+    }
+
+    /**
+     * 安全地将 Object 转换为 Long
+     * 处理 Integer、Long、Number 等类型，避免 ClassCastException
+     */
+    private Long toLong(Object val) {
+        if (val == null) return null;
+        if (val instanceof Long l) return l;
+        if (val instanceof Number n) return n.longValue();
+        try {
+            return Long.parseLong(val.toString());
+        } catch (NumberFormatException e) {
+            log.warn("Failed to convert to Long: {}", val);
+            return null;
+        }
     }
 }

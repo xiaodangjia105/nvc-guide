@@ -68,6 +68,15 @@ public class TraceManager {
     }
 
     /**
+     * 清理 ThreadLocal，防止内存泄漏
+     * 应在请求结束时调用（如 Filter/Interceptor 的 finally 块中）
+     */
+    public void cleanup() {
+        CURRENT_TRACE.remove();
+        log.debug("[Trace] ThreadLocal cleaned up");
+    }
+
+    /**
      * 创建子 Span
      *
      * @param spanType      Span 类型（INTENT_ROUTING / LLM_CALL / TOOL_CALL / COMPRESSION / EVALUATION）
