@@ -58,36 +58,23 @@ public class NvcSemanticCacheService {
     /**
      * 查询语义缓存
      * @return 缓存命中时返回响应文本，未命中返回 null
+     *
+     * <p>注意：embedding 调用在事务外执行，避免占用 DB 连接
      */
-    @Transactional
     public String lookup(String query, NvcAgentScene scene) {
         if (!enabled || !isCacheable(scene)) {
             return null;
         }
 
         try {
+            // embedding 调用在事务外
             String embeddingStr = embedQuery(query);
             if (embeddingStr == null) {
                 return null;
             }
 
-            List<NvcSemanticCacheEntity> results = cacheRepository
-                .findBySimilarity(embeddingStr, similarityThreshold, maxResults);
-
-            if (results.isEmpty()) {
-                log.debug("Semantic cache miss: query={}", query.substring(0, Math.min(50, query.length())));
-                return null;
-            }
-
-            // 命中缓存：更新命中计数
-            NvcSemanticCacheEntity best = results.get(0);
-            best.setHitCount(best.getHitCount() + 1);
-            best.setLastHitAt(LocalDateTime.now());
-            cacheRepository.save(best);
-
-            log.info("Semantic cache hit: similarity={:.3f}, hitCount={}, query={}",
-                1.0, best.getHitCount(), query.substring(0, Math.min(50, query.length())));
-            return best.getResponse();
+            // 数据库操作在事务内
+            return lookupInTransaction(embeddingStr, query);
 
         } catch (Exception e) {
             log.warn("Semantic cache lookup failed, falling through to LLM: {}", e.getMessage());
@@ -95,21 +82,54 @@ public class NvcSemanticCacheService {
         }
     }
 
+    @Transactional
+    protected String lookupInTransaction(String embeddingStr, String query) {
+        List<NvcSemanticCacheEntity> results = cacheRepository
+            .findBySimilarity(embeddingStr, similarityThreshold, maxResults);
+
+        if (results.isEmpty()) {
+            log.debug("Semantic cache miss: query={}", query.substring(0, Math.min(50, query.length())));
+            return null;
+        }
+
+        // 命中缓存：更新命中计数
+        NvcSemanticCacheEntity best = results.get(0);
+        best.setHitCount((best.getHitCount() != null ? best.getHitCount() : 0) + 1);
+        best.setLastHitAt(LocalDateTime.now());
+        cacheRepository.save(best);
+
+        log.info("Semantic cache hit: hitCount={}, query={}",
+            best.getHitCount(), query.substring(0, Math.min(50, query.length())));
+        return best.getResponse();
+    }
+
     /**
      * 将 LLM 响应存入缓存
+     *
+     * <p>注意：embedding 调用在事务外执行，避免占用 DB 连接
      */
-    @Transactional
     public void cache(String query, String response, NvcAgentScene scene) {
         if (!enabled || !isCacheable(scene)) {
             return;
         }
 
         try {
+            // embedding 调用在事务外
             String embeddingStr = embedQuery(query);
             if (embeddingStr == null) {
                 return;
             }
 
+            // 数据库操作在事务内
+            cacheInTransaction(query, response, scene, embeddingStr);
+        } catch (Exception e) {
+            log.warn("Failed to cache semantic result: {}", e.getMessage());
+        }
+    }
+
+    @Transactional
+    protected void cacheInTransaction(String query, String response, NvcAgentScene scene, String embeddingStr) {
+        try {
             NvcSemanticCacheEntity entity = NvcSemanticCacheEntity.builder()
                 .queryText(query)
                 .queryEmbedding(embeddingStr)

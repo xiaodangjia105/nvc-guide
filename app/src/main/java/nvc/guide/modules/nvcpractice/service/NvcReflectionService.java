@@ -29,18 +29,32 @@ public class NvcReflectionService {
     /**
      * 执行反思并存储结果
      * 在练习完成后调用
+     *
+     * <p>注意：LLM 调用在事务外执行，避免占用 DB 连接。
+     * 只有数据库操作在事务内执行。
      */
-    @Transactional
     public NvcPracticeReflectionEntity reflectAndSave(PracticeContext context) {
         try {
+            // LLM 调用在事务外
             String reflectJson = orchestrator.reflect(context);
-            return parseAndSave(context, reflectJson);
+            // 数据库操作在事务内
+            return parseAndSaveInTransaction(context, reflectJson);
         } catch (Exception e) {
             log.error("Reflection failed for session {}: {}",
                 context.getSession().getId(), e.getMessage());
             // 反思失败不阻塞主流程，保存默认结果
-            return saveDefaultReflection(context);
+            return saveDefaultReflectionInTransaction(context);
         }
+    }
+
+    @Transactional
+    protected NvcPracticeReflectionEntity parseAndSaveInTransaction(PracticeContext context, String reflectJson) {
+        return parseAndSave(context, reflectJson);
+    }
+
+    @Transactional
+    protected NvcPracticeReflectionEntity saveDefaultReflectionInTransaction(PracticeContext context) {
+        return saveDefaultReflection(context);
     }
 
     /**

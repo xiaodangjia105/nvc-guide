@@ -266,7 +266,8 @@ public class AgentLoop {
             } catch (Exception e) {
                 long elapsed = System.currentTimeMillis() - startTime;
                 log.error("[AgentLoop] Failed: userId={}, elapsed={}ms", userId, elapsed, e);
-                sink.next(AgentEvent.error("对话出错: " + e.getMessage()));
+                // 不泄露内部异常消息给客户端
+                sink.next(AgentEvent.error("对话出错，请稍后重试"));
                 sink.complete();
             }
         });
@@ -332,8 +333,11 @@ public class AgentLoop {
      * 从 ChatResponse 中提取文本内容
      */
     private String extractContent(ChatResponse response) {
+        if (response == null) {
+            return null;
+        }
         Generation generation = response.getResult();
-        if (generation == null) {
+        if (generation == null || generation.getOutput() == null) {
             return null;
         }
         String content = generation.getOutput().getText();
