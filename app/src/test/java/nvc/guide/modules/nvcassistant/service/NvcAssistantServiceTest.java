@@ -57,7 +57,7 @@ class NvcAssistantServiceTest {
         } else {
             when(messageService.getConversationOrThrow(convId, userId)).thenReturn(conversation);
         }
-        when(messageService.getMessageCount(convId)).thenReturn(existingMsgCount);
+        when(messageService.getNextSequenceNum(convId)).thenReturn(existingMsgCount);
         when(messageService.buildUserMessage(eq(convId), eq(userId), eq(message), eq(existingMsgCount)))
             .thenReturn(NvcAssistantMessageEntity.builder().build());
 

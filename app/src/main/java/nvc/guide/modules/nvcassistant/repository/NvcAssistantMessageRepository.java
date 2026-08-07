@@ -3,6 +3,8 @@ package nvc.guide.modules.nvcassistant.repository;
 import nvc.guide.modules.nvcassistant.model.NvcAssistantMessageEntity;
 import nvc.guide.modules.nvcassistant.model.NvcAssistantMessageRole;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -25,4 +27,10 @@ public interface NvcAssistantMessageRepository extends JpaRepository<NvcAssistan
      */
     Optional<NvcAssistantMessageEntity> findTopByConversationIdAndRoleOrderBySequenceNumDesc(
         Long conversationId, NvcAssistantMessageRole role);
+
+    /**
+     * 获取对话中最大的序列号
+     */
+    @Query("SELECT MAX(m.sequenceNum) FROM NvcAssistantMessageEntity m WHERE m.conversationId = :conversationId")
+    Optional<Integer> findMaxSequenceNumByConversationId(@Param("conversationId") Long conversationId);
 }

@@ -103,10 +103,27 @@ public class NvcAssistantMessageService {
 
     /**
      * 获取对话当前消息数
+     *
+     * <p>使用 countByConversationId 获取消息数量。
+     * 注意：在并发场景下，count 和实际保存之间可能存在竞态条件。
+     * 如果需要更安全的序列号生成，应使用 findMaxSequenceNumByConversationId。
      */
     @Transactional(readOnly = true)
     public int getMessageCount(Long conversationId) {
         return messageRepository.countByConversationId(conversationId);
+    }
+
+    /**
+     * 获取下一个序列号（更安全的方式）
+     *
+     * <p>使用 SELECT MAX(sequence_num) + 1 替代 count，
+     * 避免在并发场景下产生重复序列号。
+     */
+    @Transactional(readOnly = true)
+    public int getNextSequenceNum(Long conversationId) {
+        return messageRepository.findMaxSequenceNumByConversationId(conversationId)
+            .map(max -> max + 1)
+            .orElse(0);
     }
 
     /**

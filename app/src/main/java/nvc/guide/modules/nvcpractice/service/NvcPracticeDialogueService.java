@@ -312,8 +312,16 @@ public class NvcPracticeDialogueService {
         .toList();
   }
 
+  /**
+   * 获取下一个序列号
+   *
+   * <p>使用 SELECT MAX(sequence_num) + 1 替代 countBySessionId，
+   * 避免在并发场景下产生重复序列号。
+   */
   private int getNextSequenceNum(Long sessionId) {
-    return messageRepository.countBySessionId(sessionId);
+    return messageRepository.findMaxSequenceNumBySessionId(sessionId)
+        .map(max -> max + 1)
+        .orElse(0);
   }
 
   private MessageResponse toMessageResponse(

@@ -11,6 +11,9 @@ import java.time.LocalDateTime;
 
 /**
  * Agent 指标查询 API
+ *
+ * <p>TODO [安全] 此控制器暴露内部运营数据（token 使用量、延迟、工具调用统计等），
+ * 目前无认证保护。生产环境应添加 @PreAuthorize("hasRole('ADMIN')") 或等效认证。
  */
 @RestController
 @RequestMapping("/api/nvc/metrics")

@@ -99,9 +99,14 @@ public class PromptSanitizer {
      * UUID 片段使攻击者无法提前构造伪造分隔符。
      */
     public String wrapWithDelimiters(String label, String text) {
+        // 清理 label，只保留字母数字和下划线/连字符
+        String safeLabel = label.replaceAll("[^a-zA-Z0-9_-]", "");
+        if (safeLabel.isBlank()) {
+            safeLabel = "data";
+        }
         String id = UUID.randomUUID().toString().substring(0, 8);
-        String openTag = "<data-boundary-" + id + "-" + label + ">";
-        String closeTag = "</data-boundary-" + id + "-" + label + ">";
+        String openTag = "<data-boundary-" + id + "-" + safeLabel + ">";
+        String closeTag = "</data-boundary-" + id + "-" + safeLabel + ">";
         return openTag + "\n" + text + "\n" + closeTag;
     }
 

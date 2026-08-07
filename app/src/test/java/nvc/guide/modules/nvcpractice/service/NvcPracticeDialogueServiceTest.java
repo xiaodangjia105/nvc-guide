@@ -26,6 +26,7 @@ import reactor.core.publisher.Flux;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -110,7 +111,7 @@ class NvcPracticeDialogueServiceTest {
       when(sessionService.getSession(1L))
           .thenReturn(createdSession)
           .thenReturn(inProgressSession);
-      when(messageRepository.countBySessionId(1L)).thenReturn(0);
+      when(messageRepository.findMaxSequenceNumBySessionId(1L)).thenReturn(Optional.empty());
       when(messageRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
       when(orchestrator.buildPracticeContext(1L, 100L))
           .thenReturn(PracticeContext.builder().build());
@@ -136,7 +137,7 @@ class NvcPracticeDialogueServiceTest {
       NvcPracticeSessionEntity session =
           buildSession(NvcPracticeMode.FREE_DIALOG, null);
       when(sessionService.getSession(1L)).thenReturn(session);
-      when(messageRepository.countBySessionId(1L)).thenReturn(0);
+      when(messageRepository.findMaxSequenceNumBySessionId(1L)).thenReturn(Optional.empty());
       when(messageRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
       when(orchestrator.buildPracticeContext(1L, 100L))
           .thenReturn(PracticeContext.builder().build());
@@ -158,7 +159,7 @@ class NvcPracticeDialogueServiceTest {
       NvcPracticeSessionEntity session =
           buildSession(NvcPracticeMode.FREE_DIALOG, null);
       when(sessionService.getSession(1L)).thenReturn(session);
-      when(messageRepository.countBySessionId(1L)).thenReturn(2);
+      when(messageRepository.findMaxSequenceNumBySessionId(1L)).thenReturn(Optional.of(2));
       when(messageRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
       when(orchestrator.buildPracticeContext(1L, 100L))
           .thenReturn(PracticeContext.builder().build());
@@ -198,7 +199,7 @@ class NvcPracticeDialogueServiceTest {
           .scenarioId(42L)
           .build();
       when(sessionService.getSession(1L)).thenReturn(session);
-      when(messageRepository.countBySessionId(1L)).thenReturn(0);
+      when(messageRepository.findMaxSequenceNumBySessionId(1L)).thenReturn(Optional.empty());
       when(messageRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
       when(orchestrator.buildPracticeContext(1L, 100L))
           .thenReturn(PracticeContext.builder().build());
@@ -221,7 +222,7 @@ class NvcPracticeDialogueServiceTest {
       NvcPracticeSessionEntity session =
           buildSession(NvcPracticeMode.FREE_DIALOG, null);
       when(sessionService.getSession(1L)).thenReturn(session);
-      when(messageRepository.countBySessionId(1L)).thenReturn(0);
+      when(messageRepository.findMaxSequenceNumBySessionId(1L)).thenReturn(Optional.empty());
       when(messageRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
       when(orchestrator.buildPracticeContext(1L, 100L))
           .thenReturn(PracticeContext.builder().build());
@@ -243,7 +244,7 @@ class NvcPracticeDialogueServiceTest {
       NvcPracticeSessionEntity session =
           buildSession(NvcPracticeMode.FREE_DIALOG, null);
       when(sessionService.getSession(1L)).thenReturn(session);
-      when(messageRepository.countBySessionId(1L)).thenReturn(0);
+      when(messageRepository.findMaxSequenceNumBySessionId(1L)).thenReturn(Optional.empty());
       when(messageRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
       when(orchestrator.buildPracticeContext(1L, 100L))
           .thenReturn(PracticeContext.builder().build());
@@ -276,7 +277,7 @@ class NvcPracticeDialogueServiceTest {
       NvcPracticeSessionEntity session =
           buildSession(NvcPracticeMode.STRUCTURED_FOUR_STEP, NvcPracticeStep.OBSERVE);
       when(sessionService.getSession(1L)).thenReturn(session);
-      when(messageRepository.countBySessionId(1L)).thenReturn(0);
+      when(messageRepository.findMaxSequenceNumBySessionId(1L)).thenReturn(Optional.empty());
       when(messageRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
       AgentDecision decision = new AgentDecision(
@@ -309,7 +310,7 @@ class NvcPracticeDialogueServiceTest {
       NvcPracticeSessionEntity session =
           buildSession(NvcPracticeMode.STRUCTURED_FOUR_STEP, NvcPracticeStep.OBSERVE);
       when(sessionService.getSession(1L)).thenReturn(session);
-      when(messageRepository.countBySessionId(1L)).thenReturn(0);
+      when(messageRepository.findMaxSequenceNumBySessionId(1L)).thenReturn(Optional.empty());
       when(messageRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
       AgentDecision decision = new AgentDecision(
@@ -335,7 +336,7 @@ class NvcPracticeDialogueServiceTest {
       NvcPracticeSessionEntity session =
           buildSession(NvcPracticeMode.FREE_DIALOG, null);
       when(sessionService.getSession(1L)).thenReturn(session);
-      when(messageRepository.countBySessionId(1L)).thenReturn(0);
+      when(messageRepository.findMaxSequenceNumBySessionId(1L)).thenReturn(Optional.empty());
       when(messageRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
       AgentDecision decision = new AgentDecision(
@@ -360,7 +361,7 @@ class NvcPracticeDialogueServiceTest {
       NvcPracticeSessionEntity session =
           buildSession(NvcPracticeMode.STRUCTURED_FOUR_STEP, NvcPracticeStep.OBSERVE);
       when(sessionService.getSession(1L)).thenReturn(session);
-      when(messageRepository.countBySessionId(1L)).thenReturn(0);
+      when(messageRepository.findMaxSequenceNumBySessionId(1L)).thenReturn(Optional.empty());
       when(messageRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
       AgentDecision decision = new AgentDecision(
@@ -392,7 +393,7 @@ class NvcPracticeDialogueServiceTest {
       NvcPracticeSessionEntity session =
           buildSession(NvcPracticeMode.STRUCTURED_FOUR_STEP, NvcPracticeStep.OBSERVE);
       when(sessionService.getSession(1L)).thenReturn(session);
-      when(messageRepository.countBySessionId(1L)).thenReturn(0);
+      when(messageRepository.findMaxSequenceNumBySessionId(1L)).thenReturn(Optional.empty());
       when(messageRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
       AgentDecision decision = new AgentDecision(
@@ -428,7 +429,7 @@ class NvcPracticeDialogueServiceTest {
       NvcPracticeSessionEntity session =
           buildSession(NvcPracticeMode.STRUCTURED_FOUR_STEP, NvcPracticeStep.OBSERVE);
       when(sessionService.getSession(1L)).thenReturn(session);
-      when(messageRepository.countBySessionId(1L)).thenReturn(0);
+      when(messageRepository.findMaxSequenceNumBySessionId(1L)).thenReturn(Optional.empty());
       when(messageRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
       AgentDecision decision = new AgentDecision(
@@ -459,7 +460,7 @@ class NvcPracticeDialogueServiceTest {
       NvcPracticeSessionEntity session =
           buildSession(NvcPracticeMode.FREE_DIALOG, null);
       when(sessionService.getSession(1L)).thenReturn(session);
-      when(messageRepository.countBySessionId(1L)).thenReturn(0);
+      when(messageRepository.findMaxSequenceNumBySessionId(1L)).thenReturn(Optional.empty());
       when(messageRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
       AgentDecision decision = new AgentDecision(

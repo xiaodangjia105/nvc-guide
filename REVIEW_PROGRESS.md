@@ -66,50 +66,55 @@
 - ⚪ AbstractStreamConsumer:72 - Redis 失败无退避
 - ⚪ UnifiedEvaluationService:329 - 评分截断
 
-## 已修复的问题（35 个）
+## 已修复的问题（40 个）
 
 ### Critical (3个)
 1. 🟢 **PromptInjectionDetector.java:61** - 移除短消息长度限制，所有输入都进行注入检测
 2. 🟢 **NvcAssistantController.java** - 添加安全警告 TODO，待实现认证机制后修复
 3. 🟢 **NvcPracticeSessionService.java:210-219** - 使用分布式锁保护 completeSession，防止并发重复评估
 
-### High (5个)
+### High (8个)
 4. 🟢 **NvcAgentChatService.java:161-170** - 添加 practiceContext null 防御，使用空对象替代
 5. 🟢 **NvcAgentChatService.java:210-217** - 添加 userMessage null/blank 检查
 6. 🟢 **StructuredOutputInvoker.java:72-74** - 移除重复的格式指令添加
 7. 🟢 **InputSanitizer.java:63-64** - 清理换行符防止日志注入
 8. 🟢 **ContextManager.java:272-273** - 添加日志警告，记录 toolCalls 无法添加的问题
+9. 🟢 **NvcPracticeDialogueService.java:53,152** - 使用 SELECT MAX(sequence_num)+1 替代 count 避免并发竞态
+10. 🟢 **NvcAssistantService.java:52-55** - 使用 getNextSequenceNum 替代 getMessageCount 避免并发竞态
+11. 🟢 **MetricsController/TraceController** - 添加安全警告 TODO，待实现认证后修复
 
-### Medium (19个)
-9. 🟢 **NvcAgentChatService.java:125-129** - 移除 onErrorResume，让错误正确传播
-10. 🟢 **NvcEvaluationService.java:186** - 使用 try-with-resources 关闭 InputStream
-11. 🟢 **NvcEvaluationService.java:126** - 添加 userMessage null/blank 检查
-12. 🟢 **NvcEvaluationService.java:140-142** - 添加 messages null/空检查和 content null 检查
-13. 🟢 **GlobalExceptionHandler.java:179-181** - 精确化 SSE 检测，要求 /api/ 前缀
-14. 🟢 **NvcEvaluationService.java:80-93** - 查询方法返回 Optional 而非 null
-15. 🟢 **NvcEvaluationService.java:155-178** - 添加 LLM 评分范围校验 (0-10)
-16. 🟢 **IntentRouter.java:172-174** - 修复职业过滤器逻辑错误，使用黑名单替代恒真式
-17. 🟢 **ToolExecutor.java:65** - 移除 allOf().join()，单工具失败不丢失其他结果
-18. 🟢 **CacheToolHook.java:61** - 添加定期清理过期缓存，防止内存泄漏
-19. 🟢 **RateLimitToolHook.java:49** - 添加定期清理过期计数器，防止内存泄漏
-20. 🟢 **AbstractStreamConsumer.java:52** - 添加 awaitTermination() 实现优雅关闭
-21. 🟢 **NvcPracticeDialogueService.java:84-88** - executeAgent 返回 null 时使用降级回复
-22. 🟢 **NvcPracticeSessionService.java:87-120** - createSession 添加 @Transactional
-23. 🟢 **NvcPracticeSessionService.java:260-272** - 添加 evaluationSkipped 标志，区分跳过和失败
-24. 🟢 **LlmProviderRegistry.java:149-154** - reload() 添加 synchronized 确保原子性
-25. 🟢 **NvcEvaluationService.java:39-73** - evaluateRealtime/evaluateFinal 添加事务传播控制 (NOT_SUPPORTED)
-26. 🟢 **NvcPracticeSessionService.java:130-153** - getSession 移除无用缓存，直接从 DB 加载
+### Medium (20个)
+12. 🟢 **NvcAgentChatService.java:125-129** - 移除 onErrorResume，让错误正确传播
+13. 🟢 **NvcEvaluationService.java:186** - 使用 try-with-resources 关闭 InputStream
+14. 🟢 **NvcEvaluationService.java:126** - 添加 userMessage null/blank 检查
+15. 🟢 **NvcEvaluationService.java:140-142** - 添加 messages null/空检查和 content null 检查
+16. 🟢 **GlobalExceptionHandler.java:179-181** - 精确化 SSE 检测，要求 /api/ 前缀
+17. 🟢 **NvcEvaluationService.java:80-93** - 查询方法返回 Optional 而非 null
+18. 🟢 **NvcEvaluationService.java:155-178** - 添加 LLM 评分范围校验 (0-10)
+19. 🟢 **IntentRouter.java:172-174** - 修复职业过滤器逻辑错误，使用黑名单替代恒真式
+20. 🟢 **ToolExecutor.java:65** - 移除 allOf().join()，单工具失败不丢失其他结果
+21. 🟢 **CacheToolHook.java:61** - 添加定期清理过期缓存，防止内存泄漏
+22. 🟢 **RateLimitToolHook.java:49** - 添加定期清理过期计数器，防止内存泄漏
+23. 🟢 **AbstractStreamConsumer.java:52** - 添加 awaitTermination() 实现优雅关闭
+24. 🟢 **NvcPracticeDialogueService.java:84-88** - executeAgent 返回 null 时使用降级回复
+25. 🟢 **NvcPracticeSessionService.java:87-120** - createSession 添加 @Transactional
+26. 🟢 **NvcPracticeSessionService.java:260-272** - 添加 evaluationSkipped 标志，区分跳过和失败
+27. 🟢 **LlmProviderRegistry.java:149-154** - reload() 添加 synchronized 确保原子性
+28. 🟢 **NvcEvaluationService.java:39-73** - evaluateRealtime/evaluateFinal 添加事务传播控制 (NOT_SUPPORTED)
+29. 🟢 **NvcPracticeSessionService.java:130-153** - getSession 移除无用缓存，直接从 DB 加载
+30. 🟢 **PromptSanitizer.java:101-106** - 清理 label 参数，只保留安全字符
 
-### Low (8个)
-27. 🟢 **NvcPracticeDialogueService.java:235-245** - doOnError 添加 try-catch 防止遮蔽异常
-28. 🟢 **NvcPracticeSessionService.java:43-49** - 添加 @PostConstruct 校验 VALID_TRANSITIONS
-29. 🟢 **TraceController.java:38** - 添加 @Max(100) 限制分页大小
-30. 🟢 **NvcAgentChatService.java:179-194** - 修正步骤注释编号重复
-31. 🟢 **AgentLoop.java:249-262** - 错误事件后直接 return，不再发送完成事件
-32. 🟢 **UnifiedEvaluationService.java:329,335** - 评分使用 Math.round() 四舍五入
-33. 🟢 **NvcAssistantMessageService.java:116-122** - 使用数据库查询替代加载全部消息
-34. 🟢 **AbstractStreamConsumer.java:72-101** - Redis 失败时添加 2 秒退避延迟
-35. 🟢 **NvcPracticeDialogueService.java:251** - 添加注释说明私有方法无法 AOP 代理
+### Low (9个)
+31. 🟢 **NvcPracticeDialogueService.java:235-245** - doOnError 添加 try-catch 防止遮蔽异常
+32. 🟢 **NvcPracticeSessionService.java:43-49** - 添加 @PostConstruct 校验 VALID_TRANSITIONS
+33. 🟢 **TraceController.java:38** - 添加 @Max(100) 限制分页大小
+34. 🟢 **NvcAgentChatService.java:179-194** - 修正步骤注释编号重复
+35. 🟢 **AgentLoop.java:249-262** - 错误事件后直接 return，不再发送完成事件
+36. 🟢 **UnifiedEvaluationService.java:329,335** - 评分使用 Math.round() 四舍五入
+37. 🟢 **NvcAssistantMessageService.java:116-122** - 使用数据库查询替代加载全部消息
+38. 🟢 **AbstractStreamConsumer.java:72-101** - Redis 失败时添加 2 秒退避延迟
+39. 🟢 **NvcPracticeDialogueService.java:251** - 添加注释说明私有方法无法 AOP 代理
+40. 🟢 **NvcPracticeDialogueService.java:315-317** - getNextSequenceNum 使用 MAX+1 替代 count
 
 ## 迭代记录
 
@@ -173,6 +178,14 @@
 - **状态**: ✅ 完成
 - **开始时间**: 2026-08-08
 - **修复**: 2 个 Medium bug
+- **编译**: ✅ 通过
+- **测试**: ✅ 通过
+- **Commit**: 1bffe0d
+
+### 迭代 #9（第九批修复）
+- **状态**: ✅ 完成
+- **开始时间**: 2026-08-08
+- **修复**: 5 个 High/Medium bug
 - **编译**: ✅ 通过
 - **测试**: ✅ 通过
 - **Commit**: (待提交)

@@ -48,8 +48,8 @@ public class NvcAssistantService {
         NvcAssistantConversationEntity conversation = getOrCreateConversation(userId, request.getConversationId());
         long convId = conversation.getId();
 
-        // 2. 保存用户消息
-        int seq = messageService.getMessageCount(convId);
+        // 2. 保存用户消息（使用 getNextSequenceNum 避免并发竞态）
+        int seq = messageService.getNextSequenceNum(convId);
         NvcAssistantMessageEntity userMsg = messageService.buildUserMessage(
             convId, userId, request.getMessage(), seq++);
         messageService.saveMessage(userMsg);
