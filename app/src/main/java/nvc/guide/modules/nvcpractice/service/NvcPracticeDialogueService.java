@@ -40,6 +40,11 @@ public class NvcPracticeDialogueService {
 
   /**
    * 发送消息并获取 AI 回复（非流式）
+   *
+   * <p>注意：此方法不使用 @Transactional，因为内部调用了外部 LLM API（orchestrator.executeAgent）。
+   * 按照项目约束，不应在事务内调用外部 API 以避免占用 DB 连接。
+   * 数据库操作（保存消息、更新状态）使用独立的自动提交事务。
+   * 如果需要更强的一致性保证，应将数据库操作提取到单独的事务方法中。
    */
   public DialogueResponse sendMessage(Long sessionId,
       String userMessage) {
@@ -70,6 +75,8 @@ public class NvcPracticeDialogueService {
         orchestrator.decideNextAgent(context);
 
     // 5. 如果会话是 CREATED 状态，自动切换到 IN_PROGRESS
+    // 注意：session 对象在 updatePhase 后会被更新，但在此之前的引用可能过期。
+    // 由于这是单用户对话场景，session 数据过期的影响较小。
     if (session.getCurrentPhase() == NvcSessionPhase.CREATED) {
       session = sessionService.updatePhase(
           sessionId, NvcSessionPhase.IN_PROGRESS);
@@ -177,6 +184,8 @@ public class NvcPracticeDialogueService {
         orchestrator.decideNextAgent(context);
 
     // 3.5 状态转换：CREATED → IN_PROGRESS
+    // 注意：currentStep 在状态转换前捕获，但 phase 变化不影响 step，
+    // 所以 currentStep 不会过期。
     if (session.getCurrentPhase() == NvcSessionPhase.CREATED) {
       session = sessionService.updatePhase(
           sessionId, NvcSessionPhase.IN_PROGRESS);
@@ -235,6 +244,8 @@ public class NvcPracticeDialogueService {
     return Flux.concatDelayError(metadataEvent, messageEvents, doneEvent)
         .doOnComplete(() -> {
           // 流式清理已完成，直接获取最终结果
+          // 注意：doOnComplete 在 Reactor 线程上执行，没有事务上下文。
+          // saveStreamReply 方法内部有 try-catch 保护，每个操作独立处理异常。
           String cleanedReply = streamingCleaner.getFinalCleaned();
           saveStreamReply(sessionId, userId, cleanedReply, decision.scene(),
               nextSeq, currentStep, userMessage, practiceMode, decision);

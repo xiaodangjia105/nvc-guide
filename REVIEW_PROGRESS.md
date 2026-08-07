@@ -66,7 +66,7 @@
 - ⚪ AbstractStreamConsumer:72 - Redis 失败无退避
 - ⚪ UnifiedEvaluationService:329 - 评分截断
 
-## 已修复的问题（40 个）
+## 已修复的问题（45 个）
 
 ### Critical (3个)
 1. 🟢 **PromptInjectionDetector.java:61** - 移除短消息长度限制，所有输入都进行注入检测
@@ -83,7 +83,7 @@
 10. 🟢 **NvcAssistantService.java:52-55** - 使用 getNextSequenceNum 替代 getMessageCount 避免并发竞态
 11. 🟢 **MetricsController/TraceController** - 添加安全警告 TODO，待实现认证后修复
 
-### Medium (20个)
+### Medium (22个)
 12. 🟢 **NvcAgentChatService.java:125-129** - 移除 onErrorResume，让错误正确传播
 13. 🟢 **NvcEvaluationService.java:186** - 使用 try-with-resources 关闭 InputStream
 14. 🟢 **NvcEvaluationService.java:126** - 添加 userMessage null/blank 检查
@@ -103,18 +103,23 @@
 28. 🟢 **NvcEvaluationService.java:39-73** - evaluateRealtime/evaluateFinal 添加事务传播控制 (NOT_SUPPORTED)
 29. 🟢 **NvcPracticeSessionService.java:130-153** - getSession 移除无用缓存，直接从 DB 加载
 30. 🟢 **PromptSanitizer.java:101-106** - 清理 label 参数，只保留安全字符
+31. 🟢 **NvcPracticeDialogueService.java:44-130** - 添加注释说明无事务边界的原因
+32. 🟢 **NvcPracticeSessionService.java:228-266** - completeAndEvaluate 添加 @Transactional
+33. 🟢 **NvcPracticeDialogueService.java:229-234** - 添加注释说明 doOnComplete 无事务上下文
 
-### Low (9个)
-31. 🟢 **NvcPracticeDialogueService.java:235-245** - doOnError 添加 try-catch 防止遮蔽异常
-32. 🟢 **NvcPracticeSessionService.java:43-49** - 添加 @PostConstruct 校验 VALID_TRANSITIONS
-33. 🟢 **TraceController.java:38** - 添加 @Max(100) 限制分页大小
-34. 🟢 **NvcAgentChatService.java:179-194** - 修正步骤注释编号重复
-35. 🟢 **AgentLoop.java:249-262** - 错误事件后直接 return，不再发送完成事件
-36. 🟢 **UnifiedEvaluationService.java:329,335** - 评分使用 Math.round() 四舍五入
-37. 🟢 **NvcAssistantMessageService.java:116-122** - 使用数据库查询替代加载全部消息
-38. 🟢 **AbstractStreamConsumer.java:72-101** - Redis 失败时添加 2 秒退避延迟
-39. 🟢 **NvcPracticeDialogueService.java:251** - 添加注释说明私有方法无法 AOP 代理
-40. 🟢 **NvcPracticeDialogueService.java:315-317** - getNextSequenceNum 使用 MAX+1 替代 count
+### Low (12个)
+34. 🟢 **NvcPracticeDialogueService.java:235-245** - doOnError 添加 try-catch 防止遮蔽异常
+35. 🟢 **NvcPracticeSessionService.java:43-49** - 添加 @PostConstruct 校验 VALID_TRANSITIONS
+36. 🟢 **TraceController.java:38** - 添加 @Max(100) 限制分页大小
+37. 🟢 **NvcAgentChatService.java:179-194** - 修正步骤注释编号重复
+38. 🟢 **AgentLoop.java:249-262** - 错误事件后直接 return，不再发送完成事件
+39. 🟢 **UnifiedEvaluationService.java:329,335** - 评分使用 Math.round() 四舍五入
+40. 🟢 **NvcAssistantMessageService.java:116-122** - 使用数据库查询替代加载全部消息
+41. 🟢 **AbstractStreamConsumer.java:72-101** - Redis 失败时添加 2 秒退避延迟
+42. 🟢 **NvcPracticeDialogueService.java:251** - 添加注释说明私有方法无法 AOP 代理
+43. 🟢 **NvcPracticeDialogueService.java:315-317** - getNextSequenceNum 使用 MAX+1 替代 count
+44. 🟢 **NvcPracticeDialogueService.java:73-76** - 添加注释说明 session 数据过期的影响
+45. 🟢 **NvcPracticeDialogueService.java:164,181** - 添加注释说明 SSE metadata 不会过期
 
 ## 迭代记录
 
@@ -186,6 +191,14 @@
 - **状态**: ✅ 完成
 - **开始时间**: 2026-08-08
 - **修复**: 5 个 High/Medium bug
+- **编译**: ✅ 通过
+- **测试**: ✅ 通过
+- **Commit**: 2a84926
+
+### 迭代 #10（第十批修复）
+- **状态**: ✅ 完成
+- **开始时间**: 2026-08-08
+- **修复**: 5 个 High/Medium/Low bug
 - **编译**: ✅ 通过
 - **测试**: ✅ 通过
 - **Commit**: (待提交)

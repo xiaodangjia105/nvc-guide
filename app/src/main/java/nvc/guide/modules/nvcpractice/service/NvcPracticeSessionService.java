@@ -233,8 +233,12 @@ public class NvcPracticeSessionService {
    * 结束会话并执行最终评估
    * 从 Controller 上移的业务逻辑
    *
+   * <p>注意：此方法使用 @Transactional 确保数据库操作的原子性。
+   * evaluationService.evaluateFinal 使用 NOT_SUPPORTED 传播，LLM 调用在事务外执行。
+   *
    * @return 包含评估状态的会话实体
    */
+  @Transactional
   public CompleteResult completeAndEvaluate(Long sessionId) {
     NvcPracticeSessionEntity session = completeSession(sessionId);
     Long userId = session.getUserId();
