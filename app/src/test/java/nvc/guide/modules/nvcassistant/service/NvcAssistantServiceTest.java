@@ -89,10 +89,10 @@ class NvcAssistantServiceTest {
             assertEquals(100L, result.conversationId());
             verify(messageService).saveMessage(any(NvcAssistantMessageEntity.class));
 
-            // 收集事件验证
-            List<AgentEvent> events = new CopyOnWriteArrayList<>();
-            result.eventStream().subscribe(events::add);
+            // 收集事件验证 - 使用 collectList().block() 确保 Flux 完成
+            List<AgentEvent> events = result.eventStream().collectList().block();
 
+            assertNotNull(events);
             assertEquals(3, events.size());
             assertEquals(AgentEvent.AgentEventType.THINKING, events.get(0).type());
             assertEquals(AgentEvent.AgentEventType.CONTENT, events.get(1).type());
@@ -123,9 +123,9 @@ class NvcAssistantServiceTest {
 
             NvcAssistantService.ChatStreamResult result = service.chatStreamRaw(1L, buildRequest("什么是NVC？", null));
 
-            // 触发流完成
-            List<AgentEvent> events = new CopyOnWriteArrayList<>();
-            result.eventStream().subscribe(events::add);
+            // 触发流完成 - 使用 collectList().block() 确保 Flux 完成
+            List<AgentEvent> events = result.eventStream().collectList().block();
+            assertNotNull(events);
 
             // 验证标题被更新（包含用户消息前50字符）
             verify(messageService).updateConversationTitle(eq(200L), contains("什么是NVC"));
@@ -141,8 +141,8 @@ class NvcAssistantServiceTest {
 
             NvcAssistantService.ChatStreamResult result = service.chatStreamRaw(1L, buildRequest("继续聊", 50L));
 
-            List<AgentEvent> events = new CopyOnWriteArrayList<>();
-            result.eventStream().subscribe(events::add);
+            List<AgentEvent> events = result.eventStream().collectList().block();
+            assertNotNull(events);
 
             verify(messageService, never()).updateConversationTitle(anyLong(), anyString());
         }
@@ -158,8 +158,8 @@ class NvcAssistantServiceTest {
 
             NvcAssistantService.ChatStreamResult result = service.chatStreamRaw(1L, buildRequest(longMessage, null));
 
-            List<AgentEvent> events = new CopyOnWriteArrayList<>();
-            result.eventStream().subscribe(events::add);
+            List<AgentEvent> events = result.eventStream().collectList().block();
+            assertNotNull(events);
 
             verify(messageService).updateConversationTitle(eq(300L), argThat(title ->
                 title.length() <= 53 && (title.length() <= 50 || title.endsWith("..."))

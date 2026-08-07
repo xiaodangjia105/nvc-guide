@@ -141,7 +141,7 @@ public class NvcEvaluationService {
             throw new BusinessException(ErrorCode.NVC_EVALUATION_FAILED, "LLM 返回的评分字段缺失");
         }
 
-        // 校验评分范围 (0-10)
+        // 校验评分范围 (0-100)
         validateScoreRange(result.observationScore(), "observationScore");
         validateScoreRange(result.feelingScore(), "feelingScore");
         validateScoreRange(result.needScore(), "needScore");
@@ -149,11 +149,14 @@ public class NvcEvaluationService {
         validateScoreRange(result.overallScore(), "overallScore");
     }
 
+    /**
+     * 校验评分范围
+     *
+     * <p>注意：评分使用 0-100 刻度（与模板中的评分标准一致）
+     */
     private void validateScoreRange(Integer score, String fieldName) {
-        if (score < 0 || score > 10) {
+        if (score != null && (score < 0 || score > 100)) {
             log.warn("LLM 返回的 {} 评分超出范围: {}", fieldName, score);
-            // 裁剪到有效范围
-            score = Math.max(0, Math.min(10, score));
         }
     }
 

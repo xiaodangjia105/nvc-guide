@@ -35,12 +35,28 @@ public class PracticeStartTool implements NvcTool {
     public NvcToolResult execute(String input, NvcToolContext context) {
         try {
             PracticeStartInput params = JsonParser.fromJson(input, PracticeStartInput.class);
+            if (params == null) {
+                return NvcToolResult.failure("参数解析失败: 输入不能为空");
+            }
+
             Long userId = context.getUserId();
             if (userId == null) {
                 return NvcToolResult.failure("缺少用户ID");
             }
 
-            NvcPracticeMode practiceMode = NvcPracticeMode.valueOf(params.mode());
+            // 验证 mode 参数
+            if (params.mode() == null || params.mode().isBlank()) {
+                return NvcToolResult.failure("缺少必填参数: mode（练习模式），可选值: SCENARIO, FREE_DIALOG, STRUCTURED_FOUR_STEP");
+            }
+
+            NvcPracticeMode practiceMode;
+            try {
+                practiceMode = NvcPracticeMode.valueOf(params.mode());
+            } catch (IllegalArgumentException e) {
+                return NvcToolResult.failure("无效的练习模式: " + params.mode()
+                    + "，可选值: SCENARIO, FREE_DIALOG, STRUCTURED_FOUR_STEP");
+            }
+
             NvcDifficulty difficulty = params.difficulty() != null
                 ? NvcDifficulty.valueOf(params.difficulty()) : null;
 
