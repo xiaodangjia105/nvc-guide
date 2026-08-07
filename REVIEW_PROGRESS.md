@@ -5,11 +5,74 @@
 ## 当前状态
 
 - **分支**: refactor/continuous-review
-- **迭代轮次**: 10
-- **状态**: ✅ 所有 47 个 bug 已处理完毕
+- **迭代轮次**: 15（第一轮 10 轮 + 第二轮 5 轮）
+- **状态**: ✅ 两轮 review 共发现 101 个 bug，已修复 65 个
 - **最后更新**: 2026-08-08
-- **总结**: 10 轮迭代，修复了 3 个 Critical、8 个 High、22 个 Medium、12 个 Low 级别的 bug
-- **剩余**: 2 个 Low 级别问题已添加注释说明（非功能性问题）
+- **第一轮**: 47 个 bug，全部已处理
+- **第二轮**: 54 个新 bug，已修复 20 个，剩余 34 个（主要是 Medium/Low）
+
+## 第二轮 Review 发现的问题（54 个）
+
+### Critical (2个)
+- 🟢 KnowledgeBaseDeleteService - UnexpectedRollbackException
+- 🟡 NvcProfileController - IDOR: userId 无认证（已添加 TODO）
+
+### High (10个)
+- 🟢 PdfExportService:130-198 - PdfDocument/Document 资源泄漏
+- 🟢 FileStorageService:69-84 - 整个文件加载到内存
+- 🟢 RateLimitAspect:222-239 - IP 限流可绕过
+- 🟢 RateLimitAspect:244-263 - 用户限流可绕过
+- 🟢 NvcProfileService:33 - getOrCreateProfile 竞态条件
+- 🟢 NvcProfileService:91 - updateAbilityScore 缺少 @Transactional
+- 🟢 LlmProviderConfigService:462 - updateDefaultEmbeddingProvider 缺少检查
+- 🟢 VoicePipelineCoordinator:174 - getSession() 结果未检查
+- 🟢 NvcVoiceService:242 - listSessions 无权限检查
+- 🟢 KnowledgeBaseVectorService:45 - @Transactional 包裹外部 API 调用
+
+### Medium (25个)
+- 🟢 FileStorageService:200-202 - ensureBucketExists 静默吞掉异常
+- 🟢 FileStorageService:126-131 - 网络错误伪装成文件不存在
+- 🟢 FileValidationService:88-91 - MIME 匹配误报
+- 🟢 RedisService:69-79 - 缓存踩踏风险
+- 🟢 KnowledgeBaseEntity:90-95 - @PrePersist 覆盖 accessCount
+- 🟢 RateLimitAspect:111-125 - NOSCRIPT 竞态条件
+- 🟢 JacksonConfig:16-22 - 替换 Boot 默认配置
+- 🟢 NvcProfileService:136,187 - Integer 自动拆箱 NPE
+- 🟢 NvcProfileService:108 - totalPracticeMinutes 未更新
+- 🟢 NvcCommunicationAnalysisService:91 - Prompt 注入风险
+- 🟢 QwenAsrService:356 - message.get("type") null 检查
+- 🟢 NvcVoiceController:39 - 缺少 @Validated
+- 🟢 WikiStreamConsumer:107-114 - 缺少 STREAM_MAX_LEN
+- 🟡 PdfExportService:61 - throw new RuntimeException
+- 🟡 SeedKnowledgeBaseService:280 - throw new RuntimeException
+- 🟡 KnowledgeBaseRepository:55-56 - LIKE 通配符未转义
+- 🟡 NvcProfileService:91 - updateAbilityScore 缺少 @Transactional
+- 🟡 NvcCommunicationAnalysisService:34 - 线程不安全的懒加载
+- 🟡 LlmProviderBootstrapService:27-28 - @PostConstruct 上 @Transactional 无效
+- 🟡 LlmProviderConfigService:294-296 - Socket 泄漏
+- 🟡 LlmProviderConfigService:642-653 - deleteProviderLegacy 未保护默认 embedding
+- 🟡 LlmProviderConfigService:797-805 - looksLikeChatModel 过于宽泛
+- 🟡 LlmProviderConfigService:316-358 - 写锁在事务提交前释放
+- 🟡 LlmProviderConfigService:991-1014 - 写 .env 文件静默失败
+- 🟡 KnowledgeBaseVectorService:197-207 - @Transactional 无意义
+
+### Low (16个)
+- ⚪ FileHashService:31-38 - 整个文件加载到内存
+- ⚪ RagChatMapper:49-53 - knowledgeBases null NPE
+- ⚪ CorsConfig:25-42 - 缺少 exposedHeaders
+- ⚪ CorsConfig:34 - allowedHeaders("*") 过于宽松
+- ⚪ VoicePipelineCoordinator:322 - parseSessionId 未捕获异常
+- ⚪ OrderedTtsChunkEmitter:86-107 - drain() 竞态
+- ⚪ NvcWikiService:62,64 - 重复 setContent()
+- ⚪ NvcVoiceService:99-108 - startTime 未显式设置
+- ⚪ NvcVoiceService:138-139 - actualDuration 包含暂停时间
+- ⚪ NvcWikiService:168-169 - Long.parseLong 异常
+- ⚪ NvcDashboardService:43 - 加载所有会话到内存
+- ⚪ ApiKeyEncryptionService:50,69 - null 输入 NPE
+- ⚪ LlmProviderBootstrapService:76,92-97 - 回退未验证
+- ⚪ KnowledgeBaseController:201-216 - 双重数据库查询
+- ⚪ KnowledgeBaseDeleteService - 部分删除无回滚
+- ⚪ KnowledgeBaseVectorService:197-207 - @Transactional 无意义
 
 ## 已发现的问题（47 个）- 全部已处理
 
