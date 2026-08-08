@@ -157,6 +157,7 @@ public class NvcPracticeController {
   /**
    * 结束会话（含最终评估）
    */
+  @RateLimit(count = 5)
   @PostMapping("/sessions/{sessionId}/complete")
   public Result<PracticeSessionResponse> completeSession(
       @PathVariable Long sessionId) {

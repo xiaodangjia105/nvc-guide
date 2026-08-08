@@ -1,5 +1,6 @@
 package nvc.guide.modules.knowledgebase;
 
+import nvc.guide.common.annotation.RateLimit;
 import nvc.guide.common.result.Result;
 import nvc.guide.modules.knowledgebase.model.RagChatDTO.CreateSessionRequest;
 import nvc.guide.modules.knowledgebase.model.RagChatDTO.SendMessageRequest;
@@ -111,6 +112,7 @@ public class RagChatController {
      * 2. 返回流式响应
      * 3. 流式完成后通过回调更新消息
      */
+    @RateLimit(count = 10)
     @PostMapping(value = "/api/rag-chat/sessions/{sessionId}/messages/stream",
                  produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<ServerSentEvent<String>> sendMessageStream(

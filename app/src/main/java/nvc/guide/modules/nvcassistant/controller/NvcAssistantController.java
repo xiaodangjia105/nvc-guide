@@ -3,6 +3,7 @@ package nvc.guide.modules.nvcassistant.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import nvc.guide.common.annotation.RateLimit;
 import nvc.guide.common.exception.BusinessException;
 import nvc.guide.common.exception.ErrorCode;
 import nvc.guide.common.result.Result;
@@ -47,6 +48,7 @@ public class NvcAssistantController {
     /**
      * 非流式对话（同步等待完成）
      */
+    @RateLimit(count = 10)
     @PostMapping("/chat")
     public Result<AssistantResponse> chat(
             @RequestParam Long userId,
@@ -96,6 +98,7 @@ public class NvcAssistantController {
      *   <li>error — 错误</li>
      * </ul>
      */
+    @RateLimit(count = 10)
     @PostMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<ServerSentEvent<String>> chatStream(
             @RequestParam Long userId,
@@ -186,6 +189,7 @@ public class NvcAssistantController {
     /**
      * 重新生成最后一条回复
      */
+    @RateLimit(count = 10)
     @PostMapping("/conversations/{conversationId}/regenerate")
     public Result<AssistantResponse> regenerate(
             @RequestParam Long userId,

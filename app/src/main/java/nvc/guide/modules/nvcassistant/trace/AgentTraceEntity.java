@@ -2,6 +2,7 @@ package nvc.guide.modules.nvcassistant.trace;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -75,6 +76,7 @@ public class AgentTraceEntity {
 
     @OneToMany(mappedBy = "trace", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @OrderBy("sequence ASC")
+    @BatchSize(size = 20)
     @Builder.Default
     private List<AgentSpanEntity> spans = new ArrayList<>();
 
