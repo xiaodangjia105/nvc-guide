@@ -94,8 +94,7 @@ public class NvcFeedbackService {
      */
     @Transactional(readOnly = true)
     public List<NvcFeedbackEntity> getRecentNegativeFeedback(int limit) {
-        List<NvcFeedbackEntity> all = feedbackRepository
-            .findByRatingOrderByCreatedAtDesc(1);
-        return all.size() > limit ? all.subList(0, limit) : all;
+        return feedbackRepository.findByRatingOrderByCreatedAtDesc(1,
+            org.springframework.data.domain.PageRequest.of(0, limit));
     }
 }

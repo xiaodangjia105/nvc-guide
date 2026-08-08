@@ -5,14 +5,8 @@ import lombok.Setter;
 import lombok.ToString;
 
 import jakarta.persistence.*;
-import lombok.EqualsAndHashCode;
-import lombok.AllArgsConstructor;
-import lombok.EqualsAndHashCode;
-import lombok.Builder;
-import lombok.EqualsAndHashCode;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.NoArgsConstructor;
+import jakarta.validation.constraints.*;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
@@ -34,10 +28,16 @@ public class NvcToolCallRecordEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotNull(message = "用户ID不能为空")
+    @Column(name = "user_id", nullable = false)
     private Long userId;
 
+    @NotNull(message = "会话ID不能为空")
+    @Column(name = "session_id", nullable = false)
     private Long sessionId;
 
+    @NotBlank(message = "工具名称不能为空")
+    @Column(name = "tool_name", nullable = false, length = 100)
     private String toolName;
 
     @Column(columnDefinition = "TEXT")
@@ -46,19 +46,21 @@ public class NvcToolCallRecordEntity {
     @Column(columnDefinition = "TEXT")
     private String result;
 
+    @NotNull(message = "成功标志不能为空")
+    @Column(nullable = false)
     private Boolean success;
 
+    @Column(name = "duration_ms")
     private Long durationMs;
 
     @Column(columnDefinition = "TEXT")
     private String skipReason;
 
+    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
     @PrePersist
     protected void onCreate() {
-        if (createdAt == null) {
-            createdAt = LocalDateTime.now();
-        }
+        createdAt = LocalDateTime.now();
     }
 }

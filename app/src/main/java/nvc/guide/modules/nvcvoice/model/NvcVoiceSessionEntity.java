@@ -13,6 +13,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
+import jakarta.validation.constraints.NotNull;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 import lombok.EqualsAndHashCode;
@@ -46,10 +47,12 @@ public class NvcVoiceSessionEntity {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
-  @Column(name = "user_id")
+  @NotNull(message = "用户ID不能为空")
+  @Column(name = "user_id", nullable = false)
   private Long userId;
 
-  @Column(name = "practice_mode", length = 30)
+  @NotNull(message = "练习模式不能为空")
+  @Column(name = "practice_mode", nullable = false, length = 30)
   @Enumerated(EnumType.STRING)
   private NvcPracticeMode practiceMode;
 
