@@ -5,6 +5,7 @@ import lombok.Setter;
 import lombok.ToString;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.*;
 import lombok.EqualsAndHashCode;
 import lombok.*;
 import java.time.LocalDateTime;
@@ -30,13 +31,18 @@ public class NvcPromptVersionEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotNull(message = "Agent场景不能为空")
     @Enumerated(EnumType.STRING)
     @Column(name = "agent_scene", nullable = false, length = 50)
     private NvcAgentScene agentScene;
 
+    @NotNull(message = "版本号不能为空")
+    @Min(value = 1, message = "版本号最小为1")
     @Column(nullable = false)
     private Integer version;
 
+    @NotBlank(message = "系统提示词不能为空")
+    @Size(max = 50000, message = "系统提示词不能超过50000字符")
     @Column(name = "system_prompt", nullable = false, columnDefinition = "TEXT")
     private String systemPrompt;
 
@@ -47,10 +53,13 @@ public class NvcPromptVersionEntity {
     /**
      * 流量百分比（用于 A/B 测试，所有活跃版本的百分比之和应为 100）
      */
+    @Min(value = 0, message = "流量百分比最小为0")
+    @Max(value = 100, message = "流量百分比最大为100")
     @Column(name = "traffic_percentage")
     @Builder.Default
     private Integer trafficPercentage = 100;
 
+    @Size(max = 2000, message = "变更说明不能超过2000字符")
     @Column(name = "change_note", columnDefinition = "TEXT")
     private String changeNote;
 

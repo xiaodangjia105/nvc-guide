@@ -14,7 +14,9 @@ import java.time.LocalDateTime;
  * 主 Agent 对话会话实体
  */
 @Entity
-@Table(name = "nvc_assistant_conversations")
+@Table(name = "nvc_assistant_conversations", indexes = {
+    @Index(name = "idx_assistant_conv_user", columnList = "user_id")
+})
 @Getter
 @Setter
 @ToString

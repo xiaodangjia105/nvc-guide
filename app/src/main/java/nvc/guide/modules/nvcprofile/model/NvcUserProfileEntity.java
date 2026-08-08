@@ -5,6 +5,7 @@ import lombok.Setter;
 import lombok.ToString;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.*;
 import lombok.EqualsAndHashCode;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -26,6 +27,7 @@ public class NvcUserProfileEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotNull(message = "用户ID不能为空")
     @Column(name = "user_id", nullable = false, unique = true)
     private Long userId;
 

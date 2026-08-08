@@ -5,6 +5,7 @@ import lombok.Setter;
 import lombok.ToString;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.*;
 import lombok.EqualsAndHashCode;
 import lombok.*;
 
@@ -30,12 +31,15 @@ public class NvcAssistantMessageEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotNull(message = "对话ID不能为空")
     @Column(name = "conversation_id", nullable = false)
     private Long conversationId;
 
+    @NotNull(message = "用户ID不能为空")
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
+    @NotNull(message = "消息角色不能为空")
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private NvcAssistantMessageRole role;

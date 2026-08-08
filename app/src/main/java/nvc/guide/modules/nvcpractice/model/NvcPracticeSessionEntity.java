@@ -5,6 +5,7 @@ import lombok.Setter;
 import lombok.ToString;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.*;
 import lombok.EqualsAndHashCode;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -29,9 +30,11 @@ public class NvcPracticeSessionEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotNull(message = "用户ID不能为空")
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
+    @NotNull(message = "练习模式不能为空")
     @Enumerated(EnumType.STRING)
     @Column(name = "practice_mode", nullable = false, length = 20)
     private NvcPracticeMode practiceMode;
@@ -57,9 +60,11 @@ public class NvcPracticeSessionEntity {
     @Builder.Default
     private NvcDifficulty difficulty = NvcDifficulty.MEDIUM;
 
+    @Size(max = 5000, message = "上下文摘要不能超过5000字符")
     @Column(name = "context_summary", columnDefinition = "TEXT")
     private String contextSummary;
 
+    @Size(max = 10000, message = "会话配置不能超过10000字符")
     @Column(name = "session_config", columnDefinition = "JSONB")
     @JdbcTypeCode(SqlTypes.JSON)
     private String sessionConfig;
