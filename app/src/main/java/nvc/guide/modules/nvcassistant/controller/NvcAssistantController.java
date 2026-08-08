@@ -1,11 +1,14 @@
 package nvc.guide.modules.nvcassistant.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import nvc.guide.common.annotation.RateLimit;
 import nvc.guide.common.exception.BusinessException;
 import nvc.guide.common.exception.ErrorCode;
+import nvc.guide.common.result.PageResult;
 import nvc.guide.common.result.Result;
 import nvc.guide.common.security.InputSanitizer;
 import nvc.guide.modules.nvcassistant.dto.AssistantRequest;
@@ -17,6 +20,7 @@ import nvc.guide.modules.nvcassistant.model.NvcAssistantMessageEntity;
 import nvc.guide.modules.nvcassistant.service.NvcAssistantMessageService;
 import nvc.guide.modules.nvcassistant.service.NvcAssistantService;
 import nvc.guide.modules.nvcassistant.service.agent.AgentEvent;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.validation.annotation.Validated;
@@ -155,24 +159,29 @@ public class NvcAssistantController {
      * 获取用户对话列表
      */
     @GetMapping("/conversations")
-    public Result<List<ConversationResponse>> listConversations(@RequestParam Long userId) {
-        return Result.success(messageService.listConversations(userId));
+    public Result<PageResult<ConversationResponse>> listConversations(
+            @RequestParam Long userId,
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
+        var pageResult = messageService.listConversations(userId, PageRequest.of(page, size));
+        return Result.success(PageResult.of(pageResult));
     }
 
     /**
      * 获取对话消息列表
      */
     @GetMapping("/conversations/{conversationId}/messages")
-    public Result<List<MessageResponse>> getMessages(
+    public Result<PageResult<MessageResponse>> getMessages(
             @RequestParam Long userId,
-            @PathVariable Long conversationId) {
+            @PathVariable Long conversationId,
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "50") @Min(1) @Max(100) int size) {
         messageService.getConversationOrThrow(conversationId, userId);
 
-        List<MessageResponse> messages = messageService.getMessages(conversationId).stream()
-            .map(this::toMessageResponse)
-            .toList();
+        var pageResult = messageService.getMessages(conversationId, PageRequest.of(page, size))
+            .map(this::toMessageResponse);
 
-        return Result.success(messages);
+        return Result.success(PageResult.of(pageResult));
     }
 
     /**

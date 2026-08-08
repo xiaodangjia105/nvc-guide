@@ -150,6 +150,19 @@ public class NvcPracticeSessionService {
   }
 
   /**
+   * 获取用户的练习会话列表（分页）
+   */
+  public org.springframework.data.domain.Page<NvcPracticeSessionEntity> getUserSessions(
+      Long userId, NvcSessionPhase phase, org.springframework.data.domain.Pageable pageable) {
+    if (phase != null) {
+      return sessionRepository
+          .findByUserIdAndCurrentPhaseOrderByCreatedAtDesc(userId, phase, pageable);
+    }
+    return sessionRepository
+        .findByUserIdOrderByCreatedAtDesc(userId, pageable);
+  }
+
+  /**
    * 更新会话阶段（含状态转换校验）
    */
   public NvcPracticeSessionEntity updatePhase(

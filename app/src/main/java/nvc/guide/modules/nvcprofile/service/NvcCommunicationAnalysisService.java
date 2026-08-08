@@ -88,6 +88,14 @@ public class NvcCommunicationAnalysisService {
         return recordRepository.findByUserIdOrderByCreatedAtDesc(userId);
     }
 
+    /**
+     * 获取用户的沟通记录列表（分页）
+     */
+    public org.springframework.data.domain.Page<NvcCommunicationRecordEntity> getUserRecords(
+            Long userId, org.springframework.data.domain.Pageable pageable) {
+        return recordRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
+    }
+
     private String buildAnalysisPrompt(String rawContent, NvcScenarioType scenarioType) {
         // 清理用户输入中的潜在注入指令
         String sanitizedContent = sanitizeForPrompt(rawContent);

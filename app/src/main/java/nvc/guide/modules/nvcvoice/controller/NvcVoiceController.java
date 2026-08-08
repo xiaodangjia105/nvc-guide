@@ -1,8 +1,11 @@
 package nvc.guide.modules.nvcvoice.controller;
 
 import java.util.List;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import nvc.guide.common.result.PageResult;
 import nvc.guide.common.result.Result;
 import nvc.guide.modules.nvcvoice.dto.CreateVoiceSessionRequest;
 import nvc.guide.modules.nvcvoice.dto.VoiceEvaluationStatusDTO;
@@ -84,10 +88,13 @@ public class NvcVoiceController {
    * <p>userId 为必填参数，防止未授权访问所有用户会话
    */
   @GetMapping("/sessions")
-  public Result<List<VoiceSessionResponse>> listSessions(
+  public Result<PageResult<VoiceSessionResponse>> listSessions(
       @RequestParam Long userId,
-      @RequestParam(required = false) NvcVoiceSessionStatus status) {
-    return Result.success(voiceService.listSessions(userId, status));
+      @RequestParam(required = false) NvcVoiceSessionStatus status,
+      @RequestParam(defaultValue = "0") @Min(0) int page,
+      @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
+    var pageResult = voiceService.listSessions(userId, status, PageRequest.of(page, size));
+    return Result.success(PageResult.of(pageResult));
   }
 
   /**
@@ -104,8 +111,12 @@ public class NvcVoiceController {
    * 获取对话历史
    */
   @GetMapping("/sessions/{sessionId}/messages")
-  public Result<List<VoiceMessageDTO>> getMessages(@PathVariable Long sessionId) {
-    return Result.success(voiceService.getMessages(sessionId));
+  public Result<PageResult<VoiceMessageDTO>> getMessages(
+      @PathVariable Long sessionId,
+      @RequestParam(defaultValue = "0") @Min(0) int page,
+      @RequestParam(defaultValue = "50") @Min(1) @Max(100) int size) {
+    var pageResult = voiceService.getMessages(sessionId, PageRequest.of(page, size));
+    return Result.success(PageResult.of(pageResult));
   }
 
   /**

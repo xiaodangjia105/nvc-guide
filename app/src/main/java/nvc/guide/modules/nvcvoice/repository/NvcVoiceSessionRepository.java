@@ -4,6 +4,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 import nvc.guide.modules.nvcvoice.model.NvcVoiceSessionEntity;
 import nvc.guide.modules.nvcvoice.model.NvcVoiceSessionStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -15,6 +17,10 @@ public interface NvcVoiceSessionRepository extends JpaRepository<NvcVoiceSession
   List<NvcVoiceSessionEntity> findByStatus(NvcVoiceSessionStatus status);
 
   List<NvcVoiceSessionEntity> findByUserIdAndStatus(Long userId, NvcVoiceSessionStatus status);
+
+  Page<NvcVoiceSessionEntity> findByUserId(Long userId, Pageable pageable);
+
+  Page<NvcVoiceSessionEntity> findByUserIdAndStatus(Long userId, NvcVoiceSessionStatus status, Pageable pageable);
 
   List<NvcVoiceSessionEntity> findByStatusInAndUpdatedAtBefore(
       List<NvcVoiceSessionStatus> statuses, LocalDateTime threshold);

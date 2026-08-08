@@ -1,6 +1,8 @@
 package nvc.guide.modules.nvcpractice.repository;
 
 import nvc.guide.modules.nvcpractice.model.NvcPracticeMessageEntity;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -11,6 +13,8 @@ import java.util.Optional;
 public interface NvcPracticeMessageRepository extends JpaRepository<NvcPracticeMessageEntity, Long> {
 
     List<NvcPracticeMessageEntity> findBySessionIdOrderBySequenceNumAsc(Long sessionId);
+
+    Page<NvcPracticeMessageEntity> findBySessionIdOrderBySequenceNumAsc(Long sessionId, Pageable pageable);
 
     int countBySessionId(Long sessionId);
 

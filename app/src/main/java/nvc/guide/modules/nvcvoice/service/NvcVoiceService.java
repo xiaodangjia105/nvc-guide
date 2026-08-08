@@ -258,6 +258,23 @@ public class NvcVoiceService {
   }
 
   /**
+   * 列出会话（分页）
+   */
+  public org.springframework.data.domain.Page<VoiceSessionResponse> listSessions(
+      Long userId, NvcVoiceSessionStatus status, org.springframework.data.domain.Pageable pageable) {
+    org.springframework.data.domain.Page<NvcVoiceSessionEntity> page;
+    if (userId != null && status != null) {
+      page = sessionRepository.findByUserIdAndStatus(userId, status, pageable);
+    } else if (userId != null) {
+      page = sessionRepository.findByUserId(userId, pageable);
+    } else {
+      // status-only or all: fall back to unpaged for now
+      page = sessionRepository.findAll(pageable);
+    }
+    return page.map(this::buildSessionResponse);
+  }
+
+  /**
    * 删除会话
    */
   @Transactional
@@ -322,6 +339,15 @@ public class NvcVoiceService {
     return messageRepository.findBySessionIdOrderBySequenceNumAsc(sessionId).stream()
         .map(this::toMessageDTO)
         .collect(Collectors.toList());
+  }
+
+  /**
+   * 获取对话历史（分页）
+   */
+  public org.springframework.data.domain.Page<VoiceMessageDTO> getMessages(
+      Long sessionId, org.springframework.data.domain.Pageable pageable) {
+    return messageRepository.findBySessionIdOrderBySequenceNumAsc(sessionId, pageable)
+        .map(this::toMessageDTO);
   }
 
   // ==================== Agent 调度 ====================

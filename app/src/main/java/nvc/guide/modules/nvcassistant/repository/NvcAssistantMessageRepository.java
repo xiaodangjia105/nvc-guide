@@ -2,6 +2,8 @@ package nvc.guide.modules.nvcassistant.repository;
 
 import nvc.guide.modules.nvcassistant.model.NvcAssistantMessageEntity;
 import nvc.guide.modules.nvcassistant.model.NvcAssistantMessageRole;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -16,6 +18,8 @@ import java.util.Optional;
 public interface NvcAssistantMessageRepository extends JpaRepository<NvcAssistantMessageEntity, Long> {
 
     List<NvcAssistantMessageEntity> findByConversationIdOrderBySequenceNumAsc(Long conversationId);
+
+    Page<NvcAssistantMessageEntity> findByConversationIdOrderBySequenceNumAsc(Long conversationId, Pageable pageable);
 
     List<NvcAssistantMessageEntity> findTop20ByConversationIdOrderBySequenceNumDesc(Long conversationId);
 

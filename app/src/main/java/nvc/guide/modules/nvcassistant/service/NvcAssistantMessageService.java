@@ -75,6 +75,16 @@ public class NvcAssistantMessageService {
     }
 
     /**
+     * 获取用户对话列表（分页）
+     */
+    @Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<ConversationResponse> listConversations(
+            Long userId, org.springframework.data.domain.Pageable pageable) {
+        return conversationRepository.findByUserIdOrderByUpdatedAtDesc(userId, pageable)
+            .map(this::toConversationResponse);
+    }
+
+    /**
      * 保存消息
      */
     @Transactional
@@ -88,6 +98,15 @@ public class NvcAssistantMessageService {
     @Transactional(readOnly = true)
     public List<NvcAssistantMessageEntity> getMessages(Long conversationId) {
         return messageRepository.findByConversationIdOrderBySequenceNumAsc(conversationId);
+    }
+
+    /**
+     * 获取对话消息列表（分页）
+     */
+    @Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<NvcAssistantMessageEntity> getMessages(
+            Long conversationId, org.springframework.data.domain.Pageable pageable) {
+        return messageRepository.findByConversationIdOrderBySequenceNumAsc(conversationId, pageable);
     }
 
     /**

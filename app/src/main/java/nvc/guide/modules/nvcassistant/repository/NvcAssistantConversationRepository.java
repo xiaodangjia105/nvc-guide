@@ -1,6 +1,8 @@
 package nvc.guide.modules.nvcassistant.repository;
 
 import nvc.guide.modules.nvcassistant.model.NvcAssistantConversationEntity;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -12,6 +14,8 @@ import java.util.Optional;
 public interface NvcAssistantConversationRepository extends JpaRepository<NvcAssistantConversationEntity, Long> {
 
     List<NvcAssistantConversationEntity> findByUserIdOrderByUpdatedAtDesc(Long userId);
+
+    Page<NvcAssistantConversationEntity> findByUserIdOrderByUpdatedAtDesc(Long userId, Pageable pageable);
 
     Optional<NvcAssistantConversationEntity> findByIdAndUserId(Long id, Long userId);
 }

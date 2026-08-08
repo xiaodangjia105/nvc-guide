@@ -324,6 +324,16 @@ public class NvcPracticeDialogueService {
   }
 
   /**
+   * 获取对话历史（分页）
+   */
+  public org.springframework.data.domain.Page<MessageResponse> getMessages(
+      Long sessionId, org.springframework.data.domain.Pageable pageable) {
+    return messageRepository
+        .findBySessionIdOrderBySequenceNumAsc(sessionId, pageable)
+        .map(this::toMessageResponse);
+  }
+
+  /**
    * 获取下一个序列号
    *
    * <p>使用 SELECT MAX(sequence_num) + 1 替代 countBySessionId，

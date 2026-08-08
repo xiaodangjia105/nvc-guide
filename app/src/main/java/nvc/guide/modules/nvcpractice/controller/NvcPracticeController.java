@@ -1,6 +1,7 @@
 package nvc.guide.modules.nvcpractice.controller;
 
 import nvc.guide.common.annotation.RateLimit;
+import nvc.guide.common.result.PageResult;
 import nvc.guide.common.result.Result;
 import nvc.guide.modules.nvcpractice.dto.CreatePracticeSessionRequest;
 import nvc.guide.modules.nvcpractice.dto.DialogueResponse;
@@ -22,10 +23,14 @@ import nvc.guide.modules.nvcpractice.model.NvcSummaryEntity;
 import nvc.guide.modules.nvcscenario.model.NvcScenarioEntity;
 import nvc.guide.modules.nvcscenario.repository.NvcScenarioRepository;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -41,6 +46,7 @@ import java.util.List;
 @RequestMapping("/api/nvc/practice")
 @Slf4j
 @RequiredArgsConstructor
+@Validated
 public class NvcPracticeController {
 
   private final NvcPracticeSessionService sessionService;
@@ -68,14 +74,15 @@ public class NvcPracticeController {
    * 获取用户的练习会话列表
    */
   @GetMapping("/sessions")
-  public Result<List<PracticeSessionResponse>> getUserSessions(
+  public Result<PageResult<PracticeSessionResponse>> getUserSessions(
       @RequestParam Long userId,
-      @RequestParam(required = false) NvcSessionPhase phase) {
-    var sessions = sessionService
-        .getUserSessions(userId, phase).stream()
-        .map(this::toSessionResponse)
-        .toList();
-    return Result.success(sessions);
+      @RequestParam(required = false) NvcSessionPhase phase,
+      @RequestParam(defaultValue = "0") @Min(0) int page,
+      @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
+    var pageResult = sessionService
+        .getUserSessions(userId, phase, PageRequest.of(page, size))
+        .map(this::toSessionResponse);
+    return Result.success(PageResult.of(pageResult));
   }
 
   /**
@@ -127,10 +134,12 @@ public class NvcPracticeController {
    * 获取对话历史
    */
   @GetMapping("/sessions/{sessionId}/messages")
-  public Result<List<MessageResponse>> getMessages(
-      @PathVariable Long sessionId) {
-    return Result.success(
-        dialogueService.getMessages(sessionId));
+  public Result<PageResult<MessageResponse>> getMessages(
+      @PathVariable Long sessionId,
+      @RequestParam(defaultValue = "0") @Min(0) int page,
+      @RequestParam(defaultValue = "50") @Min(1) @Max(100) int size) {
+    var pageResult = dialogueService.getMessages(sessionId, PageRequest.of(page, size));
+    return Result.success(PageResult.of(pageResult));
   }
 
   /**

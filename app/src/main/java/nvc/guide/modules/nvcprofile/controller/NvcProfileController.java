@@ -1,13 +1,18 @@
 package nvc.guide.modules.nvcprofile.controller;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import lombok.RequiredArgsConstructor;
+import nvc.guide.common.result.PageResult;
 import nvc.guide.common.result.Result;
 import nvc.guide.modules.nvcprofile.dto.*;
 import nvc.guide.modules.nvcprofile.model.NvcCommunicationRecordEntity;
 import nvc.guide.modules.nvcprofile.model.NvcUserProfileEntity;
 import nvc.guide.modules.nvcprofile.service.NvcCommunicationAnalysisService;
 import nvc.guide.modules.nvcprofile.service.NvcProfileService;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -15,6 +20,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/nvc/profile")
 @RequiredArgsConstructor
+@Validated
 public class NvcProfileController {
 
     private final NvcProfileService profileService;
@@ -71,11 +77,13 @@ public class NvcProfileController {
      * 获取沟通记录列表
      */
     @GetMapping("/communication-records")
-    public Result<List<CommunicationRecordDTO>> getCommunicationRecords(@RequestParam Long userId) {
-        var records = analysisService.getUserRecords(userId).stream()
-            .map(this::toRecordDTO)
-            .toList();
-        return Result.success(records);
+    public Result<PageResult<CommunicationRecordDTO>> getCommunicationRecords(
+            @RequestParam Long userId,
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
+        var pageResult = analysisService.getUserRecords(userId, PageRequest.of(page, size))
+            .map(this::toRecordDTO);
+        return Result.success(PageResult.of(pageResult));
     }
 
     private CommunicationRecordDTO toRecordDTO(NvcCommunicationRecordEntity record) {
