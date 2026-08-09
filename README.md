@@ -10,6 +10,7 @@
 [![React](https://img.shields.io/badge/React-18-blue?logo=react)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue?logo=typescript)](https://www.typescriptlang.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-pgvector-336791?logo=postgresql)](https://www.postgresql.org/)
+[![OpenTelemetry](https://img.shields.io/badge/OpenTelemetry-Trace-425CC7?logo=opentelemetry)](https://opentelemetry.io/)
 
 </div>
 
@@ -80,6 +81,31 @@ NVC 非暴力沟通练习助手是一个基于大语言模型的智能沟通练�
 - **趋势图**：跟踪用户 NVC 能力的发展趋势
 - **练习统计**：练习次数、时长、得分等统计
 
+### 🔍 全链路追踪系统
+
+基于 OpenTelemetry 思想的自研 Trace 系统，记录 Agent 对话的完整链路：
+
+| Span 类型 | 说明 | 记录内容 |
+|-----------|------|----------|
+| `INTENT_ROUTING` | 意图路由 | 识别结果、耗时 |
+| `LLM_CALL` | LLM 调用 | Token 消耗、耗时、Fallback 降级 |
+| `TOOL_CALL` | 工具调用 | 工具名、参数、结果、Hook 链 |
+| `COMPRESSION` | 上下文压缩 | 压缩前后字符数、摘要 |
+| `HTTP_REQUEST` | HTTP 请求 | 请求方法、URI、响应状态 |
+| `RAG_RETRIEVAL` | RAG 检索 | 查询内容、检索结果 |
+
+**核心特性**：
+- 🎯 **智能截断**：重要字段不截断，JSON 格式化后截断
+- ⚡ **采样率控制**：生产环境可配置采样率，调试用户总是采样
+- 🧹 **自动清理**：定期清理旧 trace 数据，默认保留 30 天
+- 🔧 **Hook 链追踪**：记录每个 Hook 的执行顺序、决策、耗时
+- 📊 **并行可视化**：自动识别并行工具调用，时间线展示
+
+**前端展示**：
+- 工具调用专用卡片（参数表格化、结果摘要、Hook 链时间线）
+- 多维度筛选（会话 ID、状态、工具名、Span 类型）
+- 并行工具调用可视化
+
 ### 📖 NVC Wiki
 
 - **知识百科**：NVC 核心概念、理论框架、实践技巧
@@ -101,6 +127,7 @@ NVC 非暴力沟通练习助手是一个基于大语言模型的智能沟通练�
 | MapStruct | 1.6 | 对象映射 |
 | DashScope SDK | 2.22 | 语音识别/合成 |
 | Gradle | 8.14 | 构建工具 |
+| **自研 Trace 系统** | - | 全链路追踪（Trace/Span/采样/清理） |
 
 ### 前端技术
 
@@ -131,7 +158,8 @@ nvc-guide/
 │   │   │   ├── async/                # Redis Stream 生产者/消费者模板
 │   │   │   ├── config/               # CORS、S3、OpenAPI、Jackson 等配置
 │   │   │   ├── exception/            # 业务异常与全局异常处理
-│   │   │   └── result/               # 统一响应 Result<T>
+│   │   │   ├── result/               # 统一响应 Result<T>
+│   │   │   └── trace/                # HTTP 请求追踪拦截器
 │   │   ├── infrastructure/           # 基础设施
 │   │   │   ├── export/               # PDF 导出
 │   │   │   ├── file/                 # 文件解析、存储
@@ -143,6 +171,9 @@ nvc-guide/
 │   │       ├── nvcprofile/           # 用户档案系统
 │   │       ├── nvcscenario/          # 场景库管理
 │   │       ├── nvcassistant/         # 主 Agent 对话入口
+│   │       │   ├── controller/       # Trace API 控制器
+│   │       │   ├── service/          # AgentLoop、ToolExecutor
+│   │       │   └── trace/            # Trace 系统核心（TraceManager、Span、采样、清理）
 │   │       ├── nvcwiki/              # NVC Wiki 知识库
 │   │       ├── knowledgebase/        # RAG 知识库
 │   │       └── llmprovider/          # LLM Provider 管理
@@ -155,8 +186,16 @@ nvc-guide/
 │   ├── src/
 │   │   ├── api/                      # API 接口
 │   │   ├── components/               # 公共组件
+│   │   │   └── nvc/                  # NVC 业务组件
+│   │   │       ├── TraceTimeline.tsx     # Trace 时间线（并行可视化）
+│   │   │       ├── TraceSpanCard.tsx     # Span 卡片
+│   │   │       ├── ToolCallSpanCard.tsx  # 工具调用专用卡片（Hook 链）
+│   │   │       ├── TraceFilterBar.tsx    # 多维度筛选
+│   │   │       └── TraceSummaryBar.tsx   # 汇总统计
 │   │   ├── hooks/                    # 业务 Hooks
 │   │   ├── pages/                    # 页面组件
+│   │   │   ├── TraceListPage.tsx     # Trace 列表页
+│   │   │   └── TraceDetailPage.tsx   # Trace 详情页
 │   │   │   ├── NvcPracticePage.tsx   # 练习页面
 │   │   │   ├── NvcVoicePage.tsx      # 语音练习
 │   │   │   ├── NvcAssistantPage.tsx  # AI 助手
@@ -261,10 +300,12 @@ docker-compose up -d --build
 | 指标 | 数量 |
 |------|------|
 | 后端模块 | 9 个 |
-| Java 文件 | 219 个 |
-| TypeScript 文件 | 56 个 |
-| 前端页面 | 15 个 |
+| Java 文件 | 230+ 个 |
+| TypeScript 文件 | 60+ 个 |
+| 前端页面 | 17 个 |
 | AI Agent | 10+ 种 |
+| Trace Span 类型 | 7 种 |
+| 测试用例 | 80+ 个 |
 
 ---
 
@@ -298,7 +339,7 @@ docker-compose up -d --build
 
 ## 🗺️ 开发路线
 
-### ✅ 已完成（Phase 1-4）
+### ✅ 已完成（Phase 1-5）
 
 - [x] 项目初始化与基础架构搭建
 - [x] 数据库实体与 Repository 创建
@@ -314,12 +355,14 @@ docker-compose up -d --build
 - [x] 数据可视化仪表盘
 - [x] NVC 主 Agent 对话入口
 - [x] NVC Wiki 知识库
+- [x] **全链路追踪系统**（Trace/Span/采样/清理/前端可视化）
 
 ### 🚧 进行中
 
 - [ ] UI 细节打磨与交互优化
 - [ ] 场景库扩充（更多真实场景）
 - [ ] Prompt 持续调优
+- [ ] Trace 系统集成 EVALUATION/FALLBACK/RAG/语音埋点
 
 ### 📋 计划中
 
@@ -358,6 +401,21 @@ CREATE EXTENSION IF NOT EXISTS vector;
 
 开发环境建议设置 `spring.jpa.hibernate.ddl-auto: update`
 
+### Q: Trace 链路看不到工具调用
+
+1. 检查 `application.yml` 中的 trace 配置是否正确
+2. 确认 `nvc.trace.spans.TOOL_CALL.level` 设置为 `DETAILED` 或 `FULL`
+3. 查看后端日志是否有 `[Trace]` 相关的 WARN/ERROR 信息
+4. 检查数据库 `agent_trace` 和 `agent_span` 表是否有数据
+
+### Q: 评估评分异常
+
+评估系统使用 0-100 分制。如果看到评分验证错误：
+
+1. 检查 `NvcEvaluationEntity` 的验证注解是否为 `@Max(100)`
+2. 确认评估 Prompt 中指定的分数范围是 0-100
+3. 查看后端日志是否有 JSON 解析错误（换行符问题已修复）
+
 ---
 
 ## 🛠️ 开发指南
@@ -381,6 +439,53 @@ CREATE EXTENSION IF NOT EXISTS vector;
 - **命名规范**：Entity（`XxxEntity`）、DTO（`XxxDTO`）、Request（`XxxRequest`）、Response（`XxxResponse`）
 - **异常处理**：统一使用 `BusinessException(ErrorCode.XXX, message)`
 - **配置管理**：敏感信息放 `.env`，业务配置用 `@ConfigurationProperties`
+
+### Trace 系统配置
+
+在 `application.yml` 中配置 Trace 系统：
+
+```yaml
+nvc:
+  trace:
+    # 默认级别：BASIC / DETAILED / FULL
+    default-level: BASIC
+
+    # 按 Span 类型配置
+    spans:
+      TOOL_CALL:
+        level: DETAILED              # 工具调用详细记录
+        hook-detail-enabled: true    # 记录 Hook 链
+        payload-max-length: 4096     # payload 最大长度
+      LLM_CALL:
+        level: BASIC                 # LLM 调用基础记录
+      EVALUATION:
+        level: FULL                  # 评估完整记录
+
+    # 采样率配置（生产环境）
+    sampling:
+      enabled: false                 # 是否启用采样
+      rate: 1.0                      # 采样率（0.0-1.0）
+
+    # 自动清理配置
+    cleanup:
+      enabled: true                  # 是否启用自动清理
+      retention-days: 30             # 保留天数
+      batch-size: 1000               # 批量删除大小
+      cron: "0 0 3 * * ?"            # cron 表达式（每天凌晨 3 点）
+
+    # 运行时动态配置
+    runtime:
+      enabled: true
+      debug-users: [1001, 1002]      # 调试用户（总是采样）
+      debug-sessions: []             # 调试会话（总是采样）
+```
+
+### 添加新的 Trace Span 类型
+
+1. 在 `TraceSpanCard.tsx` 的 `SPAN_TYPE_LABELS` 中添加标签
+2. 在需要追踪的代码中调用 `traceManager.startSpan("NEW_TYPE", "Component")`
+3. 设置 `inputPayload`、`outputPayload`、`metadata` 等字段
+4. 调用 `traceManager.endSpan(span, status, failureReason)` 完成 Span
 
 ---
 
