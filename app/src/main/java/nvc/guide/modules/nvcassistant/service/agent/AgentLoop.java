@@ -25,6 +25,7 @@ import org.springframework.ai.chat.model.Generation;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
+import reactor.util.context.Context;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -72,12 +73,21 @@ public class AgentLoop {
      */
     public Flux<AgentEvent> executeStream(Long userId, Long conversationId,
                                            List<Message> contextMessages, String userMessage) {
-        return Flux.create(sink -> {
-            long startTime = System.currentTimeMillis();
-            try {
-                // 1. 构建完整消息列表
-                List<Message> messages = new ArrayList<>(contextMessages);
-                messages.add(new UserMessage(userMessage));
+        return Flux.<AgentEvent>deferContextual(ctx -> {
+            // 从 Reactor Context 中恢复 trace 上下文到 ThreadLocal
+            var traceContextOpt = ctx.getOrEmpty("traceContext");
+            if (traceContextOpt.isPresent()) {
+                traceManager.setTraceContext((nvc.guide.modules.nvcassistant.trace.TraceContext) traceContextOpt.get());
+            } else {
+                // 清理可能存在的脏数据
+                traceManager.cleanup();
+            }
+            return Flux.<AgentEvent>create(sink -> {
+                long startTime = System.currentTimeMillis();
+                try {
+                    // 1. 构建完整消息列表
+                    List<Message> messages = new ArrayList<>(contextMessages);
+                    messages.add(new UserMessage(userMessage));
 
                 // 2. 意图预路由：高置信度意图直接执行工具，跳过 LLM
                 IntentRouter.IntentMatch intentMatch = intentRouter.detectIntent(userMessage);
@@ -270,6 +280,10 @@ public class AgentLoop {
                 sink.next(AgentEvent.error("对话出错，请稍后重试"));
                 sink.complete();
             }
+        }).doFinally(signal -> {
+            // 清理 trace 上下文，防止内存泄漏
+            traceManager.cleanup();
+        });
         });
     }
 

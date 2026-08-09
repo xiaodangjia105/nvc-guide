@@ -7,7 +7,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import nvc.guide.modules.nvcassistant.metrics.MetricsCollector;
 import nvc.guide.modules.nvcassistant.trace.AgentSpanEntity;
+import nvc.guide.modules.nvcassistant.trace.PayloadTruncator;
 import nvc.guide.modules.nvcassistant.trace.TraceManager;
+import nvc.guide.modules.nvcassistant.trace.TraceProperties;
 import nvc.guide.modules.nvcpractice.tool.NvcTool;
 import nvc.guide.modules.nvcpractice.tool.NvcToolContext;
 import nvc.guide.modules.nvcpractice.tool.NvcToolRegistry;
@@ -15,6 +17,9 @@ import nvc.guide.modules.nvcpractice.tool.NvcToolResult;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -39,6 +44,8 @@ public class ToolExecutor {
     private final ObjectMapper objectMapper;
     private final MetricsCollector metricsCollector;
     private final TraceManager traceManager;
+    private final TraceProperties traceProperties;
+    private final PayloadTruncator payloadTruncator;
 
     /** 单个工具超时（毫秒） */
     private static final long TOOL_TIMEOUT_MS = 30_000;
@@ -113,9 +120,49 @@ public class ToolExecutor {
                     result.durationMs(),
                     null);
 
-                // Trace 埋点
+                // Trace 埋点（详细信息）
                 AgentSpanEntity toolSpan = traceManager.startSpan("TOOL_CALL", "ToolExecutor");
                 toolSpan.setDurationMs(result.durationMs());
+
+                // 记录输入 payload（工具名 + 参数）
+                boolean detailedTrace = traceProperties.shouldRecordDetailed("TOOL_CALL", userId, sessionId);
+                TraceProperties.SpanConfig spanConfig = traceProperties.getSpanConfig("TOOL_CALL");
+
+                if (detailedTrace) {
+                    // 构建详细输入 payload
+                    Map<String, Object> inputPayload = new HashMap<>();
+                    inputPayload.put("toolName", result.toolName());
+                    inputPayload.put("arguments", result.arguments());
+                    if (result.hookRecords() != null && !result.hookRecords().isEmpty()) {
+                        inputPayload.put("hookChain", result.hookRecords());
+                    }
+                    String inputJson = objectMapper.writeValueAsString(inputPayload);
+                    toolSpan.setInputPayload(payloadTruncator.truncate(inputJson, spanConfig.getPayloadMaxLength(), "TOOL_CALL"));
+
+                    // 记录输出 payload（结果）
+                    Map<String, Object> outputPayload = new HashMap<>();
+                    outputPayload.put("success", result.success());
+                    outputPayload.put("result", result.result());
+                    if (result.skipReason() != null) {
+                        outputPayload.put("skipReason", result.skipReason());
+                    }
+                    String outputJson = objectMapper.writeValueAsString(outputPayload);
+                    toolSpan.setOutputPayload(payloadTruncator.truncate(outputJson, spanConfig.getPayloadMaxLength(), "TOOL_CALL"));
+
+                    // 记录 metadata
+                    Map<String, Object> metadata = new HashMap<>();
+                    metadata.put("hookCount", result.hookRecords() != null ? result.hookRecords().size() : 0);
+                    metadata.put("skipped", result.skipped());
+                    metadata.put("userId", userId);
+                    metadata.put("sessionId", sessionId);
+                    toolSpan.setMetadata(objectMapper.writeValueAsString(metadata));
+                } else {
+                    // 基础级别：只记录工具名
+                    Map<String, Object> basicInput = new HashMap<>();
+                    basicInput.put("toolName", result.toolName());
+                    toolSpan.setInputPayload(objectMapper.writeValueAsString(basicInput));
+                }
+
                 traceManager.endSpan(toolSpan,
                     result.success() ? "SUCCESS" : "FAILED",
                     result.success() ? null : result.result());
@@ -135,34 +182,63 @@ public class ToolExecutor {
         String arguments = toolCall.arguments();
         long startTime = System.currentTimeMillis();
 
+        // Hook 执行记录（用于 trace）
+        List<Map<String, Object>> hookRecords = new ArrayList<>();
+        boolean detailedTrace = traceProperties.shouldRecordDetailed("TOOL_CALL", context.getUserId(), context.getSessionId());
+
         try {
             JsonNode argsNode = parseArguments(arguments);
 
             // 1. beforeToolCall Hook 链（按 @Order 排序）
             List<NvcToolHook> sortedHooks = getSortedHooks();
             for (NvcToolHook hook : sortedHooks) {
+                String hookName = hook.getClass().getSimpleName();
+                long hookStart = System.currentTimeMillis();
+
                 try {
                     NvcToolHook.ToolCallDecision decision = hook.beforeToolCall(toolName, argsNode, context)
                         .get(TOOL_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+                    long hookDuration = System.currentTimeMillis() - hookStart;
+
+                    // 记录 Hook 执行
+                    if (detailedTrace) {
+                        Map<String, Object> hookRecord = new HashMap<>();
+                        hookRecord.put("hook", hookName);
+                        hookRecord.put("phase", "before");
+                        hookRecord.put("decision", decision.name());
+                        hookRecord.put("durationMs", hookDuration);
+                        hookRecords.add(hookRecord);
+                    }
+
                     if (decision == NvcToolHook.ToolCallDecision.SKIP) {
                         long duration = System.currentTimeMillis() - startTime;
                         // 检查是否有缓存结果（CacheToolHook 命中时设置）
                         String cachedResult = context.getAttribute("cachedResult");
                         if (cachedResult != null) {
                             log.info("[ToolExecutor] SKIPPED (cached): tool={}, duration={}ms", toolName, duration);
-                            return ToolCallResult.success(toolName, arguments, cachedResult, duration);
+                            return ToolCallResult.success(toolName, arguments, cachedResult, duration, hookRecords);
                         }
                         String skipReason = context.hasAttribute("skipReason")
                             ? context.getAttribute("skipReason").toString()
                             : "Hook 跳过";
                         log.info("[ToolExecutor] SKIPPED: tool={}, reason={}, duration={}ms",
                             toolName, skipReason, duration);
-                        return ToolCallResult.skipped(toolName, arguments, skipReason);
+                        return ToolCallResult.skipped(toolName, arguments, skipReason, hookRecords);
                     }
                 } catch (Exception e) {
+                    long hookDuration = System.currentTimeMillis() - hookStart;
                     log.warn("[ToolExecutor] beforeToolCall hook error: tool={}, hook={}",
-                        toolName, hook.getClass().getSimpleName(), e);
+                        toolName, hookName, e);
                     // Hook 异常不阻断执行
+                    if (detailedTrace) {
+                        Map<String, Object> hookRecord = new HashMap<>();
+                        hookRecord.put("hook", hookName);
+                        hookRecord.put("phase", "before");
+                        hookRecord.put("decision", "ERROR");
+                        hookRecord.put("durationMs", hookDuration);
+                        hookRecord.put("error", e.getMessage());
+                        hookRecords.add(hookRecord);
+                    }
                 }
             }
 
@@ -170,7 +246,7 @@ public class ToolExecutor {
             NvcTool tool = toolRegistry.getTool(toolName);
             if (tool == null) {
                 long duration = System.currentTimeMillis() - startTime;
-                return ToolCallResult.failure(toolName, arguments, "工具不存在: " + toolName, duration);
+                return ToolCallResult.failure(toolName, arguments, "工具不存在: " + toolName, duration, hookRecords);
             }
 
             NvcToolResult result = tool.execute(arguments, context);
@@ -179,15 +255,41 @@ public class ToolExecutor {
             // 3. afterToolCall Hook 链（逆序）
             String processedResult = resultData;
             for (int i = sortedHooks.size() - 1; i >= 0; i--) {
+                NvcToolHook hook = sortedHooks.get(i);
+                String hookName = hook.getClass().getSimpleName();
+                long hookStart = System.currentTimeMillis();
+
                 try {
-                    String hookResult = sortedHooks.get(i).afterToolCall(toolName, processedResult, context)
+                    String hookResult = hook.afterToolCall(toolName, processedResult, context)
                         .get(TOOL_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+                    long hookDuration = System.currentTimeMillis() - hookStart;
+
+                    // 记录 Hook 执行
+                    if (detailedTrace) {
+                        Map<String, Object> hookRecord = new HashMap<>();
+                        hookRecord.put("hook", hookName);
+                        hookRecord.put("phase", "after");
+                        hookRecord.put("decision", hookResult != null ? "MODIFIED" : "PASSTHROUGH");
+                        hookRecord.put("durationMs", hookDuration);
+                        hookRecords.add(hookRecord);
+                    }
+
                     if (hookResult != null) {
                         processedResult = hookResult;
                     }
                 } catch (Exception e) {
+                    long hookDuration = System.currentTimeMillis() - hookStart;
                     log.warn("[ToolExecutor] afterToolCall hook error: tool={}, hook={}",
-                        toolName, sortedHooks.get(i).getClass().getSimpleName(), e);
+                        toolName, hookName, e);
+                    if (detailedTrace) {
+                        Map<String, Object> hookRecord = new HashMap<>();
+                        hookRecord.put("hook", hookName);
+                        hookRecord.put("phase", "after");
+                        hookRecord.put("decision", "ERROR");
+                        hookRecord.put("durationMs", hookDuration);
+                        hookRecord.put("error", e.getMessage());
+                        hookRecords.add(hookRecord);
+                    }
                 }
             }
 
@@ -196,13 +298,13 @@ public class ToolExecutor {
                 toolName, result.success(), duration);
 
             return result.success()
-                ? ToolCallResult.success(toolName, arguments, processedResult, duration)
-                : ToolCallResult.failure(toolName, arguments, processedResult, duration);
+                ? ToolCallResult.success(toolName, arguments, processedResult, duration, hookRecords)
+                : ToolCallResult.failure(toolName, arguments, processedResult, duration, hookRecords);
 
         } catch (Exception e) {
             long duration = System.currentTimeMillis() - startTime;
             log.error("[ToolExecutor] Execution failed: tool={}, duration={}ms", toolName, duration, e);
-            return ToolCallResult.failure(toolName, arguments, "工具执行异常: " + e.getMessage(), duration);
+            return ToolCallResult.failure(toolName, arguments, "工具执行异常: " + e.getMessage(), duration, hookRecords);
         }
     }
 

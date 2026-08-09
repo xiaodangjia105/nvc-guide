@@ -73,7 +73,15 @@ public class NvcAssistantService {
         contextMessages.addAll(contextResult.messages());
 
         // 7. 通过 AgentLoop 执行（返回 SSE 事件流）
-        Flux<AgentEvent> eventStream = agentLoop.executeStream(userId, convId, contextMessages, request.getMessage());
+        // 保存 trace 上下文，以便在异步线程中使用
+        final var traceContext = traceManager.getTraceContext();
+        Flux<AgentEvent> eventStream = agentLoop.executeStream(userId, convId, contextMessages, request.getMessage())
+            .contextWrite(ctx -> {
+                if (traceContext != null) {
+                    return ctx.put("traceContext", traceContext);
+                }
+                return ctx;
+            });
 
         // 7. 用 AtomicInteger 实现可变序列号（工具消息需要递增 seq）
         final AtomicInteger seqCounter = new AtomicInteger(seq);
@@ -147,13 +155,22 @@ public class NvcAssistantService {
                     messageService.updateConversationTitle(convId, title);
                 }
                 // 结束 Trace（链路追踪落库）
-                traceManager.endTrace(trace);
+                // 使用保存的 trace 上下文，因为当前线程可能没有 ThreadLocal
+                if (traceContext != null) {
+                    traceManager.runWithContext(traceContext, () -> traceManager.endTrace(trace));
+                } else {
+                    traceManager.endTrace(trace);
+                }
                 log.info("[NvcAssistantService] Stream completed: conversationId={}, userId={}", convId, userId);
             })
             .doOnError(e -> {
                 // 错误时也要结束 Trace
                 trace.setFinalStatus("FAILED");
-                traceManager.endTrace(trace);
+                if (traceContext != null) {
+                    traceManager.runWithContext(traceContext, () -> traceManager.endTrace(trace));
+                } else {
+                    traceManager.endTrace(trace);
+                }
                 log.error("[NvcAssistantService] Stream error: conversationId={}, userId={}", convId, userId, e);
             });
 

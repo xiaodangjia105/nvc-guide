@@ -236,3 +236,35 @@ app:
         speech-rate: 1.0
         volume: 60
 
+    # Trace 配置
+    trace:
+      default-level: ${NVC_TRACE_DEFAULT_LEVEL:BASIC}
+      spans:
+        TOOL_CALL:
+          level: ${NVC_TRACE_TOOL_CALL_LEVEL:DETAILED}
+          hook-detail-enabled: ${NVC_TRACE_TOOL_CALL_HOOK_DETAIL:true}
+          payload-max-length: ${NVC_TRACE_TOOL_CALL_PAYLOAD_MAX_LENGTH:4096}
+        LLM_CALL:
+          level: ${NVC_TRACE_LLM_CALL_LEVEL:BASIC}
+          payload-max-length: ${NVC_TRACE_LLM_CALL_PAYLOAD_MAX_LENGTH:2048}
+        EVALUATION:
+          level: ${NVC_TRACE_EVALUATION_LEVEL:FULL}
+        INTENT_ROUTING:
+          level: ${NVC_TRACE_INTENT_ROUTING_LEVEL:BASIC}
+        COMPRESSION:
+          level: ${NVC_TRACE_COMPRESSION_LEVEL:BASIC}
+      runtime:
+        enabled: ${NVC_TRACE_RUNTIME_ENABLED:true}
+        debug-users: ${NVC_TRACE_DEBUG_USERS:}
+        debug-sessions: ${NVC_TRACE_DEBUG_SESSIONS:}
+      # 采样率配置（生产环境建议开启）
+      sampling:
+        enabled: ${NVC_TRACE_SAMPLING_ENABLED:false}
+        rate: ${NVC_TRACE_SAMPLING_RATE:1.0}
+      # 自动清理配置
+      cleanup:
+        enabled: ${NVC_TRACE_CLEANUP_ENABLED:true}
+        retention-days: ${NVC_TRACE_CLEANUP_RETENTION_DAYS:30}
+        batch-size: ${NVC_TRACE_CLEANUP_BATCH_SIZE:1000}
+        cron: ${NVC_TRACE_CLEANUP_CRON:0 0 3 * * ?}
+

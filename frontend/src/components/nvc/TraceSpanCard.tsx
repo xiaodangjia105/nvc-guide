@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { AgentSpan } from '../../types/trace';
+import ToolCallSpanCard from './ToolCallSpanCard';
 
 interface Props {
   span: AgentSpan;
@@ -23,6 +24,11 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function TraceSpanCard({ span, maxDuration }: Props) {
+  // 工具调用使用专用卡片
+  if (span.spanType === 'TOOL_CALL') {
+    return <ToolCallSpanCard span={span} maxDuration={maxDuration} />;
+  }
+
   const [expanded, setExpanded] = useState(false);
 
   const widthPercent = maxDuration > 0 ? Math.max((span.durationMs / maxDuration) * 100, 2) : 2;

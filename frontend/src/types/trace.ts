@@ -32,6 +32,45 @@ export interface AgentSpan {
   metadata?: Record<string, unknown>;
 }
 
+/**
+ * Hook 执行记录
+ */
+export interface HookRecord {
+  hook: string;
+  phase: 'before' | 'after';
+  decision: 'SKIP' | 'CONTINUE' | 'MODIFIED' | 'PASSTHROUGH' | 'ERROR';
+  durationMs: number;
+  error?: string;
+}
+
+/**
+ * 工具调用输入 payload
+ */
+export interface ToolCallInput {
+  toolName: string;
+  arguments?: string | Record<string, unknown>;
+  hookChain?: HookRecord[];
+}
+
+/**
+ * 工具调用输出 payload
+ */
+export interface ToolCallOutput {
+  success: boolean;
+  result: string;
+  skipReason?: string;
+}
+
+/**
+ * 工具调用 metadata
+ */
+export interface ToolCallMetadata {
+  hookCount: number;
+  skipped: boolean;
+  userId: number;
+  sessionId: number;
+}
+
 export interface TraceStats {
   totalTraces: number;
   avgDurationMs: number;

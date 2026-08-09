@@ -1,14 +1,34 @@
 import { useState } from 'react';
 
 interface Props {
-  onSearch: (params: { sessionId?: string; from?: string; to?: string; status?: string }) => void;
+  onSearch: (params: {
+    sessionId?: string;
+    from?: string;
+    to?: string;
+    status?: string;
+    toolName?: string;
+    spanType?: string;
+  }) => void;
 }
+
+const SPAN_TYPES = [
+  { value: '', label: '全部 Span' },
+  { value: 'INTENT_ROUTING', label: '🎯 意图路由' },
+  { value: 'LLM_CALL', label: '🤖 LLM 调用' },
+  { value: 'TOOL_CALL', label: '🔧 工具调用' },
+  { value: 'COMPRESSION', label: '📦 上下文压缩' },
+  { value: 'EVALUATION', label: '📊 评估触发' },
+  { value: 'FALLBACK', label: '⚠️ 降级处理' },
+  { value: 'METRICS', label: '📈 指标采集' },
+];
 
 export default function TraceFilterBar({ onSearch }: Props) {
   const [sessionId, setSessionId] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [status, setStatus] = useState('');
+  const [toolName, setToolName] = useState('');
+  const [spanType, setSpanType] = useState('');
 
   const handleSearch = () => {
     onSearch({
@@ -16,14 +36,18 @@ export default function TraceFilterBar({ onSearch }: Props) {
       from: from || undefined,
       to: to || undefined,
       status: status || undefined,
+      toolName: toolName || undefined,
+      spanType: spanType || undefined,
     });
   };
 
-  const handleListAll = () => {
+  const handleReset = () => {
     setSessionId('');
     setFrom('');
     setTo('');
     setStatus('');
+    setToolName('');
+    setSpanType('');
     onSearch({});
   };
 
@@ -70,11 +94,41 @@ export default function TraceFilterBar({ onSearch }: Props) {
           <option value="FAILED">失败</option>
         </select>
       </div>
+      <div>
+        <label className="block text-xs text-gray-500 mb-1">工具名</label>
+        <input
+          type="text"
+          value={toolName}
+          onChange={e => setToolName(e.target.value)}
+          placeholder="如: profile_update"
+          className="border rounded px-2 py-1 text-sm w-40"
+        />
+      </div>
+      <div>
+        <label className="block text-xs text-gray-500 mb-1">Span 类型</label>
+        <select
+          value={spanType}
+          onChange={e => setSpanType(e.target.value)}
+          className="border rounded px-2 py-1 text-sm"
+        >
+          {SPAN_TYPES.map(type => (
+            <option key={type.value} value={type.value}>
+              {type.label}
+            </option>
+          ))}
+        </select>
+      </div>
       <button
         onClick={handleSearch}
         className="bg-blue-500 text-white px-4 py-1 rounded text-sm hover:bg-blue-600"
       >
         查询
+      </button>
+      <button
+        onClick={handleReset}
+        className="bg-gray-500 text-white px-4 py-1 rounded text-sm hover:bg-gray-600"
+      >
+        重置
       </button>
     </div>
   );

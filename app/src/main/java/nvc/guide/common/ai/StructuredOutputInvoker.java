@@ -116,7 +116,20 @@ public class StructuredOutputInvoker {
         try {
             return outputConverter.convert(content);
         } catch (Exception firstError) {
-            String repaired = repairUnescapedQuotesInJsonStrings(content);
+            // 尝试修复 JSON 中的换行符
+            String repaired = repairNewlinesInJsonStrings(content);
+            if (!repaired.equals(content)) {
+                try {
+                    T result = outputConverter.convert(repaired);
+                    log.warn("{}结构化 JSON 存在未转义换行符，已在本地修复后解析成功", logContext);
+                    return result;
+                } catch (Exception repairError) {
+                    firstError.addSuppressed(repairError);
+                }
+            }
+
+            // 尝试修复未转义引号
+            repaired = repairUnescapedQuotesInJsonStrings(repaired);
             if (!repaired.equals(content)) {
                 try {
                     T result = outputConverter.convert(repaired);
@@ -128,6 +141,73 @@ public class StructuredOutputInvoker {
             }
             throw firstError;
         }
+    }
+
+    /**
+     * 修复 JSON 字符串值中的换行符
+     *
+     * <p>LLM 有时会在 JSON 字符串值中返回真实的换行符（\n），
+     * 而不是转义的 \\n，导致 JSON 解析失败。
+     */
+    private String repairNewlinesInJsonStrings(String content) {
+        if (content == null || content.isBlank()) {
+            return content;
+        }
+
+        StringBuilder repaired = new StringBuilder(content.length());
+        boolean inString = false;
+        boolean escaping = false;
+
+        for (int i = 0; i < content.length(); i++) {
+            char ch = content.charAt(i);
+
+            if (!inString) {
+                if (ch == '"') {
+                    inString = true;
+                }
+                repaired.append(ch);
+                continue;
+            }
+
+            if (escaping) {
+                repaired.append(ch);
+                escaping = false;
+                continue;
+            }
+
+            if (ch == '\\') {
+                repaired.append(ch);
+                escaping = true;
+                continue;
+            }
+
+            if (ch == '"') {
+                if (isLikelyJsonStringTerminator(content, i + 1)) {
+                    inString = false;
+                    repaired.append(ch);
+                } else {
+                    repaired.append("\\\"");
+                }
+                continue;
+            }
+
+            // 修复换行符
+            if (ch == '\n') {
+                repaired.append("\\n");
+                continue;
+            }
+            if (ch == '\r') {
+                repaired.append("\\r");
+                continue;
+            }
+            if (ch == '\t') {
+                repaired.append("\\t");
+                continue;
+            }
+
+            repaired.append(ch);
+        }
+        return repaired.toString();
     }
 
     private String repairUnescapedQuotesInJsonStrings(String content) {

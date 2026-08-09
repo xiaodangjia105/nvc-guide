@@ -36,33 +36,33 @@ public class NvcEvaluationEntity {
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
-    @Min(value = 1, message = "观察评分最低为1")
-    @Max(value = 10, message = "观察评分最高为10")
+    @Min(value = 0, message = "观察评分最低为0")
+    @Max(value = 100, message = "观察评分最高为100")
     @Column(name = "observation_score")
     private Integer observationScore;
 
-    @Min(value = 1, message = "感受评分最低为1")
-    @Max(value = 10, message = "感受评分最高为10")
+    @Min(value = 0, message = "感受评分最低为0")
+    @Max(value = 100, message = "感受评分最高为100")
     @Column(name = "feeling_score")
     private Integer feelingScore;
 
-    @Min(value = 1, message = "需求评分最低为1")
-    @Max(value = 10, message = "需求评分最高为10")
+    @Min(value = 0, message = "需求评分最低为0")
+    @Max(value = 100, message = "需求评分最高为100")
     @Column(name = "need_score")
     private Integer needScore;
 
-    @Min(value = 1, message = "请求评分最低为1")
-    @Max(value = 10, message = "请求评分最高为10")
+    @Min(value = 0, message = "请求评分最低为0")
+    @Max(value = 100, message = "请求评分最高为100")
     @Column(name = "request_score")
     private Integer requestScore;
 
-    @Min(value = 1, message = "总体评分最低为1")
-    @Max(value = 10, message = "总体评分最高为10")
+    @Min(value = 0, message = "总体评分最低为0")
+    @Max(value = 100, message = "总体评分最高为100")
     @Column(name = "overall_score")
     private Integer overallScore;
 
-    @Min(value = 1, message = "共情评分最低为1")
-    @Max(value = 10, message = "共情评分最高为10")
+    @Min(value = 0, message = "共情评分最低为0")
+    @Max(value = 100, message = "共情评分最高为100")
     @Column(name = "empathy_score")
     private Integer empathyScore;
 

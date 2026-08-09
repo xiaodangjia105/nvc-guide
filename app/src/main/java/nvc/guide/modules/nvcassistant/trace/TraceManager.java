@@ -3,6 +3,7 @@ package nvc.guide.modules.nvcassistant.trace;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import reactor.util.context.Context;
 
 import java.util.UUID;
 
@@ -42,6 +43,9 @@ public class TraceManager {
     /** payload 最大长度（超过截断） */
     private static final int PAYLOAD_MAX_LENGTH = 4096;
 
+    /** Reactor Context 中的 trace 上下文 key */
+    public static final String TRACE_CONTEXT_KEY = "traceContext";
+
     /**
      * 开启新 Trace
      *
@@ -74,6 +78,44 @@ public class TraceManager {
     public void cleanup() {
         CURRENT_TRACE.remove();
         log.debug("[Trace] ThreadLocal cleaned up");
+    }
+
+    /**
+     * 获取当前 Trace 上下文（可能为 null）
+     * 用于在异步场景下保存上下文
+     */
+    public TraceContext getTraceContext() {
+        return CURRENT_TRACE.get();
+    }
+
+    /**
+     * 设置 Trace 上下文
+     * 用于在异步场景下恢复上下文
+     */
+    public void setTraceContext(TraceContext context) {
+        if (context != null) {
+            CURRENT_TRACE.set(context);
+        } else {
+            CURRENT_TRACE.remove();
+        }
+    }
+
+    /**
+     * 在指定的 Trace 上下文中执行操作
+     * 用于在异步场景下恢复上下文执行操作
+     */
+    public void runWithContext(TraceContext context, Runnable action) {
+        TraceContext previous = CURRENT_TRACE.get();
+        try {
+            CURRENT_TRACE.set(context);
+            action.run();
+        } finally {
+            if (previous != null) {
+                CURRENT_TRACE.set(previous);
+            } else {
+                CURRENT_TRACE.remove();
+            }
+        }
     }
 
     /**

@@ -8,6 +8,7 @@ import nvc.guide.modules.nvcassistant.service.agent.AgentEvent;
 import nvc.guide.modules.nvcassistant.service.agent.AgentLoop;
 import nvc.guide.modules.nvcassistant.service.agent.ContextManager;
 import nvc.guide.modules.nvcassistant.service.agent.PromptBuilder;
+import nvc.guide.modules.nvcassistant.trace.TraceManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -29,6 +30,7 @@ class NvcAssistantServiceTest {
     private ContextManager contextManager;
     private PromptBuilder promptBuilder;
     private ObjectMapper objectMapper;
+    private TraceManager traceManager;
     private NvcAssistantService service;
 
     @BeforeEach
@@ -38,7 +40,8 @@ class NvcAssistantServiceTest {
         contextManager = mock(ContextManager.class);
         promptBuilder = mock(PromptBuilder.class);
         objectMapper = new ObjectMapper();
-        service = new NvcAssistantService(messageService, agentLoop, contextManager, promptBuilder, objectMapper);
+        traceManager = mock(TraceManager.class);
+        service = new NvcAssistantService(messageService, agentLoop, contextManager, promptBuilder, objectMapper, traceManager);
     }
 
     private AssistantRequest buildRequest(String message, Long conversationId) {

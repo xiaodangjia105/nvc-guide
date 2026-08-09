@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import nvc.guide.common.result.Result;
 import nvc.guide.modules.nvcassistant.evaluation.OfflineEvaluationService;
 import nvc.guide.modules.nvcassistant.evaluation.dto.EvaluationReport;
+import nvc.guide.modules.nvcassistant.trace.AgentSpanRepository;
 import nvc.guide.modules.nvcassistant.trace.AgentTraceEntity;
 import nvc.guide.modules.nvcassistant.trace.AgentTraceRepository;
 import nvc.guide.modules.nvcassistant.trace.TraceStatsService;
@@ -13,6 +14,7 @@ import nvc.guide.modules.nvcassistant.trace.dto.TraceStats;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -32,6 +34,7 @@ import java.util.List;
 public class TraceController {
 
     private final AgentTraceRepository traceRepository;
+    private final AgentSpanRepository spanRepository;
     private final TraceStatsService traceStatsService;
     private final OfflineEvaluationService offlineEvaluationService;
 
@@ -57,9 +60,14 @@ public class TraceController {
      * 查询单个 Trace 详情（含 Spans）
      */
     @GetMapping("/{traceId}")
+    @Transactional(readOnly = true)
     public Result<AgentTraceEntity> getDetail(@PathVariable String traceId) {
         return traceRepository.findById(traceId)
-            .map(Result::success)
+            .map(trace -> {
+                // 显式触发懒加载，确保 spans 被加载
+                trace.getSpans().size();
+                return Result.success(trace);
+            })
             .orElse(Result.success(null));
     }
 
