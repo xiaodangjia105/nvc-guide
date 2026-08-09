@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import nvc.guide.modules.nvcpractice.dto.PracticeContext;
 import nvc.guide.modules.nvcpractice.model.*;
 import nvc.guide.modules.nvcpractice.repository.NvcPracticeReflectionRepository;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,12 +20,20 @@ import java.util.List;
  */
 @Service
 @Slf4j
-@RequiredArgsConstructor
 public class NvcReflectionService {
 
     private final NvcPracticeReflectionRepository reflectionRepository;
     private final NvcAgentOrchestrator orchestrator;
     private final ObjectMapper objectMapper;
+
+    public NvcReflectionService(
+        NvcPracticeReflectionRepository reflectionRepository,
+        @Lazy NvcAgentOrchestrator orchestrator,
+        ObjectMapper objectMapper) {
+      this.reflectionRepository = reflectionRepository;
+      this.orchestrator = orchestrator;
+      this.objectMapper = objectMapper;
+    }
 
     /**
      * 执行反思并存储结果

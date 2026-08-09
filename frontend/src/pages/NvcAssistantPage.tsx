@@ -28,7 +28,15 @@ export default function NvcAssistantPage() {
   useEffect(() => {
     setLoadingConversations(true);
     assistantApi.getConversations(userId)
-      .then(setConversations)
+      .then((res) => {
+        // 后端返回分页结果，提取 content 数组
+        const data = res as any;
+        if (data && data.content) {
+          setConversations(data.content);
+        } else if (Array.isArray(data)) {
+          setConversations(data);
+        }
+      })
       .catch(console.error)
       .finally(() => setLoadingConversations(false));
   }, [userId]);
@@ -38,17 +46,31 @@ export default function NvcAssistantPage() {
     setLoadingMessages(true);
     try {
       const raw = await assistantApi.getMessages(userId, conversationId);
-      const display: DisplayMessage[] = raw
-        .filter((m) => m.role === 'USER' || m.role === 'ASSISTANT')
-        .map((m) => ({
-          id: `msg-${m.id}`,
-          role: m.role as 'USER' | 'ASSISTANT',
-          content: m.content,
-          toolCalls: m.toolCalls || [],
-          practicePreview: null,
-          dbMessageId: m.id,
-          sessionId: activeConversationId ?? undefined,
-        }));
+      // 后端返回分页结果，提取 content 数组
+      const data = raw as any;
+      const messages = data && data.content ? data.content : (Array.isArray(data) ? data : []);
+      const display: DisplayMessage[] = messages
+        .filter((m: any) => m.role === 'USER' || m.role === 'ASSISTANT')
+        .map((m: any) => {
+          // toolCalls 可能是 JSON 字符串或数组
+          let toolCalls: any[] = [];
+          if (m.toolCalls) {
+            if (typeof m.toolCalls === 'string') {
+              try { toolCalls = JSON.parse(m.toolCalls); } catch { toolCalls = []; }
+            } else if (Array.isArray(m.toolCalls)) {
+              toolCalls = m.toolCalls;
+            }
+          }
+          return {
+            id: `msg-${m.id}`,
+            role: m.role as 'USER' | 'ASSISTANT',
+            content: m.content,
+            toolCalls: toolCalls.filter(Boolean),
+            practicePreview: null,
+            dbMessageId: m.id,
+            sessionId: activeConversationId ?? undefined,
+          };
+        });
       setMessages(display);
     } catch (err) {
       console.error('Failed to load messages:', err);
@@ -299,7 +321,14 @@ export default function NvcAssistantPage() {
 
             // 刷新对话列表（可能创建了新对话）
             assistantApi.getConversations(userId)
-              .then(setConversations)
+              .then((res) => {
+                const data = res as any;
+                if (data && data.content) {
+                  setConversations(data.content);
+                } else if (Array.isArray(data)) {
+                  setConversations(data);
+                }
+              })
               .catch(() => {});
             break;
           }

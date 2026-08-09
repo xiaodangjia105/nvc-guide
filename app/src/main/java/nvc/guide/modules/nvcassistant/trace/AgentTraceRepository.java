@@ -15,6 +15,8 @@ public interface AgentTraceRepository extends JpaRepository<AgentTraceEntity, St
 
     Page<AgentTraceEntity> findBySessionIdOrderByCreatedAtDesc(String sessionId, Pageable pageable);
 
+    Page<AgentTraceEntity> findAllByOrderByCreatedAtDesc(Pageable pageable);
+
     @Query("SELECT t FROM AgentTraceEntity t WHERE t.createdAt BETWEEN :from AND :to ORDER BY t.createdAt DESC")
     List<AgentTraceEntity> findByCreatedAtBetween(
         @Param("from") LocalDateTime from, @Param("to") LocalDateTime to);

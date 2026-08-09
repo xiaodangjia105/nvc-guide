@@ -9,6 +9,8 @@ import nvc.guide.modules.nvcassistant.service.agent.AgentEvent;
 import nvc.guide.modules.nvcassistant.service.agent.AgentLoop;
 import nvc.guide.modules.nvcassistant.service.agent.ContextManager;
 import nvc.guide.modules.nvcassistant.service.agent.PromptBuilder;
+import nvc.guide.modules.nvcassistant.trace.AgentTraceEntity;
+import nvc.guide.modules.nvcassistant.trace.TraceManager;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.SystemMessage;
@@ -37,6 +39,7 @@ public class NvcAssistantService {
     private final ContextManager contextManager;
     private final PromptBuilder promptBuilder;
     private final ObjectMapper objectMapper;
+    private final TraceManager traceManager;
 
     /**
      * 流式 SSE 对话（使用 AgentLoop）
@@ -54,18 +57,22 @@ public class NvcAssistantService {
             convId, userId, request.getMessage(), seq++);
         messageService.saveMessage(userMsg);
 
-        // 3. 构建上下文（历史消息 + 摘要，不含系统 Prompt）
+        // 3. 开启 Trace（链路追踪）
+        AgentTraceEntity trace = traceManager.startTrace(
+            String.valueOf(convId), String.valueOf(userId), "ASSISTANT");
+
+        // 4. 构建上下文（历史消息 + 摘要，不含系统 Prompt）
         ContextManager.ContextResult contextResult = contextManager.buildContext(convId, userId);
 
-        // 4. 通过 PromptBuilder 构建系统提示词（注入用户档案 + 上下文摘要 + 当前时间）
+        // 5. 通过 PromptBuilder 构建系统提示词（注入用户档案 + 上下文摘要 + 当前时间）
         String systemPrompt = promptBuilder.buildSystemPrompt(userId, contextResult.summary());
 
-        // 5. 组装最终上下文：系统 Prompt + 历史消息
+        // 6. 组装最终上下文：系统 Prompt + 历史消息
         List<Message> contextMessages = new ArrayList<>();
         contextMessages.add(new SystemMessage(systemPrompt));
         contextMessages.addAll(contextResult.messages());
 
-        // 6. 通过 AgentLoop 执行（返回 SSE 事件流）
+        // 7. 通过 AgentLoop 执行（返回 SSE 事件流）
         Flux<AgentEvent> eventStream = agentLoop.executeStream(userId, convId, contextMessages, request.getMessage());
 
         // 7. 用 AtomicInteger 实现可变序列号（工具消息需要递增 seq）
@@ -139,7 +146,15 @@ public class NvcAssistantService {
                     String title = generateTitle(request.getMessage());
                     messageService.updateConversationTitle(convId, title);
                 }
+                // 结束 Trace（链路追踪落库）
+                traceManager.endTrace(trace);
                 log.info("[NvcAssistantService] Stream completed: conversationId={}, userId={}", convId, userId);
+            })
+            .doOnError(e -> {
+                // 错误时也要结束 Trace
+                trace.setFinalStatus("FAILED");
+                traceManager.endTrace(trace);
+                log.error("[NvcAssistantService] Stream error: conversationId={}, userId={}", convId, userId, e);
             });
 
         // 8. 保存回调（兼容旧接口）

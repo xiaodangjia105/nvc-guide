@@ -25,6 +25,8 @@ springdoc:
   packages-to-scan: nvc.guide.modules
 
 spring:
+  main:
+    allow-circular-references: true  # 临时允许循环依赖（NvcToolRegistry → ... → NvcAgentChatService → NvcToolRegistry）
   application:
     name: nvc-guide
 

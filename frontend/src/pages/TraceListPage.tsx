@@ -20,19 +20,25 @@ export default function TraceListPage() {
     setLoading(true);
     try {
       if (params.sessionId) {
+        // 按 sessionId 查询
         const res = await traceApi.listBySession(params.sessionId);
-        setTraces((res as unknown as { data: AgentTrace[] }).data || []);
+        setTraces(Array.isArray(res) ? res : []);
       } else if (params.from && params.to) {
+        // 按时间范围查询
         const res = await traceApi.search({
           from: params.from,
           to: params.to,
           status: params.status,
         });
-        setTraces((res as unknown as { data: AgentTrace[] }).data || []);
+        setTraces(Array.isArray(res) ? res : []);
 
         // 同时获取统计
         const statsRes = await traceApi.getStats(params.from, params.to);
-        setStats((statsRes as unknown as { data: TraceStats }).data);
+        setStats(statsRes as TraceStats);
+      } else {
+        // 无条件查询：列出所有（最近 50 条）
+        const res = await traceApi.listBySession('');
+        setTraces(Array.isArray(res) ? res : []);
       }
     } catch (err) {
       console.error('Failed to fetch traces:', err);

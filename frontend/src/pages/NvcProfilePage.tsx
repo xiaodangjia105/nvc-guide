@@ -41,7 +41,13 @@ export default function NvcProfilePage() {
     ])
       .then(([p, r]) => {
         setProfile(p);
-        setRecords(r);
+        // 后端返回分页结果，提取 content 数组
+        const recordsData = r as any;
+        if (recordsData && recordsData.content) {
+          setRecords(recordsData.content);
+        } else if (Array.isArray(recordsData)) {
+          setRecords(recordsData);
+        }
         if (p) {
           setForm({
             communicationBackground: p.communicationBackground ?? '',

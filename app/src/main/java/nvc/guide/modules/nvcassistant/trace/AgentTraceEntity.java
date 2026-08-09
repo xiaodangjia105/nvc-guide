@@ -1,5 +1,6 @@
 package nvc.guide.modules.nvcassistant.trace;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.BatchSize;
@@ -74,6 +75,7 @@ public class AgentTraceEntity {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
+    @JsonIgnoreProperties("trace")
     @OneToMany(mappedBy = "trace", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @OrderBy("sequence ASC")
     @BatchSize(size = 20)

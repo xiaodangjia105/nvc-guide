@@ -19,15 +19,23 @@ export default function TraceFilterBar({ onSearch }: Props) {
     });
   };
 
+  const handleListAll = () => {
+    setSessionId('');
+    setFrom('');
+    setTo('');
+    setStatus('');
+    onSearch({});
+  };
+
   return (
     <div className="flex flex-wrap items-end gap-3 p-4 bg-gray-50 border rounded-lg mb-4">
       <div>
-        <label className="block text-xs text-gray-500 mb-1">Session ID</label>
+        <label className="block text-xs text-gray-500 mb-1">会话 ID（conversationId）</label>
         <input
           type="text"
           value={sessionId}
           onChange={e => setSessionId(e.target.value)}
-          placeholder="sess-xxx"
+          placeholder="留空查询所有"
           className="border rounded px-2 py-1 text-sm w-40"
         />
       </div>

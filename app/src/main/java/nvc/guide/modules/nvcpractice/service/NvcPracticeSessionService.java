@@ -22,6 +22,7 @@ import nvc.guide.modules.nvcscenario.service.NvcScenarioService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,7 +38,6 @@ import java.util.concurrent.TimeUnit;
 
 @Service
 @Slf4j
-@RequiredArgsConstructor
 public class NvcPracticeSessionService {
 
   /**
@@ -62,6 +62,29 @@ public class NvcPracticeSessionService {
   private final ApplicationEventPublisher eventPublisher;
   private final NvcReflectionService reflectionService;
   private final NvcAgentOrchestrator orchestrator;
+
+  public NvcPracticeSessionService(
+      NvcPracticeSessionRepository sessionRepository,
+      NvcPracticeMessageRepository messageRepository,
+      NvcEvaluationService evaluationService,
+      NvcScenarioRepository scenarioRepository,
+      NvcScenarioService scenarioService,
+      RedisService redisService,
+      ObjectMapper objectMapper,
+      ApplicationEventPublisher eventPublisher,
+      @Lazy NvcReflectionService reflectionService,
+      @Lazy NvcAgentOrchestrator orchestrator) {
+    this.sessionRepository = sessionRepository;
+    this.messageRepository = messageRepository;
+    this.evaluationService = evaluationService;
+    this.scenarioRepository = scenarioRepository;
+    this.scenarioService = scenarioService;
+    this.redisService = redisService;
+    this.objectMapper = objectMapper;
+    this.eventPublisher = eventPublisher;
+    this.reflectionService = reflectionService;
+    this.orchestrator = orchestrator;
+  }
 
   /**
    * 启动时校验 VALID_TRANSITIONS 覆盖所有枚举值

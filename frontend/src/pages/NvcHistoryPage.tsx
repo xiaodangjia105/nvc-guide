@@ -38,7 +38,15 @@ export default function NvcHistoryPage() {
 
   useEffect(() => {
     practiceApi.getSessions(userId)
-      .then(setSessions)
+      .then((res) => {
+        // 后端返回分页结果，提取 content 数组
+        const data = res as any;
+        if (data && data.content) {
+          setSessions(data.content);
+        } else if (Array.isArray(data)) {
+          setSessions(data);
+        }
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [userId]);

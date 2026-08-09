@@ -176,9 +176,9 @@ export default function NvcAssistantChat({
                     )}
 
                     {/* 工具调用卡片 */}
-                    {msg.toolCalls.length > 0 && (
+                    {msg.toolCalls && msg.toolCalls.length > 0 && (
                       <div className="space-y-2">
-                        {msg.toolCalls.map((tc, idx) => (
+                        {msg.toolCalls.filter(Boolean).map((tc, idx) => (
                           <NvcToolCallCard key={`${msg.id}-tc-${idx}`} toolCall={tc} />
                         ))}
                       </div>

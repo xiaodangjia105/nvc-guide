@@ -92,10 +92,12 @@ export default function NvcChatPanel({
   // 加载历史消息
   useEffect(() => {
     practiceApi.getMessages(sessionId)
-      .then((msgs) => {
-        const display: DisplayMessage[] = msgs
-          .filter((m) => m.role === 'USER' || m.role === 'ASSISTANT')
-          .map((m) => ({
+      .then((res) => {
+        // 后端返回分页结果，提取 content 数组
+        const msgs = (res as any)?.content ?? res;
+        const display: DisplayMessage[] = (Array.isArray(msgs) ? msgs : [])
+          .filter((m: any) => m.role === 'USER' || m.role === 'ASSISTANT')
+          .map((m: any) => ({
             id: String(m.id),
             role: m.role as 'USER' | 'ASSISTANT',
             content: m.role === 'ASSISTANT' ? cleanAiResponse(m.content) : m.content,
@@ -169,8 +171,11 @@ export default function NvcChatPanel({
           );
           // 重新加载消息以获取数据库 ID（用于反馈按钮）
           practiceApi.getMessages(sessionId)
-            .then((msgs) => {
-              const lastAiMsg = [...msgs].reverse().find((m) => m.role === 'ASSISTANT');
+            .then((res) => {
+              // 后端返回分页结果，提取 content 数组
+              const msgs = (res as any)?.content ?? res;
+              const arr = Array.isArray(msgs) ? msgs : [];
+              const lastAiMsg = [...arr].reverse().find((m: any) => m.role === 'ASSISTANT');
               if (lastAiMsg) {
                 setMessages((prev) =>
                   prev.map((m) =>

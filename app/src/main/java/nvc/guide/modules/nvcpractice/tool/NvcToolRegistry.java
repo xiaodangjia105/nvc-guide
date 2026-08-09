@@ -5,6 +5,7 @@ import nvc.guide.modules.nvcpractice.dto.PracticeContext;
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.function.FunctionToolCallback;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -25,8 +26,9 @@ public class NvcToolRegistry {
 
     /**
      * Spring 自动注入所有 NvcTool 实现
+     * 使用 @Lazy 打破循环依赖：NvcToolRegistry → PracticeStartTool → ... → NvcAgentChatService → NvcToolRegistry
      */
-    public NvcToolRegistry(List<NvcTool> toolList) {
+    public NvcToolRegistry(@Lazy List<NvcTool> toolList) {
         this.tools = toolList.stream()
             .collect(Collectors.toMap(NvcTool::name, t -> t));
         log.info("[NvcToolRegistry] Registered {} tools: {}", tools.size(), tools.keySet());

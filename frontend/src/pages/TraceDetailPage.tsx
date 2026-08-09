@@ -16,7 +16,8 @@ export default function TraceDetailPage() {
     const fetchTrace = async () => {
       try {
         const res = await traceApi.getDetail(traceId);
-        setTrace((res as unknown as { data: AgentTrace }).data);
+        // request 工具已提取 data 字段，直接使用
+        setTrace(res as AgentTrace);
       } catch (err) {
         console.error('Failed to fetch trace:', err);
       } finally {

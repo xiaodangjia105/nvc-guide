@@ -60,3 +60,5 @@ frontend/pnpm-debug.log*
 
 # Frontend node_modules (should not be tracked)
 frontend/node_modules
+# Added by code-review-graph
+.code-review-graph/

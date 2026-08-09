@@ -18,6 +18,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -144,12 +145,12 @@ class NvcFeedbackServiceTest {
         @Test
         @DisplayName("返回指定数量的差评")
         void returnsLimitedNegativeFeedback() {
+            // Mock 返回限制数量的结果（模拟数据库分页）
             List<NvcFeedbackEntity> negatives = List.of(
                 buildFeedback(1L, 1L, 1),
-                buildFeedback(2L, 2L, 1),
-                buildFeedback(3L, 3L, 1)
+                buildFeedback(2L, 2L, 1)
             );
-            when(feedbackRepository.findByRatingOrderByCreatedAtDesc(1))
+            when(feedbackRepository.findByRatingOrderByCreatedAtDesc(eq(1), any()))
                 .thenReturn(negatives);
 
             List<NvcFeedbackEntity> result = service.getRecentNegativeFeedback(2);

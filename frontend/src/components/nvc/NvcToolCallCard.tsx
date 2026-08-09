@@ -36,6 +36,9 @@ function formatJson(str: string): string {
 export default function NvcToolCallCard({ toolCall }: NvcToolCallCardProps) {
   const [expanded, setExpanded] = useState(false);
 
+  // 防御性检查：toolCall 可能为 null
+  if (!toolCall || !toolCall.toolName) return null;
+
   const label = TOOL_LABELS[toolCall.toolName] || toolCall.toolName;
   const isError = !toolCall.success;
 

@@ -36,15 +36,20 @@ public class TraceController {
     private final OfflineEvaluationService offlineEvaluationService;
 
     /**
-     * 按 sessionId 查询 Trace 列表
+     * 查询 Trace 列表（sessionId 可选，不传则返回所有）
      */
     @GetMapping
-    public Result<List<AgentTraceEntity>> listBySession(
-            @RequestParam String sessionId,
+    public Result<List<AgentTraceEntity>> list(
+            @RequestParam(required = false) String sessionId,
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
-        Page<AgentTraceEntity> result = traceRepository.findBySessionIdOrderByCreatedAtDesc(
-            sessionId, PageRequest.of(page, size));
+        Page<AgentTraceEntity> result;
+        if (sessionId != null && !sessionId.isBlank()) {
+            result = traceRepository.findBySessionIdOrderByCreatedAtDesc(
+                sessionId, PageRequest.of(page, size));
+        } else {
+            result = traceRepository.findAllByOrderByCreatedAtDesc(PageRequest.of(page, size));
+        }
         return Result.success(result.getContent());
     }
 

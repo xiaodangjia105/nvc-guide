@@ -151,7 +151,7 @@ public class AgentLoop {
                             .scene("dialog")
                             .build();
                         response = fallbackHandler.executeWithFallback(
-                            () -> callLlm(messages),
+                            () -> callLlm(messages, userId, conversationId),
                             () -> buildFallbackResponse(),
                             fallbackCtx);
                         llmSpan.setDurationMs(System.currentTimeMillis() - llmStartTime);
@@ -276,7 +276,7 @@ public class AgentLoop {
     /**
      * 调用 LLM（不自动执行工具）
      */
-    private ChatResponse callLlm(List<Message> messages) {
+    private ChatResponse callLlm(List<Message> messages, Long userId, Long conversationId) {
         ChatClient client = llmProviderRegistry.getDefaultChatClient();
 
         // 调试日志：显示可用工具（降级为 debug，避免热路径过度日志）
@@ -304,8 +304,14 @@ public class AgentLoop {
             log.warn("[AgentLoop] Failed to load agent config, using defaults", e);
         }
 
+        // 构建 ToolContext，注入 userId/sessionId（确保工具执行时能获取用户信息）
+        java.util.Map<String, Object> toolContextMap = new java.util.HashMap<>();
+        toolContextMap.put("nvc.userId", userId);
+        toolContextMap.put("nvc.sessionId", conversationId);
+
         return client.prompt()
             .messages(messages)
+            .toolContext(toolContextMap)
             .options(OpenAiChatOptions.builder()
                 .temperature(temperature)
                 .maxTokens(maxTokens)
