@@ -27,6 +27,8 @@ class TraceManagerTest {
         // 默认全部采样，避免影响现有测试
         when(traceSampler.shouldSample(anyString(), anyString())).thenReturn(true);
         traceManager = new TraceManager(traceStreamProducer, traceSampler);
+        // 清理 ThreadLocal，防止测试间干扰
+        traceManager.cleanup();
     }
 
     @Nested

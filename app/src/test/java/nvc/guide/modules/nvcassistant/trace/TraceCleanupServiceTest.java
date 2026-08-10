@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDateTime;
@@ -97,9 +98,10 @@ class TraceCleanupServiceTest {
             traceProperties.getCleanup().setBatchSize(2);
 
             // 模拟分页返回：第一页 2 条，第二页 2 条，第三页 1 条
-            Page<String> page1 = new PageImpl<>(List.of("trace-1", "trace-2"));
-            Page<String> page2 = new PageImpl<>(List.of("trace-3", "trace-4"));
-            Page<String> page3 = new PageImpl<>(List.of("trace-5"));
+            // 使用 PageRequest 和 total 参数确保 hasNext() 正确工作
+            Page<String> page1 = new PageImpl<>(List.of("trace-1", "trace-2"), PageRequest.of(0, 2), 5);
+            Page<String> page2 = new PageImpl<>(List.of("trace-3", "trace-4"), PageRequest.of(1, 2), 5);
+            Page<String> page3 = new PageImpl<>(List.of("trace-5"), PageRequest.of(2, 2), 5);
 
             when(traceRepository.findTraceIdsOlderThan(any(LocalDateTime.class), any(Pageable.class)))
                 .thenReturn(page1, page2, page3);

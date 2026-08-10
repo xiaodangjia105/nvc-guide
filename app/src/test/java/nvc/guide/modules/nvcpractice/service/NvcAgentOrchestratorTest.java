@@ -128,7 +128,7 @@ class NvcAgentOrchestratorTest {
       when(evaluationRepository.findBySessionIdOrderByCreatedAtAsc(1L))
           .thenReturn(List.of(eval));
 
-      PracticeContext ctx = orchestrator.buildPracticeContext(any(nvc.guide.common.PracticeContext.class));
+      PracticeContext ctx = orchestrator.buildPracticeContext(new nvc.guide.common.PracticeContext(1L, 100L));
 
       assertEquals(session, ctx.getSession());
       assertEquals(2, ctx.getRecentMessages().size());
@@ -162,7 +162,7 @@ class NvcAgentOrchestratorTest {
           .id(42L).title("职场冲突").description("同事误解你的意图").build();
       when(scenarioRepository.findById(42L)).thenReturn(Optional.of(scenario));
 
-      PracticeContext ctx = orchestrator.buildPracticeContext(any(nvc.guide.common.PracticeContext.class));
+      PracticeContext ctx = orchestrator.buildPracticeContext(new nvc.guide.common.PracticeContext(1L, 100L));
 
       assertNotNull(ctx.getScenario());
       assertEquals("职场冲突\n同事误解你的意图", ctx.getScenarioDescription());
@@ -460,7 +460,7 @@ class NvcAgentOrchestratorTest {
           .thenReturn(List.of(ragResult));
       when(ragService.formatForPrompt(any())).thenReturn("RAG上下文");
 
-      PracticeContext ctx = orchestrator.buildPracticeContext(any(nvc.guide.common.PracticeContext.class));
+      PracticeContext ctx = orchestrator.buildPracticeContext(new nvc.guide.common.PracticeContext(1L, 100L));
 
       assertNotNull(ctx.getRagContext());
       assertEquals("RAG上下文", ctx.getRagContext());
@@ -491,7 +491,7 @@ class NvcAgentOrchestratorTest {
           .thenReturn(List.of(ragResult));
       when(ragService.formatForPrompt(any())).thenReturn("RAG上下文");
 
-      PracticeContext ctx = orchestrator.buildPracticeContext(any(nvc.guide.common.PracticeContext.class));
+      PracticeContext ctx = orchestrator.buildPracticeContext(new nvc.guide.common.PracticeContext(1L, 100L));
 
       assertNotNull(ctx.getRagContext());
       verify(ragService).retrieve(eq("如何表达我的感受？"), any(), eq(3));
@@ -519,7 +519,7 @@ class NvcAgentOrchestratorTest {
           .thenReturn(List.of(ragResult));
       when(ragService.formatForPrompt(any())).thenReturn("RAG上下文");
 
-      PracticeContext ctx = orchestrator.buildPracticeContext(any(nvc.guide.common.PracticeContext.class));
+      PracticeContext ctx = orchestrator.buildPracticeContext(new nvc.guide.common.PracticeContext(1L, 100L));
 
       assertNotNull(ctx.getRagContext());
       verify(ragService).retrieve(eq("NVC FEELING 练习"), any(), eq(3));
@@ -540,7 +540,7 @@ class NvcAgentOrchestratorTest {
       NvcUserProfileEntity profile = buildProfile(100L);
       when(profileService.getOrCreateProfile(100L)).thenReturn(profile);
 
-      PracticeContext ctx = orchestrator.buildPracticeContext(any(nvc.guide.common.PracticeContext.class));
+      PracticeContext ctx = orchestrator.buildPracticeContext(new nvc.guide.common.PracticeContext(1L, 100L));
 
       assertNull(ctx.getRagContext());
     }
@@ -573,7 +573,7 @@ class NvcAgentOrchestratorTest {
           .thenReturn(List.of(ragResult));
       when(ragService.formatForPrompt(any())).thenReturn("个性化RAG");
 
-      PracticeContext ctx = orchestrator.buildPracticeContext(any(nvc.guide.common.PracticeContext.class));
+      PracticeContext ctx = orchestrator.buildPracticeContext(new nvc.guide.common.PracticeContext(1L, 100L));
 
       assertEquals("个性化RAG", ctx.getRagContext());
       verify(ragService).retrievePersonalized(
@@ -606,7 +606,7 @@ class NvcAgentOrchestratorTest {
           .thenReturn(List.of(ragResult));
       when(ragService.formatForPrompt(any())).thenReturn("标准RAG");
 
-      PracticeContext ctx = orchestrator.buildPracticeContext(any(nvc.guide.common.PracticeContext.class));
+      PracticeContext ctx = orchestrator.buildPracticeContext(new nvc.guide.common.PracticeContext(1L, 100L));
 
       assertEquals("标准RAG", ctx.getRagContext());
       verify(ragService).retrieve(eq("你好"), any(), eq(3));
