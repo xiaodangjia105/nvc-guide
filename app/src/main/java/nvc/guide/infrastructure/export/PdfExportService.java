@@ -1,10 +1,8 @@
 package nvc.guide.infrastructure.export;
 
-import com.itextpdf.io.font.PdfEncodings;
 import com.itextpdf.kernel.colors.DeviceRgb;
 import com.itextpdf.kernel.font.PdfFont;
 import com.itextpdf.kernel.font.PdfFontFactory;
-import com.itextpdf.kernel.font.PdfFontFactory.EmbeddingStrategy;
 import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfWriter;
 import com.itextpdf.layout.Document;
@@ -49,19 +47,16 @@ public class PdfExportService {
 
     /**
      * 创建中文字体
+     * 使用 iText font-asian 包内置的 STSong-Light 字体，支持中文显示
      */
     protected PdfFont createChineseFont() {
         try {
-            // 使用内置字体，中文显示为方块但不报错
-            // 生产环境应该配置中文字体路径
-            return PdfFontFactory.createFont("Helvetica", "UniGB-UCS2-H", EmbeddingStrategy.PREFER_EMBEDDED);
+            // STSong-Light 是 iText font-asian 包中的内置中文字体
+            // UniGB-UCS2-H 是简体中文编码
+            return PdfFontFactory.createFont("STSong-Light", "UniGB-UCS2-H");
         } catch (Exception e) {
-            log.warn("创建中文字体失败，使用默认字体: {}", e.getMessage());
-            try {
-                return PdfFontFactory.createFont("Helvetica");
-            } catch (Exception ex) {
-                throw new BusinessException(ErrorCode.EXPORT_PDF_FAILED, "无法创建PDF字体");
-            }
+            log.error("创建中文字体失败: {}", e.getMessage(), e);
+            throw new BusinessException(ErrorCode.EXPORT_PDF_FAILED, "无法创建中文字体: " + e.getMessage());
         }
     }
 
