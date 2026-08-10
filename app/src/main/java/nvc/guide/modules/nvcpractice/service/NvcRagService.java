@@ -8,6 +8,7 @@ import nvc.guide.modules.nvcpractice.dto.RagResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -42,8 +43,8 @@ public class NvcRagService {
       return List.of();
     }
 
-    // 1. 按类型查出所有匹配的知识库 ID
-    List<Long> kbIds = knowledgeBaseRepository.findByTypeInOrderByUploadedAtDesc(knowledgeTypes)
+    // 1. 按类型查出所有匹配的知识库 ID（限制最多 1000 条，防止 OOM）
+    List<Long> kbIds = knowledgeBaseRepository.findByTypeInOrderByUploadedAtDesc(knowledgeTypes, PageRequest.of(0, 1000))
         .stream()
         .map(KnowledgeBaseEntity::getId)
         .toList();
@@ -84,22 +85,22 @@ public class NvcRagService {
 
     List<Long> kbIds = new ArrayList<>();
 
-    // 1. 用户个人 Wiki（如果指定了 userId 且类型包含 PERSONAL_WIKI）
+    // 1. 用户个人 Wiki（如果指定了 userId 且类型包含 PERSONAL_WIKI，限制最多 1000 条）
     if (userId != null && knowledgeTypes.contains(KnowledgeBaseType.PERSONAL_WIKI)) {
       List<Long> personalIds = knowledgeBaseRepository
-          .findByTypeAndUserIdOrderByUploadedAtDesc(KnowledgeBaseType.PERSONAL_WIKI, userId)
+          .findByTypeAndUserIdOrderByUploadedAtDesc(KnowledgeBaseType.PERSONAL_WIKI, userId, PageRequest.of(0, 1000))
           .stream()
           .map(KnowledgeBaseEntity::getId)
           .toList();
       kbIds.addAll(personalIds);
     }
 
-    // 2. 系统知识库（排除 PERSONAL_WIKI）
+    // 2. 系统知识库（排除 PERSONAL_WIKI，限制最多 1000 条）
     List<KnowledgeBaseType> systemTypes = knowledgeTypes.stream()
         .filter(t -> t != KnowledgeBaseType.PERSONAL_WIKI)
         .toList();
     if (!systemTypes.isEmpty()) {
-      List<Long> systemIds = knowledgeBaseRepository.findByTypeInOrderByUploadedAtDesc(systemTypes)
+      List<Long> systemIds = knowledgeBaseRepository.findByTypeInOrderByUploadedAtDesc(systemTypes, PageRequest.of(0, 1000))
           .stream()
           .map(KnowledgeBaseEntity::getId)
           .toList();

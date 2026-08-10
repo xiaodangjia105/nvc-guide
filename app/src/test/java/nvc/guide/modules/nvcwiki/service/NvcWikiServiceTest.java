@@ -399,26 +399,28 @@ class NvcWikiServiceTest {
         @DisplayName("关键词搜索返回匹配的 Wiki")
         void searchByKeyword_returnsMatches() {
             KnowledgeBaseEntity entity = buildEntity(10L, 1L, "NVC学习笔记");
+            Page<KnowledgeBaseEntity> page = new PageImpl<>(List.of(entity));
             when(knowledgeBaseRepository.searchByTypeAndUserIdAndKeyword(
-                eq(KnowledgeBaseType.PERSONAL_WIKI), eq(1L), eq("NVC")))
-                .thenReturn(List.of(entity));
+                eq(KnowledgeBaseType.PERSONAL_WIKI), eq(1L), eq("NVC"), any(Pageable.class)))
+                .thenReturn(page);
 
-            List<WikiResponse> results = service.searchByKeyword(1L, "NVC");
+            Page<WikiResponse> results = service.searchByKeyword(1L, "NVC", PageRequest.of(0, 20));
 
-            assertEquals(1, results.size());
-            assertEquals("NVC学习笔记", results.get(0).title());
+            assertEquals(1, results.getTotalElements());
+            assertEquals("NVC学习笔记", results.getContent().get(0).title());
         }
 
         @Test
-        @DisplayName("无匹配结果时返回空列表")
+        @DisplayName("无匹配结果时返回空页")
         void searchByKeyword_noMatches_returnsEmpty() {
+            Page<KnowledgeBaseEntity> emptyPage = new PageImpl<>(List.of());
             when(knowledgeBaseRepository.searchByTypeAndUserIdAndKeyword(
-                eq(KnowledgeBaseType.PERSONAL_WIKI), eq(1L), eq("不存在")))
-                .thenReturn(List.of());
+                eq(KnowledgeBaseType.PERSONAL_WIKI), eq(1L), eq("不存在"), any(Pageable.class)))
+                .thenReturn(emptyPage);
 
-            List<WikiResponse> results = service.searchByKeyword(1L, "不存在");
+            Page<WikiResponse> results = service.searchByKeyword(1L, "不存在", PageRequest.of(0, 20));
 
-            assertTrue(results.isEmpty());
+            assertTrue(results.getContent().isEmpty());
         }
     }
 }

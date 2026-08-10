@@ -93,12 +93,14 @@ public class NvcWikiController {
     }
 
     /**
-     * 关键词搜索
+     * 关键词搜索（分页）
      */
     @GetMapping("/search/keyword")
-    public Result<List<WikiResponse>> searchByKeyword(
+    public Result<Page<WikiResponse>> searchByKeyword(
             @RequestParam Long userId,
-            @RequestParam String keyword) {
-        return Result.success(wikiService.searchByKeyword(userId, keyword));
+            @RequestParam String keyword,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return Result.success(wikiService.searchByKeyword(userId, keyword, PageRequest.of(page, size)));
     }
 }

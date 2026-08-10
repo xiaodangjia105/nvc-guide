@@ -16,6 +16,8 @@ import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -50,13 +52,14 @@ public class KnowledgeBaseController {
     private final KnowledgeBaseDeleteService deleteService;
 
     /**
-     * 获取所有知识库列表
+     * 获取所有知识库列表（分页）
      */
     @GetMapping("/api/knowledgebase/list")
-    public Result<List<KnowledgeBaseListItemDTO>> getAllKnowledgeBases(
-            @RequestParam(value = "sortBy", required = false) String sortBy,
-            @RequestParam(value = "vectorStatus", required = false) String vectorStatus) {
-        
+    public Result<Page<KnowledgeBaseListItemDTO>> getAllKnowledgeBases(
+            @RequestParam(value = "vectorStatus", required = false) String vectorStatus,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "20") int size) {
+
         VectorStatus status = null;
         if (vectorStatus != null && !vectorStatus.isBlank()) {
             try {
@@ -65,8 +68,8 @@ public class KnowledgeBaseController {
                 return Result.error("无效的向量化状态: " + vectorStatus);
             }
         }
-        
-        return Result.success(listService.listKnowledgeBases(status, sortBy));
+
+        return Result.success(listService.listKnowledgeBases(status, PageRequest.of(page, size)));
     }
 
     /**
@@ -121,19 +124,24 @@ public class KnowledgeBaseController {
     }
 
     /**
-     * 根据分类获取知识库列表
+     * 根据分类获取知识库列表（分页）
      */
     @GetMapping("/api/knowledgebase/category/{category}")
-    public Result<List<KnowledgeBaseListItemDTO>> getByCategory(@PathVariable String category) {
-        return Result.success(listService.listByCategory(category));
+    public Result<Page<KnowledgeBaseListItemDTO>> getByCategory(
+            @PathVariable String category,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "20") int size) {
+        return Result.success(listService.listByCategory(category, PageRequest.of(page, size)));
     }
 
     /**
-     * 获取未分类的知识库
+     * 获取未分类的知识库（分页）
      */
     @GetMapping("/api/knowledgebase/uncategorized")
-    public Result<List<KnowledgeBaseListItemDTO>> getUncategorized() {
-        return Result.success(listService.listByCategory(null));
+    public Result<Page<KnowledgeBaseListItemDTO>> getUncategorized(
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "20") int size) {
+        return Result.success(listService.listByCategory(null, PageRequest.of(page, size)));
     }
 
     /**
@@ -148,13 +156,16 @@ public class KnowledgeBaseController {
     // ========== 类型管理 API ==========
 
     /**
-     * 根据类型获取知识库列表
+     * 根据类型获取知识库列表（分页）
      */
     @GetMapping("/api/knowledgebase/type/{type}")
-    public Result<List<KnowledgeBaseListItemDTO>> getByType(@PathVariable String type) {
+    public Result<Page<KnowledgeBaseListItemDTO>> getByType(
+            @PathVariable String type,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "20") int size) {
         try {
             KnowledgeBaseType kbType = KnowledgeBaseType.valueOf(type.toUpperCase());
-            return Result.success(listService.listByType(kbType));
+            return Result.success(listService.listByType(kbType, PageRequest.of(page, size)));
         } catch (IllegalArgumentException e) {
             return Result.error("无效的知识库类型: " + type);
         }
@@ -218,11 +229,14 @@ public class KnowledgeBaseController {
     // ========== 搜索 API ==========
 
     /**
-     * 搜索知识库
+     * 搜索知识库（分页）
      */
     @GetMapping("/api/knowledgebase/search")
-    public Result<List<KnowledgeBaseListItemDTO>> search(@RequestParam("keyword") String keyword) {
-        return Result.success(listService.search(keyword));
+    public Result<Page<KnowledgeBaseListItemDTO>> search(
+            @RequestParam("keyword") String keyword,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "20") int size) {
+        return Result.success(listService.search(keyword, PageRequest.of(page, size)));
     }
 
     // ========== 统计 API ==========

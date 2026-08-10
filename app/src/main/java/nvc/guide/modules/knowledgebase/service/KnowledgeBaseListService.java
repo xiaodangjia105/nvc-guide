@@ -14,6 +14,8 @@ import nvc.guide.modules.knowledgebase.repository.KnowledgeBaseRepository;
 import nvc.guide.modules.knowledgebase.repository.RagChatMessageRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,14 +38,16 @@ public class KnowledgeBaseListService {
 
     /**
      * 获取知识库列表（支持状态过滤和排序）
-     * 
+     *
      * @param vectorStatus 向量化状态，null 表示不过滤
      * @param sortBy 排序字段，null 或 "time" 表示按时间排序
      * @return 知识库列表
+     * @deprecated 使用 {@link #listKnowledgeBases(VectorStatus, String, Pageable)} 分页查询
      */
+    @Deprecated
     public List<KnowledgeBaseListItemDTO> listKnowledgeBases(VectorStatus vectorStatus, String sortBy) {
         List<KnowledgeBaseEntity> entities;
-        
+
         // 如果指定了状态，按状态过滤
         if (vectorStatus != null) {
             entities = knowledgeBaseRepository.findByVectorStatusOrderByUploadedAtDesc(vectorStatus);
@@ -51,27 +55,48 @@ public class KnowledgeBaseListService {
             // 否则获取所有知识库
             entities = knowledgeBaseRepository.findAllByOrderByUploadedAtDesc();
         }
-        
+
         // 如果指定了排序字段，在内存中排序
         if (sortBy != null && !sortBy.isBlank() && !sortBy.equalsIgnoreCase("time")) {
             entities = sortEntities(entities, sortBy);
         }
-        
+
         return knowledgeBaseMapper.toListItemDTOList(entities);
     }
 
     /**
-     * 获取所有知识库列表（保持向后兼容）
+     * 分页获取知识库列表（支持状态过滤）
+     *
+     * @param vectorStatus 向量化状态，null 表示不过滤
+     * @param pageable 分页参数
+     * @return 知识库分页结果
      */
+    public Page<KnowledgeBaseListItemDTO> listKnowledgeBases(VectorStatus vectorStatus, Pageable pageable) {
+        Page<KnowledgeBaseEntity> page;
+        if (vectorStatus != null) {
+            page = knowledgeBaseRepository.findByVectorStatusOrderByUploadedAtDesc(vectorStatus, pageable);
+        } else {
+            page = knowledgeBaseRepository.findAllByOrderByUploadedAtDesc(pageable);
+        }
+        return page.map(knowledgeBaseMapper::toListItemDTO);
+    }
+
+    /**
+     * 获取所有知识库列表（保持向后兼容）
+     * @deprecated 使用分页版本
+     */
+    @Deprecated
     public List<KnowledgeBaseListItemDTO> listKnowledgeBases() {
-        return listKnowledgeBases(null, null);
+        return listKnowledgeBases(null, (String) null);
     }
 
     /**
      * 按向量化状态获取知识库列表（保持向后兼容）
+     * @deprecated 使用分页版本
      */
+    @Deprecated
     public List<KnowledgeBaseListItemDTO> listKnowledgeBasesByStatus(VectorStatus vectorStatus) {
-        return listKnowledgeBases(vectorStatus, null);
+        return listKnowledgeBases(vectorStatus, (String) null);
     }
 
     /**
@@ -104,6 +129,7 @@ public class KnowledgeBaseListService {
 
     /**
      * 获取所有分类
+     * <p>分类数量有限，不会导致 OOM
      */
     public List<String> getAllCategories() {
         return knowledgeBaseRepository.findAllCategories();
@@ -111,7 +137,9 @@ public class KnowledgeBaseListService {
 
     /**
      * 根据分类获取知识库列表
+     * @deprecated 使用 {@link #listByCategory(String, Pageable)} 分页查询
      */
+    @Deprecated
     public List<KnowledgeBaseListItemDTO> listByCategory(String category) {
         List<KnowledgeBaseEntity> entities;
         if (category == null || category.isBlank()) {
@@ -120,6 +148,19 @@ public class KnowledgeBaseListService {
             entities = knowledgeBaseRepository.findByCategoryOrderByUploadedAtDesc(category);
         }
         return knowledgeBaseMapper.toListItemDTOList(entities);
+    }
+
+    /**
+     * 分页获取分类下的知识库列表
+     */
+    public Page<KnowledgeBaseListItemDTO> listByCategory(String category, Pageable pageable) {
+        Page<KnowledgeBaseEntity> page;
+        if (category == null || category.isBlank()) {
+            page = knowledgeBaseRepository.findByCategoryIsNullOrderByUploadedAtDesc(pageable);
+        } else {
+            page = knowledgeBaseRepository.findByCategoryOrderByUploadedAtDesc(category, pageable);
+        }
+        return page.map(knowledgeBaseMapper::toListItemDTO);
     }
 
     /**
@@ -138,11 +179,22 @@ public class KnowledgeBaseListService {
 
     /**
      * 按类型获取知识库列表
+     * @deprecated 使用 {@link #listByType(KnowledgeBaseType, Pageable)} 分页查询
      */
+    @Deprecated
     public List<KnowledgeBaseListItemDTO> listByType(KnowledgeBaseType type) {
         List<KnowledgeBaseEntity> entities =
             knowledgeBaseRepository.findByTypeOrderByUploadedAtDesc(type);
         return knowledgeBaseMapper.toListItemDTOList(entities);
+    }
+
+    /**
+     * 分页获取类型下的知识库列表
+     */
+    public Page<KnowledgeBaseListItemDTO> listByType(KnowledgeBaseType type, Pageable pageable) {
+        Page<KnowledgeBaseEntity> page =
+            knowledgeBaseRepository.findByTypeOrderByUploadedAtDesc(type, pageable);
+        return page.map(knowledgeBaseMapper::toListItemDTO);
     }
 
     /**
@@ -161,7 +213,9 @@ public class KnowledgeBaseListService {
 
     /**
      * 按关键词搜索知识库
+     * @deprecated 使用 {@link #search(String, Pageable)} 分页查询
      */
+    @Deprecated
     public List<KnowledgeBaseListItemDTO> search(String keyword) {
         if (keyword == null || keyword.isBlank()) {
             return listKnowledgeBases();
@@ -176,11 +230,28 @@ public class KnowledgeBaseListService {
         );
     }
 
+    /**
+     * 分页搜索知识库
+     */
+    public Page<KnowledgeBaseListItemDTO> search(String keyword, Pageable pageable) {
+        if (keyword == null || keyword.isBlank()) {
+            return listKnowledgeBases(null, pageable);
+        }
+        String escaped = keyword.trim()
+            .replace("\\", "\\\\")
+            .replace("%", "\\%")
+            .replace("_", "\\_");
+        return knowledgeBaseRepository.searchByKeyword(escaped, pageable)
+            .map(knowledgeBaseMapper::toListItemDTO);
+    }
+
     // ========== 排序功能 ==========
 
     /**
      * 按指定字段排序获取知识库列表（保持向后兼容）
+     * @deprecated 使用分页版本
      */
+    @Deprecated
     public List<KnowledgeBaseListItemDTO> listSorted(String sortBy) {
         return listKnowledgeBases(null, sortBy);
     }

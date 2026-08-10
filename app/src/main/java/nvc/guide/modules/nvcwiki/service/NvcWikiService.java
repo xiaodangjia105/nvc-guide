@@ -192,7 +192,9 @@ public class NvcWikiService {
 
     /**
      * 关键词搜索
+     * @deprecated 使用 {@link #searchByKeyword(Long, String, Pageable)} 分页查询
      */
+    @Deprecated
     @Transactional(readOnly = true)
     public List<WikiResponse> searchByKeyword(Long userId, String keyword) {
         // 转义 LIKE 通配符
@@ -205,6 +207,20 @@ public class NvcWikiService {
         return entities.stream()
                 .map(entity -> toResponse(entity, null, null, null))
                 .toList();
+    }
+
+    /**
+     * 关键词分页搜索
+     */
+    @Transactional(readOnly = true)
+    public Page<WikiResponse> searchByKeyword(Long userId, String keyword, Pageable pageable) {
+        String escaped = keyword.trim()
+            .replace("\\", "\\\\")
+            .replace("%", "\\%")
+            .replace("_", "\\_");
+        Page<KnowledgeBaseEntity> page = knowledgeBaseRepository
+                .searchByTypeAndUserIdAndKeyword(KnowledgeBaseType.PERSONAL_WIKI, userId, escaped, pageable);
+        return page.map(entity -> toResponse(entity, null, null, null));
     }
 
     // ==================== 私有方法 ====================
