@@ -37,12 +37,14 @@ class NvcAgentConfigServiceTest {
   private NvcAgentConfigRepository agentConfigRepository;
   @Mock
   private RedisService redisService;
+  @Mock
+  private NvcPromptVersionService promptVersionService;
 
   private NvcAgentConfigService service;
 
   @BeforeEach
   void setUp() {
-    service = new NvcAgentConfigService(agentConfigRepository, redisService);
+    service = new NvcAgentConfigService(agentConfigRepository, redisService, promptVersionService);
   }
 
   private NvcAgentConfigEntity buildConfig(NvcAgentScene scene) {

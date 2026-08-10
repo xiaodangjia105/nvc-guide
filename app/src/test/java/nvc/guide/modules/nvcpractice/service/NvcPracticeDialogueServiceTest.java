@@ -113,7 +113,7 @@ class NvcPracticeDialogueServiceTest {
           .thenReturn(inProgressSession);
       when(messageRepository.findMaxSequenceNumBySessionId(1L)).thenReturn(Optional.empty());
       when(messageRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-      when(orchestrator.buildPracticeContext(1L, 100L))
+      when(orchestrator.buildPracticeContext(any(nvc.guide.common.PracticeContext.class)))
           .thenReturn(PracticeContext.builder().build());
       when(orchestrator.decideNextAgent(any()))
           .thenReturn(buildDecision(NvcAgentScene.DIALOGUE_GUIDE, null));
@@ -139,7 +139,7 @@ class NvcPracticeDialogueServiceTest {
       when(sessionService.getSession(1L)).thenReturn(session);
       when(messageRepository.findMaxSequenceNumBySessionId(1L)).thenReturn(Optional.empty());
       when(messageRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-      when(orchestrator.buildPracticeContext(1L, 100L))
+      when(orchestrator.buildPracticeContext(any(nvc.guide.common.PracticeContext.class)))
           .thenReturn(PracticeContext.builder().build());
       when(orchestrator.decideNextAgent(any()))
           .thenReturn(buildDecision(NvcAgentScene.DIALOGUE_GUIDE, null));
@@ -161,7 +161,7 @@ class NvcPracticeDialogueServiceTest {
       when(sessionService.getSession(1L)).thenReturn(session);
       when(messageRepository.findMaxSequenceNumBySessionId(1L)).thenReturn(Optional.of(2));
       when(messageRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-      when(orchestrator.buildPracticeContext(1L, 100L))
+      when(orchestrator.buildPracticeContext(any(nvc.guide.common.PracticeContext.class)))
           .thenReturn(PracticeContext.builder().build());
       when(orchestrator.decideNextAgent(any()))
           .thenReturn(buildDecision(NvcAgentScene.DIALOGUE_GUIDE, null));
@@ -179,7 +179,7 @@ class NvcPracticeDialogueServiceTest {
       // 验证保存了用户消息和 AI 回复（两次 save）
       verify(messageRepository, atLeast(2)).save(any());
       // 验证构建上下文
-      verify(orchestrator).buildPracticeContext(1L, 100L);
+      verify(orchestrator).buildPracticeContext(any(nvc.guide.common.PracticeContext.class));
       // 验证 Agent 决策
       verify(orchestrator).decideNextAgent(any());
       // 验证执行 Agent
@@ -201,7 +201,7 @@ class NvcPracticeDialogueServiceTest {
       when(sessionService.getSession(1L)).thenReturn(session);
       when(messageRepository.findMaxSequenceNumBySessionId(1L)).thenReturn(Optional.empty());
       when(messageRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-      when(orchestrator.buildPracticeContext(1L, 100L))
+      when(orchestrator.buildPracticeContext(any(nvc.guide.common.PracticeContext.class)))
           .thenReturn(PracticeContext.builder().build());
       when(orchestrator.decideNextAgent(any()))
           .thenReturn(buildDecision(NvcAgentScene.DIFFICULT_PARTNER, null));
@@ -224,7 +224,7 @@ class NvcPracticeDialogueServiceTest {
       when(sessionService.getSession(1L)).thenReturn(session);
       when(messageRepository.findMaxSequenceNumBySessionId(1L)).thenReturn(Optional.empty());
       when(messageRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-      when(orchestrator.buildPracticeContext(1L, 100L))
+      when(orchestrator.buildPracticeContext(any(nvc.guide.common.PracticeContext.class)))
           .thenReturn(PracticeContext.builder().build());
       when(orchestrator.decideNextAgent(any()))
           .thenReturn(buildDecision(NvcAgentScene.DIALOGUE_GUIDE, null));
@@ -246,7 +246,7 @@ class NvcPracticeDialogueServiceTest {
       when(sessionService.getSession(1L)).thenReturn(session);
       when(messageRepository.findMaxSequenceNumBySessionId(1L)).thenReturn(Optional.empty());
       when(messageRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-      when(orchestrator.buildPracticeContext(1L, 100L))
+      when(orchestrator.buildPracticeContext(any(nvc.guide.common.PracticeContext.class)))
           .thenReturn(PracticeContext.builder().build());
       when(orchestrator.decideNextAgent(any()))
           .thenReturn(buildDecision(NvcAgentScene.DIALOGUE_GUIDE, null));
@@ -282,7 +282,7 @@ class NvcPracticeDialogueServiceTest {
 
       AgentDecision decision = new AgentDecision(
           NvcAgentScene.STEP_OBSERVE_COACH, "测试", "STEP_ADVANCE");
-      when(orchestrator.buildPracticeContext(1L, 100L))
+      when(orchestrator.buildPracticeContext(any(nvc.guide.common.PracticeContext.class)))
           .thenReturn(PracticeContext.builder().build());
       when(orchestrator.decideNextAgent(any())).thenReturn(decision);
       when(orchestrator.executeAgent(any(), any(), any())).thenReturn("AI回复");
@@ -315,7 +315,7 @@ class NvcPracticeDialogueServiceTest {
 
       AgentDecision decision = new AgentDecision(
           NvcAgentScene.STEP_OBSERVE_COACH, "测试", "CONTINUE");
-      when(orchestrator.buildPracticeContext(1L, 100L))
+      when(orchestrator.buildPracticeContext(any(nvc.guide.common.PracticeContext.class)))
           .thenReturn(PracticeContext.builder().build());
       when(orchestrator.decideNextAgent(any())).thenReturn(decision);
       when(orchestrator.executeAgent(any(), any(), any())).thenReturn("AI回复");
@@ -341,7 +341,7 @@ class NvcPracticeDialogueServiceTest {
 
       AgentDecision decision = new AgentDecision(
           NvcAgentScene.DIALOGUE_GUIDE, "测试", "STEP_ADVANCE");
-      when(orchestrator.buildPracticeContext(1L, 100L))
+      when(orchestrator.buildPracticeContext(any(nvc.guide.common.PracticeContext.class)))
           .thenReturn(PracticeContext.builder().build());
       when(orchestrator.decideNextAgent(any())).thenReturn(decision);
       when(orchestrator.executeAgent(any(), any(), any())).thenReturn("AI回复");
@@ -366,7 +366,7 @@ class NvcPracticeDialogueServiceTest {
 
       AgentDecision decision = new AgentDecision(
           NvcAgentScene.STEP_OBSERVE_COACH, "测试", null);
-      when(orchestrator.buildPracticeContext(1L, 100L))
+      when(orchestrator.buildPracticeContext(any(nvc.guide.common.PracticeContext.class)))
           .thenReturn(PracticeContext.builder().build());
       when(orchestrator.decideNextAgent(any())).thenReturn(decision);
       when(orchestrator.executeAgent(any(), any(), any())).thenReturn("AI回复");
@@ -398,7 +398,7 @@ class NvcPracticeDialogueServiceTest {
 
       AgentDecision decision = new AgentDecision(
           NvcAgentScene.STEP_OBSERVE_COACH, "测试", "STEP_ADVANCE");
-      when(orchestrator.buildPracticeContext(1L, 100L))
+      when(orchestrator.buildPracticeContext(any(nvc.guide.common.PracticeContext.class)))
           .thenReturn(PracticeContext.builder().build());
       when(orchestrator.decideNextAgent(any())).thenReturn(decision);
       when(orchestrator.executeAgentStream(any(), any(), any()))
@@ -434,7 +434,7 @@ class NvcPracticeDialogueServiceTest {
 
       AgentDecision decision = new AgentDecision(
           NvcAgentScene.STEP_OBSERVE_COACH, "测试", "CONTINUE");
-      when(orchestrator.buildPracticeContext(1L, 100L))
+      when(orchestrator.buildPracticeContext(any(nvc.guide.common.PracticeContext.class)))
           .thenReturn(PracticeContext.builder().build());
       when(orchestrator.decideNextAgent(any())).thenReturn(decision);
       when(orchestrator.executeAgentStream(any(), any(), any()))
@@ -465,7 +465,7 @@ class NvcPracticeDialogueServiceTest {
 
       AgentDecision decision = new AgentDecision(
           NvcAgentScene.DIALOGUE_GUIDE, "测试", "STEP_ADVANCE");
-      when(orchestrator.buildPracticeContext(1L, 100L))
+      when(orchestrator.buildPracticeContext(any(nvc.guide.common.PracticeContext.class)))
           .thenReturn(PracticeContext.builder().build());
       when(orchestrator.decideNextAgent(any())).thenReturn(decision);
       when(orchestrator.executeAgentStream(any(), any(), any()))

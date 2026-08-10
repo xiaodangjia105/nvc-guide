@@ -2,6 +2,7 @@ package nvc.guide.modules.nvcassistant.service.agent;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import nvc.guide.common.ai.LlmProviderRegistry;
+import nvc.guide.modules.nvcassistant.fallback.DialogFallbackTemplates;
 import nvc.guide.modules.nvcassistant.fallback.LlmFallbackHandler;
 import nvc.guide.modules.nvcassistant.metrics.MetricsCollector;
 import nvc.guide.modules.nvcassistant.trace.TraceManager;
@@ -48,7 +49,8 @@ class AgentLoopTest {
         agentConfigRepository = mock(NvcAgentConfigRepository.class);
         metricsCollector = mock(MetricsCollector.class);
         fallbackHandler = new LlmFallbackHandler();
-        agentLoop = new AgentLoop(llmProviderRegistry, toolRegistry, toolExecutor, intentRouter, agentConfigRepository, metricsCollector, traceManager, fallbackHandler);
+        DialogFallbackTemplates dialogFallbackTemplates = mock(DialogFallbackTemplates.class);
+        agentLoop = new AgentLoop(llmProviderRegistry, toolRegistry, toolExecutor, intentRouter, agentConfigRepository, metricsCollector, traceManager, fallbackHandler, dialogFallbackTemplates);
     }
 
     private ChatResponse mockTextResponse(String content) {
