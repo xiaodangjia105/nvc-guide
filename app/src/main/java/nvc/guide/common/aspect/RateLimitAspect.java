@@ -223,17 +223,21 @@ public class RateLimitAspect {
         }
 
         HttpServletRequest request = attributes.getRequest();
+        String ip = null;
 
-        // 优先使用 getRemoteAddr()，这是不可伪造的
-        // 只有在确认有可信代理时才应使用 X-Forwarded-For
-        String ip = request.getRemoteAddr();
+        // 优先从 X-Forwarded-For 获取客户端真实 IP（由反向代理注入）
+        // X-Forwarded-For 格式: client, proxy1, proxy2, ...
+        // 第一个 IP 是原始客户端地址
+        String forwarded = request.getHeader("X-Forwarded-For");
+        if (forwarded != null && !forwarded.isEmpty() && !"unknown".equalsIgnoreCase(forwarded)) {
+            ip = forwarded.split(",")[0].trim();
+            log.debug("从 X-Forwarded-For 获取客户端 IP: {}", ip);
+        }
 
-        // TODO: 如果部署在可信反向代理后面，可以取消下面的注释来支持代理头
-        // 注意：必须确保代理会剥离/覆盖客户端发送的 X-Forwarded-For 头
-        // String forwarded = request.getHeader("X-Forwarded-For");
-        // if (forwarded != null && !forwarded.isEmpty() && !"unknown".equalsIgnoreCase(forwarded)) {
-        //     ip = forwarded.split(",")[0].trim();
-        // }
+        // 回退到 getRemoteAddr()（直连场景或无代理头时）
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getRemoteAddr();
+        }
 
         return ip != null ? ip : "unknown";
     }

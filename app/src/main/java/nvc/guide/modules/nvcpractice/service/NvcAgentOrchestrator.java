@@ -95,9 +95,11 @@ public class NvcAgentOrchestrator {
 
   /**
    * 从 DB 组装 PracticeContext
-   * 外部调用者只需传 sessionId 和 userId
+   * 外部调用者只需传 PracticeContext（包含 sessionId 和 userId）
    */
-  public PracticeContext buildPracticeContext(Long sessionId, Long userId) {
+  public PracticeContext buildPracticeContext(nvc.guide.common.PracticeContext ctx) {
+    Long sessionId = ctx.sessionId();
+    Long userId = ctx.userId();
     NvcPracticeSessionEntity session = sessionRepository.findById(sessionId)
         .orElseThrow(() -> new BusinessException(
             ErrorCode.NVC_SESSION_NOT_FOUND,

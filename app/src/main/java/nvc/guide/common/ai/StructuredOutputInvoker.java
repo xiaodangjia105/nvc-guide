@@ -78,25 +78,14 @@ public class StructuredOutputInvoker {
                 ? securedSystemPrompt
                 : buildRetrySystemPrompt(securedSystemPrompt, lastError);
             try {
-                String content = chatClient.prompt()
-                    .system(attemptSystemPrompt)
-                    .user(userPrompt)
-                    .call()
-                    .content();
-                T result = convertWithRepair(content, outputConverter, logContext, log);
+                T result = executeSingleAttempt(chatClient, attemptSystemPrompt, userPrompt, outputConverter, logContext, log);
                 recordAttempt(contextTag, STATUS_SUCCESS);
                 recordInvocation(contextTag, STATUS_SUCCESS, startNanos);
                 return result;
             } catch (Exception e) {
                 lastError = e;
                 recordAttempt(contextTag, STATUS_FAILURE);
-                if (attempt < maxAttempts) {
-                    log.warn("{}结构化解析失败，准备重试: attempt={}/{}, error={}",
-                        logContext, attempt, maxAttempts, e.getMessage());
-                } else {
-                    log.error("{}结构化解析失败，已达最大重试次数: attempts={}, error={}",
-                        logContext, maxAttempts, e.getMessage());
-                }
+                logRetryInfo(log, logContext, attempt, e);
             }
         }
 
@@ -107,39 +96,85 @@ public class StructuredOutputInvoker {
         );
     }
 
+    private <T> T executeSingleAttempt(
+        ChatClient chatClient,
+        String attemptSystemPrompt,
+        String userPrompt,
+        BeanOutputConverter<T> outputConverter,
+        String logContext,
+        Logger log
+    ) throws Exception {
+        String content = chatClient.prompt()
+            .system(attemptSystemPrompt)
+            .user(userPrompt)
+            .call()
+            .content();
+        return convertWithRepair(content, outputConverter, logContext, log);
+    }
+
+    private void logRetryInfo(Logger log, String logContext, int attempt, Exception e) {
+        if (attempt < maxAttempts) {
+            log.warn("{}结构化解析失败，准备重试: attempt={}/{}, error={}",
+                logContext, attempt, maxAttempts, e.getMessage());
+        } else {
+            log.error("{}结构化解析失败，已达最大重试次数: attempts={}, error={}",
+                logContext, maxAttempts, e.getMessage());
+        }
+    }
+
     private <T> T convertWithRepair(
         String content,
         BeanOutputConverter<T> outputConverter,
         String logContext,
         Logger log
-    ) {
+    ) throws Exception {
         try {
             return outputConverter.convert(content);
         } catch (Exception firstError) {
-            // 尝试修复 JSON 中的换行符
-            String repaired = repairNewlinesInJsonStrings(content);
-            if (!repaired.equals(content)) {
-                try {
-                    T result = outputConverter.convert(repaired);
-                    log.warn("{}结构化 JSON 存在未转义换行符，已在本地修复后解析成功", logContext);
-                    return result;
-                } catch (Exception repairError) {
-                    firstError.addSuppressed(repairError);
-                }
-            }
+            return attemptJsonRepairs(content, outputConverter, logContext, log, firstError);
+        }
+    }
 
-            // 尝试修复未转义引号
-            repaired = repairUnescapedQuotesInJsonStrings(repaired);
-            if (!repaired.equals(content)) {
-                try {
-                    T result = outputConverter.convert(repaired);
-                    log.warn("{}结构化 JSON 存在未转义引号，已在本地修复后解析成功", logContext);
-                    return result;
-                } catch (Exception repairError) {
-                    firstError.addSuppressed(repairError);
-                }
+    private <T> T attemptJsonRepairs(
+        String content,
+        BeanOutputConverter<T> outputConverter,
+        String logContext,
+        Logger log,
+        Exception firstError
+    ) throws Exception {
+        // 尝试修复 JSON 中的换行符
+        String repaired = repairNewlinesInJsonStrings(content);
+        if (!repaired.equals(content)) {
+            T result = tryConvertSilently(repaired, outputConverter, firstError);
+            if (result != null) {
+                log.warn("{}结构化 JSON 存在未转义换行符，已在本地修复后解析成功", logContext);
+                return result;
             }
-            throw firstError;
+        }
+
+        // 尝试修复未转义引号
+        repaired = repairUnescapedQuotesInJsonStrings(repaired);
+        if (!repaired.equals(content)) {
+            T result = tryConvertSilently(repaired, outputConverter, firstError);
+            if (result != null) {
+                log.warn("{}结构化 JSON 存在未转义引号，已在本地修复后解析成功", logContext);
+                return result;
+            }
+        }
+
+        throw firstError;
+    }
+
+    private <T> T tryConvertSilently(
+        String content,
+        BeanOutputConverter<T> outputConverter,
+        Exception firstError
+    ) {
+        try {
+            return outputConverter.convert(content);
+        } catch (Exception repairError) {
+            firstError.addSuppressed(repairError);
+            return null;
         }
     }
 

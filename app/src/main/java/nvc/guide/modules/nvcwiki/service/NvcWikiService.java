@@ -246,7 +246,7 @@ public class NvcWikiService {
     }
 
     private String generateContentHash(Long userId, String title, String content) {
-        String raw = userId + ":" + title + ":" + (content != null ? content.hashCode() : 0);
+        String raw = userId + ":" + title + ":" + (content != null ? content : "");
         try {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
             byte[] hash = md.digest(raw.getBytes(StandardCharsets.UTF_8));

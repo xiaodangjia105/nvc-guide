@@ -273,7 +273,8 @@ public class NvcPracticeSessionService {
 
     // 练习后反思（异步，不阻塞主流程）
     try {
-      PracticeContext context = orchestrator.buildPracticeContext(sessionId, userId);
+      PracticeContext context = orchestrator.buildPracticeContext(
+          new nvc.guide.common.PracticeContext(sessionId, userId));
       reflectionService.reflectAndSave(context);
       log.info("Reflection completed: sessionId={}", sessionId);
     } catch (Exception e) {
