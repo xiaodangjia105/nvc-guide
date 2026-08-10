@@ -1,471 +1,199 @@
 package nvc.guide.modules.llmprovider.service;
 
-import nvc.guide.common.ai.LlmProviderRegistry;
-import nvc.guide.common.config.LlmProviderProperties;
-import nvc.guide.common.exception.BusinessException;
-import nvc.guide.common.exception.ErrorCode;
+import nvc.guide.modules.llmprovider.dto.AsrConfigDTO;
+import nvc.guide.modules.llmprovider.dto.AsrConfigRequest;
 import nvc.guide.modules.llmprovider.dto.CreateProviderRequest;
 import nvc.guide.modules.llmprovider.dto.DefaultProviderDTO;
+import nvc.guide.modules.llmprovider.dto.ProviderDTO;
+import nvc.guide.modules.llmprovider.dto.ProviderTestResult;
+import nvc.guide.modules.llmprovider.dto.TtsConfigDTO;
+import nvc.guide.modules.llmprovider.dto.TtsConfigRequest;
 import nvc.guide.modules.llmprovider.dto.UpdateProviderRequest;
-import nvc.guide.modules.nvcvoice.config.NvcVoiceProperties;
-import nvc.guide.modules.nvcvoice.service.provider.QwenAsrService;
-import nvc.guide.modules.nvcvoice.service.provider.QwenTtsService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.List;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("LlmProviderConfigService 测试")
+@DisplayName("LlmProviderConfigService (Facade) 测试")
 class LlmProviderConfigServiceTest {
 
-    @Mock private LlmProviderProperties properties;
-    @Mock private LlmProviderRegistry registry;
-    @Mock private NvcVoiceProperties voiceProperties;
-    @Mock private QwenAsrService asrService;
-    @Mock private QwenTtsService ttsService;
+    @Mock private LlmProviderCrudService crudService;
+    @Mock private AsrTtsConfigService asrTtsService;
 
     private LlmProviderConfigService service;
 
     @BeforeEach
-    void setUp(@TempDir Path tempDir) throws IOException {
-        Path tempYaml = tempDir.resolve("application.yml");
-        Path tempEnv = tempDir.resolve(".env");
-        Files.writeString(tempYaml, """
-            app:
-              ai:
-                providers: {}
-            """);
-        Files.writeString(tempEnv, "");
-
-        when(properties.getConfigYamlPath()).thenReturn(tempYaml.toString());
-        when(properties.getConfigEnvPath()).thenReturn(tempEnv.toString());
-
-        service = new LlmProviderConfigService(
-            properties,
-            registry,
-            voiceProperties,
-            asrService,
-            ttsService
-        );
+    void setUp() {
+        service = new LlmProviderConfigService(crudService, asrTtsService);
     }
 
-    @Nested
-    @DisplayName("启动校验")
-    class Bootstrap {
+    @Test
+    @DisplayName("listProviders 委托给 crudService")
+    void listProvidersDelegates() {
+        ProviderDTO dto = ProviderDTO.builder().id("dashscope").build();
+        when(crudService.listProviders()).thenReturn(List.of(dto));
 
-        @Test
-        @DisplayName("validateWritablePaths 对不可创建的父目录 fail-fast")
-        void validateWritablePathsFailsFastWhenParentUnwritable(@TempDir Path tempDir) throws IOException {
-            Path sentinel = tempDir.resolve("not-a-dir");
-            Files.writeString(sentinel, "");
-            Path unreachableYaml = sentinel.resolve("child/llm-providers.yml");
+        List<ProviderDTO> result = service.listProviders();
 
-            when(properties.getConfigYamlPath()).thenReturn(unreachableYaml.toString());
-            when(properties.getConfigEnvPath()).thenReturn(tempDir.resolve(".env").toString());
-
-            LlmProviderConfigService failing = new LlmProviderConfigService(
-                properties, registry, voiceProperties, asrService, ttsService);
-
-            assertThrows(BusinessException.class, failing::validateWritablePaths);
-        }
+        assertEquals(1, result.size());
+        assertEquals("dashscope", result.get(0).id());
+        verify(crudService).listProviders();
     }
 
-    @Nested
-    @DisplayName("基础行为")
-    class BasicBehavior {
+    @Test
+    @DisplayName("getProvider 委托给 crudService")
+    void getProviderDelegates() {
+        ProviderDTO dto = ProviderDTO.builder().id("glm").build();
+        when(crudService.getProvider("glm")).thenReturn(dto);
 
-        @Test
-        @DisplayName("maskApiKey 返回脱敏值")
-        void maskApiKeyReturnsMaskedValue() {
-            assertEquals("sk-***xyz", service.maskApiKey("sk-abcdefxyz"));
-            assertEquals("***", service.maskApiKey("ab"));
-            assertEquals("abc***fgh", service.maskApiKey("abcdefgh"));
-        }
+        ProviderDTO result = service.getProvider("glm");
 
-        @Test
-        @DisplayName("listProviders 在 providers 为空时返回空列表")
-        void listProvidersReturnsEmptyWhenProvidersNull() {
-            when(properties.getProviders()).thenReturn(null);
-
-            assertTrue(service.listProviders().isEmpty());
-        }
-
-        @Test
-        @DisplayName("getProvider 对未知 provider 抛出异常")
-        void getProviderThrowsWhenProviderMissing() {
-            when(properties.getProviders()).thenReturn(new HashMap<>());
-
-            assertThrows(BusinessException.class, () -> service.getProvider("unknown"));
-        }
-
-        @Test
-        @DisplayName("GLM base-url 测试连接不应重复拼接 /v1")
-        void buildConnectivityUrlsAvoidsDoubleVersionForGlm() throws Exception {
-            List<String> urls = invokeConnectivityUrls("https://open.bigmodel.cn/api/coding/paas/v4");
-
-            assertEquals(List.of("https://open.bigmodel.cn/api/coding/paas/v4/chat/completions"), urls);
-        }
-
-        @Test
-        @DisplayName("测试连接请求体不再强制携带 temperature")
-        void connectivityRequestBodyOmitsTemperature() throws Exception {
-            Map<String, Object> body = invokeConnectivityRequestBody("kimi-latest");
-
-            assertEquals("kimi-latest", body.get("model"));
-            assertEquals(1, body.get("max_tokens"));
-            assertTrue(body.containsKey("messages"));
-            assertTrue(!body.containsKey("temperature"));
-        }
+        assertEquals("glm", result.id());
+        verify(crudService).getProvider("glm");
     }
 
-    @Nested
-    @DisplayName("Provider 管理")
-    class ProviderManagement {
+    @Test
+    @DisplayName("getDefaultProvider 委托给 crudService")
+    void getDefaultProviderDelegates() {
+        DefaultProviderDTO dto = new DefaultProviderDTO("glm", "glm");
+        when(crudService.getDefaultProvider()).thenReturn(dto);
 
-        @Test
-        @DisplayName("createProvider 对重复 id 抛出异常")
-        void createProviderThrowsForDuplicateId() {
-            Map<String, LlmProviderProperties.ProviderConfig> providers = new HashMap<>();
-            providers.put("existing", createProviderConfig("http://localhost:1234", "key", "model", null));
-            when(properties.getProviders()).thenReturn(providers);
+        DefaultProviderDTO result = service.getDefaultProvider();
 
-            CreateProviderRequest request = new CreateProviderRequest(
-                "existing",
-                "http://localhost:1234",
-                "key",
-                "model",
-                null,
-                null
-            );
-
-            assertThrows(BusinessException.class, () -> service.createProvider(request));
-        }
-
-        @Test
-        @DisplayName("deleteProvider 删除默认 provider 时抛出异常")
-        void deleteProviderThrowsForDefaultProvider() {
-            when(properties.getDefaultProvider()).thenReturn("dashscope");
-
-            assertThrows(BusinessException.class, () -> service.deleteProvider("dashscope"));
-        }
-
-        @Test
-        @DisplayName("updateProvider 允许清空 embedding model")
-        void updateProviderAllowsClearingEmbeddingModel() {
-            Map<String, LlmProviderProperties.ProviderConfig> providers = new LinkedHashMap<>();
-            LlmProviderProperties.ProviderConfig config = createProviderConfig(
-                "https://dashscope.aliyuncs.com/compatible-mode/v1",
-                "secret",
-                "qwen-plus",
-                "text-embedding-v3"
-            );
-            providers.put("dashscope", config);
-            when(properties.getProviders()).thenReturn(providers);
-
-            service.updateProvider("dashscope", new UpdateProviderRequest(null, null, null, "", null));
-
-            assertNull(config.getEmbeddingModel());
-            verify(registry).reload();
-        }
-
-        @Test
-        @DisplayName("updateProvider 对纯空白 embedding model 等价于清空")
-        void updateProviderTreatsBlankEmbeddingModelAsClear() {
-            Map<String, LlmProviderProperties.ProviderConfig> providers = new LinkedHashMap<>();
-            LlmProviderProperties.ProviderConfig config = createProviderConfig(
-                "https://dashscope.aliyuncs.com/compatible-mode/v1",
-                "secret",
-                "qwen-plus",
-                "text-embedding-v3"
-            );
-            providers.put("dashscope", config);
-            when(properties.getProviders()).thenReturn(providers);
-
-            service.updateProvider("dashscope", new UpdateProviderRequest(null, null, null, "   ", null));
-
-            assertNull(config.getEmbeddingModel());
-            verify(registry).reload();
-        }
-
-        @Test
-        @DisplayName("updateProvider 拒绝空串 baseUrl / model / apiKey")
-        void updateProviderRejectsBlankRequiredFields() {
-            Map<String, LlmProviderProperties.ProviderConfig> providers = new LinkedHashMap<>();
-            providers.put("dashscope",
-                createProviderConfig("https://dashscope.aliyuncs.com", "secret", "qwen-plus", null));
-            when(properties.getProviders()).thenReturn(providers);
-
-            assertThrows(BusinessException.class, () ->
-                service.updateProvider("dashscope",
-                    new UpdateProviderRequest("", null, null, null, null)));
-            assertThrows(BusinessException.class, () ->
-                service.updateProvider("dashscope",
-                    new UpdateProviderRequest("   ", null, null, null, null)));
-            assertThrows(BusinessException.class, () ->
-                service.updateProvider("dashscope",
-                    new UpdateProviderRequest(null, null, "", null, null)));
-            assertThrows(BusinessException.class, () ->
-                service.updateProvider("dashscope",
-                    new UpdateProviderRequest(null, "  ", null, null, null)));
-        }
+        assertEquals("glm", result.defaultProvider());
+        verify(crudService).getDefaultProvider();
     }
 
-    @Nested
-    @DisplayName("全局默认 Provider")
-    class DefaultProviderBehavior {
+    @Test
+    @DisplayName("testProvider 委托给 crudService")
+    void testProviderDelegates() {
+        ProviderTestResult result = ProviderTestResult.builder().success(true).message("ok").build();
+        when(crudService.testProvider("dashscope")).thenReturn(result);
 
-        @Test
-        @DisplayName("updateDefaultProvider 拒绝未知 provider")
-        void updateDefaultProviderRejectsUnknownProvider() {
-            Map<String, LlmProviderProperties.ProviderConfig> providers = new LinkedHashMap<>();
-            providers.put("dashscope", createProviderConfig("https://dashscope.aliyuncs.com", "key", "qwen", null));
-            when(properties.getProviders()).thenReturn(providers);
+        ProviderTestResult actual = service.testProvider("dashscope");
 
-            BusinessException exception = assertThrows(
-                BusinessException.class,
-                () -> service.updateDefaultProvider(new DefaultProviderDTO("unknown"))
-            );
-
-            assertEquals(ErrorCode.PROVIDER_NOT_FOUND.getCode(), exception.getCode());
-            verify(properties, never()).setDefaultProvider("unknown");
-            verify(registry, never()).reload();
-        }
-
-        @Test
-        @DisplayName("updateDefaultProvider 写入新的默认 provider")
-        void updateDefaultProviderPersistsValue() {
-            Map<String, LlmProviderProperties.ProviderConfig> providers = new LinkedHashMap<>();
-            providers.put("dashscope", createProviderConfig("https://dashscope.aliyuncs.com", "key", "qwen", null));
-            providers.put("glm", createProviderConfig("https://open.bigmodel.cn/api/coding/paas/v4", "key", "glm-4-flash", null));
-            when(properties.getProviders()).thenReturn(providers);
-
-            service.updateDefaultProvider(new DefaultProviderDTO("glm"));
-
-            verify(properties).setDefaultProvider("glm");
-            verify(registry).reload();
-        }
+        assertEquals(true, actual.success());
+        verify(crudService).testProvider("dashscope");
     }
 
-    @Nested
-    @DisplayName("env 文件操作")
-    class EnvFileOperations {
+    @Test
+    @DisplayName("createProvider 委托给 crudService")
+    void createProviderDelegates() {
+        CreateProviderRequest request = new CreateProviderRequest("kimi", "http://url", "key", "model", null, null);
 
-        private LlmProviderConfigService createServiceWithEnv(Path envFile) {
-            when(properties.getConfigYamlPath()).thenReturn(null);
-            when(properties.getConfigEnvPath()).thenReturn(envFile.toString());
-            return new LlmProviderConfigService(
-                properties, registry, voiceProperties, asrService, ttsService);
-        }
+        service.createProvider(request);
 
-        @Test
-        @DisplayName("writeEnvValue 在空文件追加新键")
-        void appendNewKeyToEmptyFile(@TempDir Path tempDir) throws Exception {
-            Path envFile = tempDir.resolve(".env");
-            Files.writeString(envFile, "");
-
-            LlmProviderConfigService envService = createServiceWithEnv(envFile);
-            invokeMethod(envService, "writeEnvValue", "PROVIDER_KIMI_API_KEY", "sk-123");
-
-            String content = Files.readString(envFile, StandardCharsets.UTF_8);
-            assertTrue(content.contains("PROVIDER_KIMI_API_KEY=sk-123"));
-        }
-
-        @Test
-        @DisplayName("writeEnvValue 在已有文件追加新键并补换行")
-        void appendNewKeyToExistingFile(@TempDir Path tempDir) throws Exception {
-            Path envFile = tempDir.resolve(".env");
-            Files.writeString(envFile, "EXISTING_KEY=val1");
-
-            LlmProviderConfigService envService = createServiceWithEnv(envFile);
-            invokeMethod(envService, "writeEnvValue", "PROVIDER_KIMI_API_KEY", "sk-123");
-
-            String content = Files.readString(envFile, StandardCharsets.UTF_8);
-            assertTrue(content.contains("EXISTING_KEY=val1"));
-            assertTrue(content.contains("PROVIDER_KIMI_API_KEY=sk-123"));
-        }
-
-        @Test
-        @DisplayName("writeEnvValue 替换已有键的值")
-        void replaceExistingKey(@TempDir Path tempDir) throws Exception {
-            Path envFile = tempDir.resolve(".env");
-            Files.writeString(envFile, "PROVIDER_KIMI_API_KEY=old-value\nOTHER_KEY=x\n");
-
-            LlmProviderConfigService envService = createServiceWithEnv(envFile);
-            invokeMethod(envService, "writeEnvValue", "PROVIDER_KIMI_API_KEY", "new-value");
-
-            String content = Files.readString(envFile, StandardCharsets.UTF_8);
-            assertTrue(content.contains("PROVIDER_KIMI_API_KEY=new-value"));
-            assertTrue(content.contains("OTHER_KEY=x"));
-        }
-
-        @Test
-        @DisplayName("envPath 为 null 时不写入文件")
-        void nullEnvPathIsNoOp(@TempDir Path tempDir) throws IOException {
-            when(properties.getConfigYamlPath()).thenReturn(null);
-            when(properties.getConfigEnvPath()).thenReturn(null);
-
-            LlmProviderConfigService nullEnvService = new LlmProviderConfigService(
-                properties, registry, voiceProperties, asrService, ttsService);
-
-            assertDoesNotThrow(() -> nullEnvService.createProvider(
-                new CreateProviderRequest("test", "http://localhost", "key", "model", null, null)));
-        }
-
-        @Test
-        @DisplayName("removeFromEnv 移除指定键")
-        void removeFromEnvDeletesKey(@TempDir Path tempDir) throws Exception {
-            Path envFile = tempDir.resolve(".env");
-            Files.writeString(envFile, "PROVIDER_KIMI_API_KEY=sk-123\nKEEP_ME=yes\n");
-
-            LlmProviderConfigService envService = createServiceWithEnv(envFile);
-            invokeMethod(envService, "removeFromEnv", "PROVIDER_KIMI_API_KEY");
-
-            String content = Files.readString(envFile, StandardCharsets.UTF_8);
-            assertFalse(content.contains("PROVIDER_KIMI_API_KEY"));
-            assertTrue(content.contains("KEEP_ME=yes"));
-        }
+        verify(crudService).createProvider(request);
     }
 
-    @Nested
-    @DisplayName("YAML 文件操作")
-    class YamlMutations {
+    @Test
+    @DisplayName("updateProvider 委托给 crudService")
+    void updateProviderDelegates() {
+        UpdateProviderRequest request = new UpdateProviderRequest("http://url", "key", "model", null, null);
 
-        @Test
-        @DisplayName("mutateYaml 在文件不存在时创建新文件")
-        void createsNewFileWhenMissing(@TempDir Path tempDir) throws IOException {
-            Path yamlFile = tempDir.resolve("new-config.yml");
-            when(properties.getConfigYamlPath()).thenReturn(yamlFile.toString());
-            when(properties.getConfigEnvPath()).thenReturn(null);
+        service.updateProvider("kimi", request);
 
-            LlmProviderConfigService yamlService = new LlmProviderConfigService(
-                properties, registry, voiceProperties, asrService, ttsService);
-
-            when(properties.getProviders()).thenReturn(new HashMap<>());
-
-            yamlService.createProvider(
-                new CreateProviderRequest("kimi", "https://api.moonshot.cn/v1", "key", "kimi-latest", null, null));
-
-            assertTrue(Files.exists(yamlFile));
-            String content = Files.readString(yamlFile, StandardCharsets.UTF_8);
-            assertTrue(content.contains("kimi"));
-            assertTrue(content.contains("kimi-latest"));
-        }
-
-        @Test
-        @DisplayName("mutateYaml 保留已有 YAML 结构")
-        void preservesExistingStructure(@TempDir Path tempDir) throws IOException {
-            Path yamlFile = tempDir.resolve("config.yml");
-            Files.writeString(yamlFile, """
-                app:
-                  ai:
-                    default-provider: dashscope
-                  nvc:
-                    voice:
-                      qwen-asr:
-                        model: qwen3-asr-flash-realtime
-                """);
-
-            when(properties.getConfigYamlPath()).thenReturn(yamlFile.toString());
-            when(properties.getConfigEnvPath()).thenReturn(null);
-
-            LlmProviderConfigService yamlService = new LlmProviderConfigService(
-                properties, registry, voiceProperties, asrService, ttsService);
-
-            when(properties.getProviders()).thenReturn(new HashMap<>());
-
-            yamlService.createProvider(
-                new CreateProviderRequest("kimi", "https://api.moonshot.cn/v1", "key", "kimi-latest", null, null));
-
-            String content = Files.readString(yamlFile, StandardCharsets.UTF_8);
-            assertTrue(content.contains("default-provider"));
-            assertTrue(content.contains("qwen3-asr-flash-realtime"));
-            assertTrue(content.contains("kimi"));
-        }
-
-        @Test
-        @DisplayName("yamlPath 为 null 时 mutateYaml 不抛异常")
-        void nullYamlPathIsNoOp() {
-            when(properties.getConfigYamlPath()).thenReturn(null);
-            when(properties.getConfigEnvPath()).thenReturn(null);
-
-            LlmProviderConfigService nullYamlService = new LlmProviderConfigService(
-                properties, registry, voiceProperties, asrService, ttsService);
-
-            assertDoesNotThrow(() -> nullYamlService.createProvider(
-                new CreateProviderRequest("test", "http://localhost", "key", "model", null, null)));
-        }
+        verify(crudService).updateProvider("kimi", request);
     }
 
-    private LlmProviderProperties.ProviderConfig createProviderConfig(
-        String baseUrl,
-        String apiKey,
-        String model,
-        String embeddingModel
-    ) {
-        LlmProviderProperties.ProviderConfig config = new LlmProviderProperties.ProviderConfig();
-        config.setBaseUrl(baseUrl);
-        config.setApiKey(apiKey);
-        config.setModel(model);
-        config.setEmbeddingModel(embeddingModel);
-        return config;
+    @Test
+    @DisplayName("deleteProvider 委托给 crudService")
+    void deleteProviderDelegates() {
+        service.deleteProvider("kimi");
+
+        verify(crudService).deleteProvider("kimi");
     }
 
-    @SuppressWarnings("unchecked")
-    private List<String> invokeConnectivityUrls(String baseUrl)
-        throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
-        Method method = LlmProviderConfigService.class.getDeclaredMethod(
-            "buildConnectivityTestUrls",
-            String.class
-        );
-        method.setAccessible(true);
-        return (List<String>) method.invoke(service, baseUrl);
+    @Test
+    @DisplayName("updateDefaultProvider 委托给 crudService")
+    void updateDefaultProviderDelegates() {
+        DefaultProviderDTO request = new DefaultProviderDTO("glm");
+
+        service.updateDefaultProvider(request);
+
+        verify(crudService).updateDefaultProvider(request);
     }
 
-    private void invokeMethod(Object target, String methodName, Object... args)
-        throws Exception {
-        Class<?>[] paramTypes = new Class<?>[args.length];
-        for (int i = 0; i < args.length; i++) {
-            paramTypes[i] = args[i].getClass();
-        }
-        Method method = LlmProviderConfigService.class.getDeclaredMethod(methodName, paramTypes);
-        method.setAccessible(true);
-        method.invoke(target, args);
+    @Test
+    @DisplayName("updateDefaultEmbeddingProvider 委托给 crudService")
+    void updateDefaultEmbeddingProviderDelegates() {
+        DefaultProviderDTO request = new DefaultProviderDTO(null, "dashscope");
+
+        service.updateDefaultEmbeddingProvider(request);
+
+        verify(crudService).updateDefaultEmbeddingProvider(request);
     }
 
-    @SuppressWarnings("unchecked")
-    private Map<String, Object> invokeConnectivityRequestBody(String model)
-        throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
-        Method method = LlmProviderConfigService.class.getDeclaredMethod(
-            "buildConnectivityTestRequestBody",
-            String.class
-        );
-        method.setAccessible(true);
-        return (Map<String, Object>) method.invoke(service, model);
+    @Test
+    @DisplayName("reloadProviders 委托给 crudService")
+    void reloadProvidersDelegates() {
+        service.reloadProviders();
+
+        verify(crudService).reloadProviders();
+    }
+
+    @Test
+    @DisplayName("getAsrConfig 委托给 asrTtsService")
+    void getAsrConfigDelegates() {
+        AsrConfigDTO dto = AsrConfigDTO.builder().url("ws://test").build();
+        when(asrTtsService.getAsrConfig()).thenReturn(dto);
+
+        AsrConfigDTO result = service.getAsrConfig();
+
+        assertEquals("ws://test", result.getUrl());
+        verify(asrTtsService).getAsrConfig();
+    }
+
+    @Test
+    @DisplayName("getTtsConfig 委托给 asrTtsService")
+    void getTtsConfigDelegates() {
+        TtsConfigDTO dto = TtsConfigDTO.builder().model("test-model").build();
+        when(asrTtsService.getTtsConfig()).thenReturn(dto);
+
+        TtsConfigDTO result = service.getTtsConfig();
+
+        assertEquals("test-model", result.getModel());
+        verify(asrTtsService).getTtsConfig();
+    }
+
+    @Test
+    @DisplayName("testAsrConfig 委托给 asrTtsService")
+    void testAsrConfigDelegates() {
+        ProviderTestResult result = ProviderTestResult.builder().success(true).message("ok").build();
+        when(asrTtsService.testAsrConfig()).thenReturn(result);
+
+        ProviderTestResult actual = service.testAsrConfig();
+
+        assertEquals(true, actual.success());
+        verify(asrTtsService).testAsrConfig();
+    }
+
+    @Test
+    @DisplayName("updateAsrConfig 委托给 asrTtsService")
+    void updateAsrConfigDelegates() {
+        AsrConfigRequest request = new AsrConfigRequest("ws://url", "model", "key", "zh", "wav", 16000, null, null, null, null);
+
+        service.updateAsrConfig(request);
+
+        verify(asrTtsService).updateAsrConfig(request);
+    }
+
+    @Test
+    @DisplayName("updateTtsConfig 委托给 asrTtsService")
+    void updateTtsConfigDelegates() {
+        TtsConfigRequest request = new TtsConfigRequest("model", "key", "voice", "wav", 16000, "mode", "zh", 1.0f, 1);
+
+        service.updateTtsConfig(request);
+
+        verify(asrTtsService).updateTtsConfig(request);
     }
 }
