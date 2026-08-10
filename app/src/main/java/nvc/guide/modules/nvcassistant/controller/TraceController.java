@@ -22,8 +22,8 @@ import java.util.List;
 /**
  * Agent Trace 查询 API
  *
- * <p>TODO [安全] 此控制器暴露内部追踪数据（包括对话内容），
- * 目前无认证保护。生产环境应添加 @PreAuthorize("hasRole('ADMIN')") 或等效认证。
+ * <p>由 AdminApiAuthInterceptor 通过 X-Api-Key 请求头进行鉴权保护。
+ * 生产环境需配置 app.security.admin-api-key。
  */
 @RestController
 @RequestMapping("/api/nvc/traces")
