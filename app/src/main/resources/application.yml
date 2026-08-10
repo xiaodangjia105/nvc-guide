@@ -96,6 +96,10 @@ spring:
 
 # Application custom configuration
 app:
+  # 管理端点 API Key 鉴权（Trace / Metrics 等内部端点）
+  # 配置非空值后启用鉴权；为空或未配置时放行（开发环境默认）
+  security:
+    admin-api-key: ${APP_ADMIN_API_KEY:}
   ai:
     default-provider: ${APP_AI_DEFAULT_PROVIDER:mimo}
     default-embedding-provider: qwen-embedding
