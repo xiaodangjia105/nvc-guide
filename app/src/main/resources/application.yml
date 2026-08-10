@@ -96,6 +96,11 @@ spring:
 
 # Application custom configuration
 app:
+  # JWT 配置
+  jwt:
+    secret: ${JWT_SECRET:nvc-guide-default-jwt-secret-key-please-change-in-production-2024}
+    expiration: ${JWT_EXPIRATION:86400000}  # 24小时（毫秒）
+
   # 管理端点 API Key 鉴权（Trace / Metrics 等内部端点）
   # 配置非空值后启用鉴权；为空或未配置时放行（开发环境默认）
   security:
