@@ -116,7 +116,7 @@ public class NvcVoiceWebSocketHandler extends TextWebSocketHandler implements Di
   @Override
   public void handleTransportError(WebSocketSession session, Throwable exception) {
     String sessionId = extractSessionId(session);
-    log.error("[Handler] Transport error for session {}: {}", sessionId, exception.getMessage());
+    log.error("[Handler] Transport error for session {}", sessionId, exception);
   }
 
   // ==================== 消息路由 ====================
@@ -192,7 +192,7 @@ public class NvcVoiceWebSocketHandler extends TextWebSocketHandler implements Di
       session.sendMessage(new TextMessage(subtitleJson));
 
     } catch (IOException e) {
-      log.error("[Handler] Failed to send welcome message: {}", e.getMessage());
+      log.error("[Handler] Failed to send welcome message", e);
     }
   }
 

@@ -99,7 +99,7 @@ public class VoicePipelineCoordinator {
         () -> log.info("[Pipeline] ASR ready for session: {}", sessionId),
         // onError
         error -> {
-          log.error("[Pipeline] ASR error for session {}: {}", sessionId, error.getMessage());
+          log.error("[Pipeline] ASR error for session {}", sessionId, error);
           handleAsrError(sessionId, wsSession, error, state);
         }
     ));
@@ -329,7 +329,7 @@ public class VoicePipelineCoordinator {
         session.sendMessage(new TextMessage(json));
       }
     } catch (IOException e) {
-      log.error("[Pipeline] Failed to send WebSocket message: {}", e.getMessage());
+      log.error("[Pipeline] Failed to send WebSocket message", e);
     }
   }
 

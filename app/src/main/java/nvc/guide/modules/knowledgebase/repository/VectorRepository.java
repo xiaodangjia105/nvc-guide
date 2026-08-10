@@ -57,7 +57,7 @@ public class VectorRepository {
             return deletedRows;
             
         } catch (Exception e) {
-            log.error("执行删除向量 SQL 失败: kbId={}, error={}", knowledgeBaseId, e.getMessage());
+            log.error("执行删除向量 SQL 失败: kbId={}", knowledgeBaseId, e);
             // 抛出异常以触发事务回滚
             throw new BusinessException(ErrorCode.KNOWLEDGE_BASE_DELETE_FAILED, "删除向量数据失败");
         }
