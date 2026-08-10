@@ -130,7 +130,7 @@ public class FileStorageService {
         } catch (S3Exception e) {
             // 区分"文件不存在"和"网络/权限错误"
             // 只有 NoSuchKeyException 才表示文件不存在，其他 S3 错误应该抛出
-            log.error("检查文件存在性时发生S3错误: {} - {}", fileKey, e.getMessage());
+            log.error("检查文件存在性时发生S3错误: fileKey={}", fileKey, e);
             throw new BusinessException(ErrorCode.STORAGE_DOWNLOAD_FAILED, "检查文件失败: " + e.getMessage(), e);
         }
     }
@@ -146,7 +146,7 @@ public class FileStorageService {
                     .build();
             return s3Client.headObject(headRequest).contentLength();
         } catch (S3Exception e) {
-            log.error("获取文件大小失败: {} - {}", fileKey, e.getMessage());
+            log.error("获取文件大小失败: fileKey={}", fileKey, e);
             throw new BusinessException(ErrorCode.STORAGE_DOWNLOAD_FAILED, "获取文件信息失败");
         }
     }

@@ -147,7 +147,7 @@ public class NvcReflectionService {
             return saved;
 
         } catch (Exception e) {
-            log.error("Failed to parse reflection JSON: {}", e.getMessage());
+            log.error("Failed to parse reflection JSON", e);
             return saveDefaultReflection(context);
         }
     }
