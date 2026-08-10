@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import nvc.guide.common.ai.LlmProviderRegistry;
 import nvc.guide.modules.nvcassistant.dto.ToolCallRecord;
+import nvc.guide.modules.nvcassistant.fallback.DialogFallbackTemplates;
 import nvc.guide.modules.nvcassistant.fallback.LlmCallContext;
 import nvc.guide.modules.nvcassistant.fallback.LlmFallbackHandler;
 import nvc.guide.modules.nvcassistant.metrics.MetricsCollector;
@@ -56,6 +57,7 @@ public class AgentLoop {
     private final MetricsCollector metricsCollector;
     private final TraceManager traceManager;
     private final LlmFallbackHandler fallbackHandler;
+    private final DialogFallbackTemplates dialogFallbackTemplates;
 
     /** 最大工具调用轮数 */
     private static final int MAX_TOOL_CALL_TURNS = 10;
@@ -382,10 +384,18 @@ public class AgentLoop {
      * 构建降级响应（LLM 调用失败时使用）
      */
     private ChatResponse buildFallbackResponse() {
+        // 从模板库获取降级话术，模板获取失败时回退到硬编码字符串
+        String template;
+        try {
+            template = dialogFallbackTemplates.selectTemplate("FREE_DIALOG");
+        } catch (Exception e) {
+            log.warn("[AgentLoop] Failed to select fallback template, using hardcoded fallback", e);
+            template = "让我们先停下来，客观描述一下刚才发生了什么？注意区分事实和评价哦。";
+        }
         // 返回一个简单的降级响应，让循环正常结束
         AssistantMessage output = new AssistantMessage(
             "【降级模式】AI 服务暂时不可用，以下是 NVC 引导提示：\n\n"
-            + "让我们先停下来，客观描述一下刚才发生了什么？注意区分事实和评价哦。");
+            + template);
         Generation generation = new Generation(output);
         return org.springframework.ai.chat.model.ChatResponse.builder()
             .generations(List.of(generation))
