@@ -73,6 +73,21 @@ public class UnifiedEvaluationService {
         List<String> improvements
     ) {}
 
+    /**
+     * 批次汇总上下文，封装 summarizeBatchResults 的所有参数
+     */
+    private record BatchSummaryContext(
+        ChatClient chatClient,
+        String sessionId,
+        String resumeContext,
+        String referenceContext,
+        List<QaRecord> qaRecords,
+        List<QuestionEvalDTO> evaluations,
+        String fallbackFeedback,
+        List<String> fallbackStrengths,
+        List<String> fallbackImprovements
+    ) {}
+
     public UnifiedEvaluationService(
             StructuredOutputInvoker structuredOutputInvoker,
             ResourceLoader resourceLoader,
@@ -134,10 +149,10 @@ public class UnifiedEvaluationService {
         List<String> fallbackImprovements = mergeListItems(batchResults, false);
 
         // 二次汇总
-        SummaryDTO summary = summarizeBatchResults(
+        SummaryDTO summary = summarizeBatchResults(new BatchSummaryContext(
             chatClient, sessionId, resumeContext, referenceBaseline, qaRecords,
             mergedEvaluations, fallbackFeedback, fallbackStrengths, fallbackImprovements
-        );
+        ));
 
         return buildReport(sessionId, qaRecords, mergedEvaluations,
             summary.overallFeedback(), summary.strengths(), summary.improvements());
@@ -245,37 +260,34 @@ public class UnifiedEvaluationService {
         return merged.stream().limit(8).toList();
     }
 
-    private SummaryDTO summarizeBatchResults(
-            ChatClient chatClient, String sessionId, String resumeContext, String referenceContext,
-            List<QaRecord> qaRecords, List<QuestionEvalDTO> evaluations,
-            String fallbackFeedback, List<String> fallbackStrengths, List<String> fallbackImprovements) {
+    private SummaryDTO summarizeBatchResults(BatchSummaryContext ctx) {
         try {
             String summarySystem = summarySystemPromptTemplate.render();
             Map<String, Object> vars = new HashMap<>();
-            vars.put("resumeText", resumeContext);
+            vars.put("resumeText", ctx.resumeContext());
             vars.put("referenceContext",
-                (referenceContext != null && !referenceContext.isBlank()) ? referenceContext : "无");
-            vars.put("categorySummary", buildCategorySummary(qaRecords, evaluations));
-            vars.put("questionHighlights", buildQuestionHighlights(qaRecords, evaluations));
-            vars.put("fallbackOverallFeedback", fallbackFeedback);
-            vars.put("fallbackStrengths", String.join("\n", fallbackStrengths));
-            vars.put("fallbackImprovements", String.join("\n", fallbackImprovements));
+                (ctx.referenceContext() != null && !ctx.referenceContext().isBlank()) ? ctx.referenceContext() : "无");
+            vars.put("categorySummary", buildCategorySummary(ctx.qaRecords(), ctx.evaluations()));
+            vars.put("questionHighlights", buildQuestionHighlights(ctx.qaRecords(), ctx.evaluations()));
+            vars.put("fallbackOverallFeedback", ctx.fallbackFeedback());
+            vars.put("fallbackStrengths", String.join("\n", ctx.fallbackStrengths()));
+            vars.put("fallbackImprovements", String.join("\n", ctx.fallbackImprovements()));
             String summaryUser = summaryUserPromptTemplate.render(vars);
 
             String systemWithFormat = summarySystem + "\n\n" + summaryOutputConverter.getFormat();
             SummaryDTO dto = structuredOutputInvoker.invoke(
-                chatClient, systemWithFormat, summaryUser, summaryOutputConverter,
+                ctx.chatClient(), systemWithFormat, summaryUser, summaryOutputConverter,
                 ErrorCode.NVC_EVALUATION_FAILED, "总结评估失败：", "总结评估", log
             );
 
             String feedback = dto != null && dto.overallFeedback() != null && !dto.overallFeedback().isBlank()
-                ? dto.overallFeedback() : fallbackFeedback;
-            List<String> strengths = sanitizeItems(dto != null ? dto.strengths() : null, fallbackStrengths);
-            List<String> improvements = sanitizeItems(dto != null ? dto.improvements() : null, fallbackImprovements);
+                ? dto.overallFeedback() : ctx.fallbackFeedback();
+            List<String> strengths = sanitizeItems(dto != null ? dto.strengths() : null, ctx.fallbackStrengths());
+            List<String> improvements = sanitizeItems(dto != null ? dto.improvements() : null, ctx.fallbackImprovements());
             return new SummaryDTO(feedback, strengths, improvements);
         } catch (Exception e) {
-            log.warn("二次汇总评估失败，降级到批次聚合结果: sessionId={}, error={}", sessionId, e.getMessage());
-            return new SummaryDTO(fallbackFeedback, fallbackStrengths, fallbackImprovements);
+            log.warn("二次汇总评估失败，降级到批次聚合结果: sessionId={}, error={}", ctx.sessionId(), e.getMessage());
+            return new SummaryDTO(ctx.fallbackFeedback(), ctx.fallbackStrengths(), ctx.fallbackImprovements());
         }
     }
 
