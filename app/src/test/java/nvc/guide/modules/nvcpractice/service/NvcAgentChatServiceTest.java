@@ -37,6 +37,7 @@ import static org.mockito.Mockito.when;
 class NvcAgentChatServiceTest {
 
   @Mock private LlmProviderRegistry llmProviderRegistry;
+  @Mock private NvcSemanticCacheService semanticCacheService;
 
   private NvcToolRegistry toolRegistry;
   private NvcAgentChatService service;
@@ -44,7 +45,7 @@ class NvcAgentChatServiceTest {
   @BeforeEach
   void setUp() {
     toolRegistry = new NvcToolRegistry(List.of());
-    service = new NvcAgentChatService(llmProviderRegistry, toolRegistry);
+    service = new NvcAgentChatService(llmProviderRegistry, toolRegistry, semanticCacheService);
   }
 
   private NvcAgentConfigEntity buildConfig() {

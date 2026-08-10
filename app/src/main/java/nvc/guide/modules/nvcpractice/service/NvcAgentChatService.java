@@ -30,6 +30,7 @@ public class NvcAgentChatService {
 
   private final LlmProviderRegistry llmProviderRegistry;
   private final NvcToolRegistry toolRegistry;
+  private final NvcSemanticCacheService semanticCacheService;
 
   // ═══ 原有方法 — 保持不变，向后兼容 ═══
 
@@ -81,9 +82,16 @@ public class NvcAgentChatService {
   // ═══ 新方法 — 统一入口 ═══
 
   /**
-   * 执行 Agent 对话（非流式）— 统一入口，支持工具调用
+   * 执行 Agent 对话（非流式）— 统一入口，支持工具调用，带语义缓存
    */
   public String chat(NvcChatRequest request) {
+    // 语义缓存查询（缓存失败不影响主流程，内部已有 try-catch）
+    String cachedResponse = semanticCacheService.lookup(
+        request.getUserMessage(), request.getAgentConfig().getAgentScene());
+    if (cachedResponse != null) {
+      return cachedResponse;
+    }
+
     ChatClient client = getChatClient(request.getAgentConfig());
     List<Message> messages = buildMessages(
         request.getAgentConfig(), request.getPracticeContext(),
@@ -99,7 +107,13 @@ public class NvcAgentChatService {
           toolRegistry.toFunctionCallbacks(request.getToolConfig().getToolNames()));
     }
 
-    return spec.call().content();
+    String response = spec.call().content();
+
+    // 将 LLM 响应存入语义缓存（缓存失败不影响主流程，内部已有 try-catch）
+    semanticCacheService.cache(
+        request.getUserMessage(), response, request.getAgentConfig().getAgentScene());
+
+    return response;
   }
 
   /**
