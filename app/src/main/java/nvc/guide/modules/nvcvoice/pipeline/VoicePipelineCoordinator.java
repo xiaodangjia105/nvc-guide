@@ -177,20 +177,39 @@ public class VoicePipelineCoordinator {
         // 3. LLM 流式调用
         String aiText;
         if (properties.isLlmStreamingEnabled()) {
-          aiText = llmService.chatStreamSentences(
-              systemPrompt,
-              userPrompt,
-              // onToken: 实时文本
-              token -> sendSubtitle(wsSession, WebSocketSubtitleMessage.aiPartial(token)),
-              // onSentence: 触发 TTS
-              sentence -> {
-                if (properties.isChunkedAudioEnabled()) {
-                  // 分片模式：每句触发 TTS
-                  triggerSentenceTts(sessionId, sentence, wsSession);
-                }
-              },
-              getLlmProvider(sessionId)
-          );
+          // 分片模式：创建保序发射器，确保 TTS 音频块按句子顺序发送
+          final OrderedTtsChunkEmitter[] emitterHolder = {null};
+          if (properties.isChunkedAudioEnabled()) {
+            emitterHolder[0] = new OrderedTtsChunkEmitter(
+                audio -> sendAudioChunk(wsSession, audio),
+                unused -> log.debug("[Pipeline] TTS ordered emitter: all chunks sent")
+            );
+          }
+
+          try {
+            aiText = llmService.chatStreamSentences(
+                systemPrompt,
+                userPrompt,
+                // onToken: 实时文本
+                token -> sendSubtitle(wsSession, WebSocketSubtitleMessage.aiPartial(token)),
+                // onSentence: 触发 TTS（通过保序发射器）
+                sentence -> {
+                  if (emitterHolder[0] != null) {
+                    triggerSentenceTts(sentence, emitterHolder[0]);
+                  }
+                },
+                getLlmProvider(sessionId)
+            );
+          } finally {
+            // 所有句子已提交，标记完成触发按序排放
+            if (emitterHolder[0] != null) {
+              try {
+                emitterHolder[0].markComplete();
+              } catch (Exception e) {
+                log.warn("[Pipeline] TTS emitter markComplete failed: {}", e.getMessage());
+              }
+            }
+          }
         } else {
           aiText = llmService.chat(systemPrompt, userPrompt,
               getLlmProvider(sessionId));
@@ -252,18 +271,10 @@ public class VoicePipelineCoordinator {
 
   // ==================== 内部方法 ====================
 
-  private void triggerSentenceTts(String sessionId, String sentence, WebSocketSession wsSession) {
+  private void triggerSentenceTts(String sentence, OrderedTtsChunkEmitter emitter) {
     CompletableFuture<byte[]> ttsFuture = CompletableFuture.supplyAsync(
         () -> ttsProvider.synthesize(sentence), pipelineExecutor);
-
-    ttsFuture.thenAccept(audio -> {
-      if (audio != null && audio.length > 0) {
-        sendAudioChunk(wsSession, audio);
-      }
-    }).exceptionally(error -> {
-      log.warn("[Pipeline] TTS failed for sentence: {}, error: {}", sentence, error.getMessage());
-      return null;
-    });
+    emitter.submit(ttsFuture);
   }
 
   private void handleAsrError(String sessionId, WebSocketSession wsSession, Throwable error,
