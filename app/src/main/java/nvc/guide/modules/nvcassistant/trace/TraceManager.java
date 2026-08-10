@@ -39,6 +39,7 @@ import java.util.UUID;
 public class TraceManager implements TraceSpanManager {
 
     private final TraceStreamProducer traceStreamProducer;
+    private final TraceSampler traceSampler;
 
     private static final ThreadLocal<TraceContext> CURRENT_TRACE = new ThreadLocal<>();
 
@@ -66,11 +67,29 @@ public class TraceManager implements TraceSpanManager {
             .finalStatus("SUCCESS")
             .build();
 
+        // 采样决策：未命中采样时跳过上下文设置，下游操作自动降级为 no-op
+        if (!shouldSample(userId, sessionId)) {
+            log.debug("[Trace] Skipped by sampler: traceId={}, session={}, mode={}", trace.getTraceId(), sessionId, mode);
+            return trace;
+        }
+
         TraceContext context = new TraceContext(trace);
         CURRENT_TRACE.set(context);
 
         log.debug("[Trace] Started: traceId={}, session={}, mode={}", trace.getTraceId(), sessionId, mode);
         return trace;
+    }
+
+    /**
+     * 判断是否应该采样（采样器异常时默认采样，不影响主流程）
+     */
+    private boolean shouldSample(String userId, String sessionId) {
+        try {
+            return traceSampler.shouldSample(userId, sessionId);
+        } catch (Exception e) {
+            log.warn("[Trace] TraceSampler failed, defaulting to sample: userId={}, sessionId={}", userId, sessionId, e);
+            return true;
+        }
     }
 
     /**

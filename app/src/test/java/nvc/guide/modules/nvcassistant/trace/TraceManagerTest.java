@@ -17,12 +17,16 @@ import static org.mockito.Mockito.*;
 class TraceManagerTest {
 
     private TraceStreamProducer traceStreamProducer;
+    private TraceSampler traceSampler;
     private TraceManager traceManager;
 
     @BeforeEach
     void setUp() {
         traceStreamProducer = mock(TraceStreamProducer.class);
-        traceManager = new TraceManager(traceStreamProducer);
+        traceSampler = mock(TraceSampler.class);
+        // 默认全部采样，避免影响现有测试
+        when(traceSampler.shouldSample(anyString(), anyString())).thenReturn(true);
+        traceManager = new TraceManager(traceStreamProducer, traceSampler);
     }
 
     @Nested
@@ -43,6 +47,34 @@ class TraceManagerTest {
             assertEquals("SUCCESS", trace.getFinalStatus());
 
             // 验证 ThreadLocal 已设置
+            assertNotNull(traceManager.current());
+        }
+
+        @Test
+        @DisplayName("采样器返回 false 时应跳过 Trace 上下文设置")
+        void shouldSkipContextWhenSamplerRejects() {
+            when(traceSampler.shouldSample("user-1", "session-1")).thenReturn(false);
+
+            AgentTraceEntity trace = traceManager.startTrace("session-1", "user-1", "FREE_DIALOG");
+
+            // 实体仍然返回（API 不变）
+            assertNotNull(trace);
+            assertNotNull(trace.getTraceId());
+
+            // ThreadLocal 未设置
+            assertNull(traceManager.current());
+        }
+
+        @Test
+        @DisplayName("采样器异常时应默认采样（不中断主流程）")
+        void shouldDefaultToSampleOnSamplerFailure() {
+            when(traceSampler.shouldSample(anyString(), anyString()))
+                .thenThrow(new RuntimeException("Redis unavailable"));
+
+            AgentTraceEntity trace = traceManager.startTrace("session-1", "user-1", "FREE_DIALOG");
+
+            assertNotNull(trace);
+            // ThreadLocal 仍然设置
             assertNotNull(traceManager.current());
         }
     }
