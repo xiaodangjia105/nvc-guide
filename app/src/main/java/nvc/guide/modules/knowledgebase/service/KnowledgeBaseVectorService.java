@@ -10,7 +10,6 @@ import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Objects;
@@ -39,10 +38,15 @@ public class KnowledgeBaseVectorService {
     }
     /**
      * 将知识库内容向量化并存储
+     *
+     * <p>注意：此方法不使用 @Transactional，因为 vectorStore.add() 会调用外部 DashScope Embedding API。
+     * 事务内禁止调用外部 API（见 GUARDRAILS.md），否则会占用 DB 连接直到 API 返回。
+     * deleteByKnowledgeBaseId() 是单条 DELETE 语句，会自动提交。
+     * 如果向量化失败，调用方（VectorizeStreamConsumer）会标记为 FAILED 并可重试。
+     *
      * @param knowledgeBaseId 知识库ID
      * @param content 知识库文本内容
      */
-    @Transactional
     public void vectorizeAndStore(Long knowledgeBaseId, String content) {
         log.info("开始向量化知识库: kbId={}, contentLength={}", knowledgeBaseId, content.length());
         try {
