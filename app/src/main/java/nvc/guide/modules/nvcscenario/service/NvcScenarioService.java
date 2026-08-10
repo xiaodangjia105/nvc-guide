@@ -59,6 +59,13 @@ public class NvcScenarioService {
     }
 
     /**
+     * 按 ID 查找场景（不存在时返回 null，不抛异常）
+     */
+    public NvcScenarioEntity findById(Long id) {
+        return scenarioRepository.findById(id).orElse(null);
+    }
+
+    /**
      * AI 生成新场景
      */
     public NvcScenarioEntity generateScenario(ScenarioGenerateRequest request) {
