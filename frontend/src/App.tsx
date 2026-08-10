@@ -2,8 +2,14 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from
 import Layout from './components/Layout';
 import ErrorBoundary from './components/ErrorBoundary';
 import { Suspense, lazy } from 'react';
+import type { ReactNode } from 'react';
 import type { UploadKnowledgeBaseResponse } from './api/knowledgebase';
 import { ROUTES } from './constants/routes';
+import { AuthProvider, useAuth } from './hooks/useAuth';
+
+// Lazy load - 认证页面
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const RegisterPage = lazy(() => import('./pages/RegisterPage'));
 
 // Lazy load - 知识库页面
 const KnowledgeBaseQueryPage = lazy(() => import('./pages/KnowledgeBaseQueryPage'));
@@ -33,13 +39,43 @@ const Loading = () => (
   </div>
 );
 
+// 全屏加载（用于认证状态恢复）
+const FullscreenLoading = () => (
+  <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 to-indigo-50 dark:from-slate-900 dark:to-slate-800">
+    <div className="w-10 h-10 border-3 border-slate-200 border-t-primary-500 rounded-full animate-spin" />
+  </div>
+);
+
+/**
+ * 路由守卫 — 未登录用户跳转到登录页
+ */
+function RequireAuth({ children }: { children: ReactNode }) {
+  const { user, loading, token } = useAuth();
+
+  if (loading && token) {
+    return <FullscreenLoading />;
+  }
+
+  if (!user) {
+    return <Navigate to={ROUTES.login} replace />;
+  }
+
+  return <>{children}</>;
+}
+
 function App() {
   return (
     <BrowserRouter>
+      <AuthProvider>
       <ErrorBoundary>
         <Suspense fallback={<Loading />}>
           <Routes>
-          <Route path="/" element={<Layout />}>
+          {/* 认证页面（无需 Layout） */}
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+
+          {/* 需要登录的页面 */}
+          <Route path="/" element={<RequireAuth><Layout /></RequireAuth>}>
             {/* 默认重定向到 NVC 练习中心 */}
             <Route index element={<Navigate to="/nvc" replace />} />
 
@@ -75,6 +111,7 @@ function App() {
           </Routes>
         </Suspense>
       </ErrorBoundary>
+      </AuthProvider>
     </BrowserRouter>
   );
 }

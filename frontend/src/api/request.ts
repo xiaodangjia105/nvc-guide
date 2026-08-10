@@ -58,7 +58,15 @@ instance.interceptors.response.use(
   (error) => {
     // 有响应的情况：后端返回了结果（即使是错误）
     if (error.response) {
-      const { data } = error.response;
+      const { status, data } = error.response;
+
+      // 401 Unauthorized — token 过期或无效，清除认证状态并跳转登录
+      if (status === 401) {
+        localStorage.removeItem('token');
+        window.location.href = '/login';
+        return Promise.reject(new Error('登录已过期，请重新登录'));
+      }
+
       // 尝试解析 Result 格式
       if (data && typeof data === 'object' && 'code' in data && 'message' in data) {
         const result = data as Result;
