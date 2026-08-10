@@ -23,8 +23,17 @@ import java.util.stream.Collectors;
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
-    
+
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    /** 业务错误码：资源未找到 */
+    private static final int ERROR_CODE_RESOURCE_NOT_FOUND = 3001;
+    /** 业务错误码：请求频率限制 */
+    private static final int ERROR_CODE_RATE_LIMIT = 8001;
+    /** 业务错误码范围下限：服务不可用类错误 */
+    private static final int ERROR_CODE_SERVICE_UNAVAILABLE_MIN = 7000;
+    /** 业务错误码范围上限：服务不可用类错误 */
+    private static final int ERROR_CODE_SERVICE_UNAVAILABLE_MAX = 8000;
     
     /**
      * 处理业务异常
@@ -43,12 +52,12 @@ public class GlobalExceptionHandler {
      */
     private HttpStatus mapErrorCodeToHttpStatus(int code) {
         if (code >= 400 && code < 500) return HttpStatus.BAD_REQUEST;
-        if (code == 404 || code == 3001) return HttpStatus.NOT_FOUND;
+        if (code == 404 || code == ERROR_CODE_RESOURCE_NOT_FOUND) return HttpStatus.NOT_FOUND;
         if (code == 403) return HttpStatus.FORBIDDEN;
         if (code == 401) return HttpStatus.UNAUTHORIZED;
-        if (code == 429 || code == 8001) return HttpStatus.TOO_MANY_REQUESTS;
+        if (code == 429 || code == ERROR_CODE_RATE_LIMIT) return HttpStatus.TOO_MANY_REQUESTS;
         if (code >= 500 && code < 600) return HttpStatus.INTERNAL_SERVER_ERROR;
-        if (code >= 7000 && code < 8000) return HttpStatus.SERVICE_UNAVAILABLE;
+        if (code >= ERROR_CODE_SERVICE_UNAVAILABLE_MIN && code < ERROR_CODE_SERVICE_UNAVAILABLE_MAX) return HttpStatus.SERVICE_UNAVAILABLE;
         return HttpStatus.INTERNAL_SERVER_ERROR;
     }
 

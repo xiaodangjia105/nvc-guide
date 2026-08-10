@@ -25,6 +25,15 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class NvcProfileService {
 
+    /** 最少练习次数，低于此值不计算等级，直接返回 BEGINNER */
+    private static final int MIN_SAMPLES_FOR_LEVEL = 3;
+    /** 取最近 N 次练习的平均分 */
+    private static final int RECENT_SCORES_WINDOW_SIZE = 10;
+    /** 达到 ADVANCED 等级的平均分阈值 */
+    private static final int ADVANCED_THRESHOLD = 80;
+    /** 达到 INTERMEDIATE 等级的平均分阈值 */
+    private static final int INTERMEDIATE_THRESHOLD = 60;
+
     private final NvcUserProfileRepository profileRepository;
     private final NvcUserAbilityScoreRepository abilityScoreRepository;
 
@@ -166,7 +175,7 @@ public class NvcProfileService {
 
         // 取最近 10 次的平均值
         List<NvcUserAbilityScoreEntity> last10 = recentScores.subList(
-            0, Math.min(10, recentScores.size()));
+            0, Math.min(RECENT_SCORES_WINDOW_SIZE, recentScores.size()));
 
         // 使用 null 安全的拆箱方式，防止 Integer 为 null 时 NPE
         int avgObservation = (int) last10.stream()
@@ -223,11 +232,11 @@ public class NvcProfileService {
         List<NvcUserAbilityScoreEntity> recent =
             abilityScoreRepository.findTop30ByUserIdOrderByScoredAtDesc(userId);
 
-        if (recent.size() < 3) {
+        if (recent.size() < MIN_SAMPLES_FOR_LEVEL) {
             return NvcLevel.BEGINNER;
         }
 
-        List<NvcUserAbilityScoreEntity> last10 = recent.subList(0, Math.min(10, recent.size()));
+        List<NvcUserAbilityScoreEntity> last10 = recent.subList(0, Math.min(RECENT_SCORES_WINDOW_SIZE, recent.size()));
         double avgOverall = last10.stream()
             .mapToInt(s -> {
                 // null 安全的拆箱
@@ -240,8 +249,8 @@ public class NvcProfileService {
             .average()
             .orElse(0);
 
-        if (avgOverall >= 80) return NvcLevel.ADVANCED;
-        if (avgOverall >= 60) return NvcLevel.INTERMEDIATE;
+        if (avgOverall >= ADVANCED_THRESHOLD) return NvcLevel.ADVANCED;
+        if (avgOverall >= INTERMEDIATE_THRESHOLD) return NvcLevel.INTERMEDIATE;
         return NvcLevel.BEGINNER;
     }
 
