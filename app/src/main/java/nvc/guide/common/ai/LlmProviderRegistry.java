@@ -224,7 +224,7 @@ public class LlmProviderRegistry {
             throw new BusinessException(ErrorCode.PROVIDER_CONFIG_READ_FAILED,
                 "Provider '" + providerId + "' 未配置可用的 Embedding 模型，无法执行知识库向量化");
         }
-        if (looksLikeChatModel(config.embeddingModel())) {
+        if (ModelNameUtils.looksLikeChatModel(config.embeddingModel())) {
             String recommendation = RECOMMENDED_EMBEDDING_MODELS.get(providerId.toLowerCase());
             String suffix = recommendation != null
                 ? "，推荐填写 " + recommendation
@@ -375,14 +375,5 @@ public class LlmProviderRegistry {
         return properties.getEmbeddingDimensions();
     }
 
-    private boolean looksLikeChatModel(String model) {
-        String lower = model.toLowerCase();
-        return lower.startsWith("glm-")
-            || lower.startsWith("deepseek")
-            || lower.startsWith("kimi")
-            || lower.startsWith("moonshot")
-            || lower.startsWith("qwen")
-            || lower.startsWith("ernie");
-    }
 
 }

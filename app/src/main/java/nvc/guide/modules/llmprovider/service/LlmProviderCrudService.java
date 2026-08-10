@@ -2,6 +2,7 @@ package nvc.guide.modules.llmprovider.service;
 
 import nvc.guide.common.ai.ApiPathResolver;
 import nvc.guide.common.ai.LlmProviderRegistry;
+import nvc.guide.common.ai.ModelNameUtils;
 import nvc.guide.common.config.LlmProviderProperties;
 import nvc.guide.common.config.LlmProviderProperties.ProviderConfig;
 import nvc.guide.common.exception.BusinessException;
@@ -39,6 +40,11 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 @Service
 @Slf4j
 public class LlmProviderCrudService {
+
+  /** Provider 连接测试：HTTP 连接超时（毫秒） */
+  private static final int HTTP_CONNECT_TIMEOUT_MS = 5000;
+  /** Provider 连接测试：HTTP 读取超时（毫秒） */
+  private static final int HTTP_READ_TIMEOUT_MS = 10000;
 
   private final LlmProviderProperties properties;
   private final LlmProviderRegistry registry;
@@ -597,7 +603,7 @@ public class LlmProviderCrudService {
       throw new BusinessException(ErrorCode.BAD_REQUEST,
           "支持 Embedding 的 Provider 必须填写 embeddingModel");
     }
-    if (looksLikeChatModel(normalizedModel)) {
+    if (ModelNameUtils.looksLikeChatModel(normalizedModel)) {
       String recommendation = RECOMMENDED_EMBEDDING_MODELS.get(providerId.toLowerCase());
       String suffix = recommendation != null
           ? "，推荐填写 " + recommendation
@@ -617,15 +623,6 @@ public class LlmProviderCrudService {
     return properties.getEmbeddingDimensions();
   }
 
-  private boolean looksLikeChatModel(String model) {
-    String lower = model.toLowerCase();
-    return lower.startsWith("glm-")
-        || lower.startsWith("deepseek")
-        || lower.startsWith("kimi")
-        || lower.startsWith("moonshot")
-        || lower.startsWith("qwen")
-        || lower.startsWith("ernie");
-  }
 
   private String toEnvKey(String providerId) {
     return "PROVIDER_" + providerId.toUpperCase().replace("-", "_") + "_API_KEY";
@@ -636,8 +633,8 @@ public class LlmProviderCrudService {
   private ProviderTestResult doTestProvider(ProviderRuntimeConfig config, String id) {
     try {
       SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
-      requestFactory.setConnectTimeout(5000);
-      requestFactory.setReadTimeout(10000);
+      requestFactory.setConnectTimeout(HTTP_CONNECT_TIMEOUT_MS);
+      requestFactory.setReadTimeout(HTTP_READ_TIMEOUT_MS);
 
       RestClient restClient = RestClient.builder()
           .defaultHeader("Authorization", "Bearer " + config.apiKey())
