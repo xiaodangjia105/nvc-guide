@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ThumbsUp, ThumbsDown, X, Send } from 'lucide-react';
 import { feedbackApi } from '../../api/feedback';
 import type { FeedbackSource } from '../../api/feedback';
+import { useUserId } from '../../hooks/useUserId';
 
 interface NvcFeedbackButtonsProps {
   messageId: number;
@@ -26,6 +27,7 @@ export default function NvcFeedbackButtons({
   initialRating,
   onFeedback,
 }: NvcFeedbackButtonsProps) {
+  const [userId] = useUserId();
   const [rating, setRating] = useState<number | null>(initialRating ?? null);
   const [showComment, setShowComment] = useState(false);
   const [comment, setComment] = useState('');
@@ -35,8 +37,6 @@ export default function NvcFeedbackButtons({
     async (selectedRating: number, commentText?: string) => {
       setSubmitting(true);
       try {
-        // TODO: 从全局状态获取 userId，暂用 1
-        const userId = 1;
         await feedbackApi.submit(userId, {
           sessionId,
           messageId,
@@ -55,7 +55,7 @@ export default function NvcFeedbackButtons({
         setSubmitting(false);
       }
     },
-    [sessionId, messageId, messageSource, agentScene, onFeedback]
+    [userId, sessionId, messageId, messageSource, agentScene, onFeedback]
   );
 
   const handleThumbsUp = useCallback(() => {
