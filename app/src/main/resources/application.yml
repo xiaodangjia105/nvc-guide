@@ -268,3 +268,10 @@ app:
         batch-size: ${NVC_TRACE_CLEANUP_BATCH_SIZE:1000}
         cron: ${NVC_TRACE_CLEANUP_CRON:0 0 3 * * ?}
 
+# Spring Boot Actuator 健康检查端点
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
