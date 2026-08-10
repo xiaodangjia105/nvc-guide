@@ -1,4 +1,8 @@
 export const ROUTES = {
+  // 认证
+  login: '/login',
+  register: '/register',
+
   // NVC 练习
   nvcHub: '/nvc',
   nvcPractice: (sessionId: number) => `/nvc/practice/${sessionId}`,
