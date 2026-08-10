@@ -255,7 +255,7 @@ class NvcAgentOrchestratorTest {
           .modelProvider("mimo")
           .isEnabled(true)
           .build();
-      when(agentConfigService.getConfig(NvcAgentScene.DIALOGUE_GUIDE)).thenReturn(config);
+      when(agentConfigService.getConfig(eq(NvcAgentScene.DIALOGUE_GUIDE), anyLong())).thenReturn(config);
 
       PracticeContext context = PracticeContext.builder()
           .session(buildSession(NvcSessionPhase.IN_PROGRESS,
@@ -286,9 +286,9 @@ class NvcAgentOrchestratorTest {
           .modelProvider("mimo")
           .isEnabled(true)
           .build();
-      when(agentConfigService.getConfig(NvcAgentScene.DIFFICULT_PARTNER))
+      when(agentConfigService.getConfig(eq(NvcAgentScene.DIFFICULT_PARTNER), anyLong()))
           .thenReturn(disabledConfig);
-      when(agentConfigService.getConfig(NvcAgentScene.DIALOGUE_GUIDE))
+      when(agentConfigService.getConfig(eq(NvcAgentScene.DIALOGUE_GUIDE), anyLong()))
           .thenReturn(fallbackConfig);
 
       PracticeContext context = PracticeContext.builder()
@@ -326,7 +326,7 @@ class NvcAgentOrchestratorTest {
           .isEnabled(true)
           .build();
 
-      when(agentConfigService.getConfig(NvcAgentScene.NVC_EXPRESSION_EVALUATOR))
+      when(agentConfigService.getConfig(eq(NvcAgentScene.NVC_EXPRESSION_EVALUATOR), anyLong()))
           .thenReturn(evaluatorConfig);
       when(agentChatService.chatPlain(any(), anyString(), anyString()))
           .thenReturn("{\"weak_elements\":[\"feeling\"]}");
@@ -334,7 +334,7 @@ class NvcAgentOrchestratorTest {
       String result = orchestrator.reflect(context);
 
       assertNotNull(result);
-      verify(agentConfigService).getConfig(NvcAgentScene.NVC_EXPRESSION_EVALUATOR);
+      verify(agentConfigService).getConfig(eq(NvcAgentScene.NVC_EXPRESSION_EVALUATOR), anyLong());
       verify(agentChatService).chatPlain(eq(evaluatorConfig), anyString(), anyString());
     }
 
@@ -371,7 +371,7 @@ class NvcAgentOrchestratorTest {
           .modelProvider("mimo")
           .isEnabled(true)
           .build();
-      when(agentConfigService.getConfig(NvcAgentScene.DIALOGUE_GUIDE)).thenReturn(config);
+      when(agentConfigService.getConfig(eq(NvcAgentScene.DIALOGUE_GUIDE), anyLong())).thenReturn(config);
 
       PracticeContext context = PracticeContext.builder()
           .session(buildSession(NvcSessionPhase.IN_PROGRESS,
@@ -398,9 +398,9 @@ class NvcAgentOrchestratorTest {
       NvcAgentConfigEntity fallbackConfig = NvcAgentConfigEntity.builder()
           .id(1L).agentScene(NvcAgentScene.DIALOGUE_GUIDE)
           .systemPrompt("fallback").modelProvider("mimo").isEnabled(true).build();
-      when(agentConfigService.getConfig(NvcAgentScene.DIFFICULT_PARTNER))
+      when(agentConfigService.getConfig(eq(NvcAgentScene.DIFFICULT_PARTNER), anyLong()))
           .thenReturn(disabledConfig);
-      when(agentConfigService.getConfig(NvcAgentScene.DIALOGUE_GUIDE))
+      when(agentConfigService.getConfig(eq(NvcAgentScene.DIALOGUE_GUIDE), anyLong()))
           .thenReturn(fallbackConfig);
 
       PracticeContext context = PracticeContext.builder()

@@ -29,6 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -148,7 +149,7 @@ class NvcStructuredPracticeServiceTest {
           1L, NvcEvaluationType.REALTIME)).thenReturn(Optional.of(eval));
 
       NvcAgentConfigEntity config = buildConfig(NvcAgentScene.STEP_OBSERVE_COACH);
-      when(agentConfigService.getConfig(NvcAgentScene.STEP_OBSERVE_COACH))
+      when(agentConfigService.getConfig(eq(NvcAgentScene.STEP_OBSERVE_COACH), anyLong()))
           .thenReturn(config);
 
       StepProgressDTO result = service.getStepProgress(1L);
@@ -173,7 +174,7 @@ class NvcStructuredPracticeServiceTest {
           1L, NvcEvaluationType.REALTIME)).thenReturn(Optional.empty());
 
       NvcAgentConfigEntity config = buildConfig(NvcAgentScene.STEP_FEELING_COACH);
-      when(agentConfigService.getConfig(NvcAgentScene.STEP_FEELING_COACH))
+      when(agentConfigService.getConfig(eq(NvcAgentScene.STEP_FEELING_COACH), anyLong()))
           .thenReturn(config);
 
       StepProgressDTO result = service.getStepProgress(1L);
@@ -203,7 +204,7 @@ class NvcStructuredPracticeServiceTest {
           1L, NvcEvaluationType.REALTIME)).thenReturn(Optional.of(eval));
 
       NvcAgentConfigEntity config = buildConfig(NvcAgentScene.STEP_NEED_COACH);
-      when(agentConfigService.getConfig(NvcAgentScene.STEP_NEED_COACH))
+      when(agentConfigService.getConfig(eq(NvcAgentScene.STEP_NEED_COACH), anyLong()))
           .thenReturn(config);
 
       StepProgressDTO result = service.getStepProgress(1L);
@@ -232,7 +233,7 @@ class NvcStructuredPracticeServiceTest {
 
       NvcAgentConfigEntity config = buildConfig(NvcAgentScene.STEP_REQUEST_COACH);
       config.setStepAdvanceThreshold(null);
-      when(agentConfigService.getConfig(NvcAgentScene.STEP_REQUEST_COACH))
+      when(agentConfigService.getConfig(eq(NvcAgentScene.STEP_REQUEST_COACH), anyLong()))
           .thenReturn(config);
 
       StepProgressDTO result = service.getStepProgress(1L);
@@ -260,7 +261,7 @@ class NvcStructuredPracticeServiceTest {
           1L, NvcEvaluationType.REALTIME)).thenReturn(Optional.of(eval));
 
       NvcAgentConfigEntity config = buildConfig(NvcAgentScene.STEP_OBSERVE_COACH);
-      when(agentConfigService.getConfig(NvcAgentScene.STEP_OBSERVE_COACH))
+      when(agentConfigService.getConfig(eq(NvcAgentScene.STEP_OBSERVE_COACH), anyLong()))
           .thenReturn(config);
 
       StepProgressDTO result = service.getStepProgress(1L);
@@ -323,7 +324,7 @@ class NvcStructuredPracticeServiceTest {
       when(sessionService.getSession(1L)).thenReturn(session);
 
       NvcAgentConfigEntity config = buildConfig(NvcAgentScene.STEP_FEELING_COACH);
-      when(agentConfigService.getConfig(NvcAgentScene.STEP_FEELING_COACH))
+      when(agentConfigService.getConfig(eq(NvcAgentScene.STEP_FEELING_COACH), anyLong()))
           .thenReturn(config);
       when(sessionService.updateStep(1L, NvcPracticeStep.FEELING))
           .thenReturn(session);
@@ -344,7 +345,7 @@ class NvcStructuredPracticeServiceTest {
       when(sessionService.getSession(1L)).thenReturn(session);
 
       NvcAgentConfigEntity config = buildConfig(NvcAgentScene.STEP_NEED_COACH);
-      when(agentConfigService.getConfig(NvcAgentScene.STEP_NEED_COACH))
+      when(agentConfigService.getConfig(eq(NvcAgentScene.STEP_NEED_COACH), anyLong()))
           .thenReturn(config);
       when(sessionService.updateStep(1L, NvcPracticeStep.NEED))
           .thenReturn(session);
@@ -363,7 +364,7 @@ class NvcStructuredPracticeServiceTest {
       when(sessionService.getSession(1L)).thenReturn(session);
 
       NvcAgentConfigEntity config = buildConfig(NvcAgentScene.STEP_REQUEST_COACH);
-      when(agentConfigService.getConfig(NvcAgentScene.STEP_REQUEST_COACH))
+      when(agentConfigService.getConfig(eq(NvcAgentScene.STEP_REQUEST_COACH), anyLong()))
           .thenReturn(config);
       when(sessionService.updateStep(1L, NvcPracticeStep.REQUEST))
           .thenReturn(session);
@@ -427,7 +428,7 @@ class NvcStructuredPracticeServiceTest {
       when(sessionService.getSession(1L)).thenReturn(session);
 
       NvcAgentConfigEntity config = buildConfig(NvcAgentScene.STEP_OBSERVE_COACH);
-      when(agentConfigService.getConfig(NvcAgentScene.STEP_OBSERVE_COACH))
+      when(agentConfigService.getConfig(eq(NvcAgentScene.STEP_OBSERVE_COACH), anyLong()))
           .thenReturn(config);
 
       assertFalse(service.canAdvance(1L, null));
@@ -441,7 +442,7 @@ class NvcStructuredPracticeServiceTest {
       when(sessionService.getSession(1L)).thenReturn(session);
 
       NvcAgentConfigEntity config = buildConfig(NvcAgentScene.STEP_OBSERVE_COACH);
-      when(agentConfigService.getConfig(NvcAgentScene.STEP_OBSERVE_COACH))
+      when(agentConfigService.getConfig(eq(NvcAgentScene.STEP_OBSERVE_COACH), anyLong()))
           .thenReturn(config);
 
       assertFalse(service.canAdvance(1L, 69));
@@ -455,7 +456,7 @@ class NvcStructuredPracticeServiceTest {
       when(sessionService.getSession(1L)).thenReturn(session);
 
       NvcAgentConfigEntity config = buildConfig(NvcAgentScene.STEP_OBSERVE_COACH);
-      when(agentConfigService.getConfig(NvcAgentScene.STEP_OBSERVE_COACH))
+      when(agentConfigService.getConfig(eq(NvcAgentScene.STEP_OBSERVE_COACH), anyLong()))
           .thenReturn(config);
 
       assertTrue(service.canAdvance(1L, 70));
@@ -469,7 +470,7 @@ class NvcStructuredPracticeServiceTest {
       when(sessionService.getSession(1L)).thenReturn(session);
 
       NvcAgentConfigEntity config = buildConfig(NvcAgentScene.STEP_NEED_COACH);
-      when(agentConfigService.getConfig(NvcAgentScene.STEP_NEED_COACH))
+      when(agentConfigService.getConfig(eq(NvcAgentScene.STEP_NEED_COACH), anyLong()))
           .thenReturn(config);
 
       assertTrue(service.canAdvance(1L, 90));
@@ -484,7 +485,7 @@ class NvcStructuredPracticeServiceTest {
 
       NvcAgentConfigEntity config = buildConfig(NvcAgentScene.STEP_FEELING_COACH);
       config.setStepAdvanceThreshold(null);
-      when(agentConfigService.getConfig(NvcAgentScene.STEP_FEELING_COACH))
+      when(agentConfigService.getConfig(eq(NvcAgentScene.STEP_FEELING_COACH), anyLong()))
           .thenReturn(config);
 
       assertFalse(service.canAdvance(1L, 69));
@@ -521,7 +522,7 @@ class NvcStructuredPracticeServiceTest {
           .thenReturn(session);
 
       NvcAgentConfigEntity config = buildConfig(NvcAgentScene.STEP_OBSERVE_COACH);
-      when(agentConfigService.getConfig(NvcAgentScene.STEP_OBSERVE_COACH))
+      when(agentConfigService.getConfig(eq(NvcAgentScene.STEP_OBSERVE_COACH), anyLong()))
           .thenReturn(config);
 
       StepProgressDTO result = service.resetStep(1L);
@@ -544,7 +545,7 @@ class NvcStructuredPracticeServiceTest {
           .thenReturn(session);
 
       NvcAgentConfigEntity config = buildConfig(NvcAgentScene.STEP_OBSERVE_COACH);
-      when(agentConfigService.getConfig(NvcAgentScene.STEP_OBSERVE_COACH))
+      when(agentConfigService.getConfig(eq(NvcAgentScene.STEP_OBSERVE_COACH), anyLong()))
           .thenReturn(config);
 
       StepProgressDTO result = service.resetStep(1L);

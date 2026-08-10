@@ -218,12 +218,12 @@ public class NvcAgentOrchestrator {
    */
   public String executeAgent(
       AgentDecision decision, PracticeContext context, String userMessage) {
-    NvcAgentConfigEntity config = agentConfigService.getConfig(decision.scene());
+    NvcAgentConfigEntity config = agentConfigService.getConfig(decision.scene(), context.getSession().getUserId());
 
     // 检查 Agent 是否启用，禁用则 fallback
     if (!config.getIsEnabled()) {
       log.warn("Agent is disabled: {}, falling back to DIALOGUE_GUIDE", decision.scene());
-      config = agentConfigService.getConfig(NvcAgentScene.DIALOGUE_GUIDE);
+      config = agentConfigService.getConfig(NvcAgentScene.DIALOGUE_GUIDE, context.getSession().getUserId());
     }
 
     NvcToolCallConfig toolConfig = NvcToolCallConfig.builder()
@@ -244,9 +244,9 @@ public class NvcAgentOrchestrator {
   public Flux<String> executeAgentStream(
       AgentDecision decision, PracticeContext context, String userMessage) {
     try {
-      NvcAgentConfigEntity config = agentConfigService.getConfig(decision.scene());
+      NvcAgentConfigEntity config = agentConfigService.getConfig(decision.scene(), context.getSession().getUserId());
       if (!config.getIsEnabled()) {
-        config = agentConfigService.getConfig(NvcAgentScene.DIALOGUE_GUIDE);
+        config = agentConfigService.getConfig(NvcAgentScene.DIALOGUE_GUIDE, context.getSession().getUserId());
       }
       NvcToolCallConfig toolConfig = NvcToolCallConfig.builder()
           .toolNames(decision.availableTools())
@@ -278,7 +278,7 @@ public class NvcAgentOrchestrator {
     }
 
     NvcAgentConfigEntity evaluatorConfig =
-        agentConfigService.getConfig(NvcAgentScene.NVC_EXPRESSION_EVALUATOR);
+        agentConfigService.getConfig(NvcAgentScene.NVC_EXPRESSION_EVALUATOR, context.getSession().getUserId());
 
     NvcEvaluationEntity eval = context.getLastEvaluation();
     String reflectPrompt = """

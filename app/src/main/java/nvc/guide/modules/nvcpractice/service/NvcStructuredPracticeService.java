@@ -54,7 +54,7 @@ public class NvcStructuredPracticeService {
             currentStepScore = getStepScore(latestEval, currentStep);
         }
 
-        NvcAgentConfigEntity config = agentConfigService.getConfig(stepToCoach(currentStep));
+        NvcAgentConfigEntity config = agentConfigService.getConfig(stepToCoach(currentStep), session.getUserId());
         if (config == null) {
             log.warn("Agent config not found for step: {}, using defaults", currentStep);
             return new StepProgressDTO(
@@ -111,7 +111,7 @@ public class NvcStructuredPracticeService {
             );
         }
 
-        NvcAgentConfigEntity config = agentConfigService.getConfig(stepToCoach(nextStep));
+        NvcAgentConfigEntity config = agentConfigService.getConfig(stepToCoach(nextStep), session.getUserId());
         return new StepProgressDTO(
             nextStep, getStepIndex(nextStep), 4, null, false,
             getStepDescription(nextStep),
@@ -130,7 +130,7 @@ public class NvcStructuredPracticeService {
             return false;
         }
 
-        NvcAgentConfigEntity config = agentConfigService.getConfig(stepToCoach(currentStep));
+        NvcAgentConfigEntity config = agentConfigService.getConfig(stepToCoach(currentStep), session.getUserId());
         Integer threshold = config.getStepAdvanceThreshold() != null
             ? config.getStepAdvanceThreshold() : 70;
 
@@ -153,7 +153,7 @@ public class NvcStructuredPracticeService {
         sessionService.updateStep(sessionId, NvcPracticeStep.OBSERVE);
         log.info("Step reset: sessionId={}", sessionId);
 
-        NvcAgentConfigEntity config = agentConfigService.getConfig(NvcAgentScene.STEP_OBSERVE_COACH);
+        NvcAgentConfigEntity config = agentConfigService.getConfig(NvcAgentScene.STEP_OBSERVE_COACH, session.getUserId());
         return new StepProgressDTO(
             NvcPracticeStep.OBSERVE, 0, 4, null, false,
             getStepDescription(NvcPracticeStep.OBSERVE),

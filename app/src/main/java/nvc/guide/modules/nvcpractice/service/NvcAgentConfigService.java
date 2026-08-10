@@ -7,6 +7,7 @@ import nvc.guide.modules.nvcpractice.dto.AgentConfigDTO;
 import nvc.guide.modules.nvcpractice.dto.AgentConfigUpdateRequest;
 import nvc.guide.modules.nvcpractice.model.NvcAgentConfigEntity;
 import nvc.guide.modules.nvcpractice.model.NvcAgentScene;
+import nvc.guide.modules.nvcpractice.model.NvcPromptVersionEntity;
 import nvc.guide.modules.nvcpractice.repository.NvcAgentConfigRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,6 +27,7 @@ public class NvcAgentConfigService {
 
   private final NvcAgentConfigRepository agentConfigRepository;
   private final RedisService redisService;
+  private final NvcPromptVersionService promptVersionService;
 
   /**
    * 获取 Agent 配置（cache-aside 模式）
@@ -41,6 +43,27 @@ public class NvcAgentConfigService {
       log.debug("Loaded agent config from DB: scene={}", scene);
       return config;
     });
+  }
+
+  /**
+   * 获取 Agent 配置，集成 Prompt 版本 A/B 测试
+   * 如果有活跃的 Prompt 版本，使用版本的 systemPrompt 覆盖默认配置
+   * 版本选择失败时静默回退到默认配置
+   */
+  public NvcAgentConfigEntity getConfig(NvcAgentScene scene, Long userId) {
+    NvcAgentConfigEntity config = getConfig(scene);
+    try {
+      NvcPromptVersionEntity version = promptVersionService.selectVersion(scene, userId);
+      if (version != null) {
+        config.setSystemPrompt(version.getSystemPrompt());
+        log.debug("Using prompt version {} for scene={}, userId={}",
+            version.getVersion(), scene, userId);
+      }
+    } catch (Exception e) {
+      log.warn("Prompt version selection failed for scene={}, userId={}, using default config",
+          scene, userId, e);
+    }
+    return config;
   }
 
   /**
