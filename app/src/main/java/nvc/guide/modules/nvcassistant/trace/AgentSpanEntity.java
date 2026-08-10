@@ -2,6 +2,7 @@ package nvc.guide.modules.nvcassistant.trace;
 
 import jakarta.persistence.*;
 import lombok.*;
+import nvc.guide.common.trace.TraceSpan;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -23,7 +24,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class AgentSpanEntity {
+public class AgentSpanEntity implements TraceSpan {
 
     @Id
     @Column(name = "span_id", length = 64)

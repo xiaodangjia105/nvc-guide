@@ -21,7 +21,7 @@ import nvc.guide.modules.nvcpractice.service.NvcStructuredPracticeService;
 import nvc.guide.modules.nvcpractice.service.NvcSummaryService;
 import nvc.guide.modules.nvcpractice.model.NvcSummaryEntity;
 import nvc.guide.modules.nvcscenario.model.NvcScenarioEntity;
-import nvc.guide.modules.nvcscenario.repository.NvcScenarioRepository;
+import nvc.guide.modules.nvcscenario.service.NvcScenarioService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -54,7 +54,7 @@ public class NvcPracticeController {
   private final NvcStructuredPracticeService structuredPracticeService;
   private final NvcEvaluationService evaluationService;
   private final NvcSummaryService summaryService;
-  private final NvcScenarioRepository scenarioRepository;
+  private final NvcScenarioService scenarioService;
   private final NvcAgentOrchestrator agentOrchestrator;
 
   /**
@@ -224,7 +224,7 @@ public class NvcPracticeController {
     String scenarioDescription = null;
     if (scenarioId != null) {
       NvcScenarioEntity scenario =
-          scenarioRepository.findById(scenarioId).orElse(null);
+          scenarioService.findById(scenarioId);
       if (scenario != null) {
         scenarioTitle = scenario.getTitle();
         scenarioDescription = scenario.getDescription();

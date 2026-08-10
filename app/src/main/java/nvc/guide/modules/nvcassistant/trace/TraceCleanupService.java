@@ -2,6 +2,8 @@ package nvc.guide.modules.nvcassistant.trace;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -24,7 +26,7 @@ public class TraceCleanupService {
     private final TraceProperties traceProperties;
 
     /**
-     * 清理旧 Trace
+     * 清理旧 Trace（分页查询 + 分批删除，避免一次性加载过多数据）
      *
      * @return 删除的 Trace 数量
      */
@@ -42,34 +44,39 @@ public class TraceCleanupService {
 
         log.info("[TraceCleanup] Starting cleanup: retentionDays={}, cutoffTime={}", retentionDays, cutoffTime);
 
-        // 查找需要删除的 Trace ID
-        List<String> traceIdsToDelete = traceRepository.findTraceIdsOlderThan(cutoffTime);
-
-        if (traceIdsToDelete.isEmpty()) {
-            log.info("[TraceCleanup] No traces to delete");
-            return 0;
-        }
-
-        log.info("[TraceCleanup] Found {} traces to delete", traceIdsToDelete.size());
-
-        // 分批删除
         int totalDeleted = 0;
-        for (int i = 0; i < traceIdsToDelete.size(); i += batchSize) {
-            int end = Math.min(i + batchSize, traceIdsToDelete.size());
-            List<String> batch = traceIdsToDelete.subList(i, end);
+        int pageNum = 0;
+
+        // 分页查询待删除的 Trace ID，每页 batchSize 条
+        while (true) {
+            Page<String> traceIdPage = traceRepository.findTraceIdsOlderThan(
+                cutoffTime, PageRequest.of(pageNum, batchSize));
+            List<String> traceIdsToDelete = traceIdPage.getContent();
+
+            if (traceIdsToDelete.isEmpty()) {
+                break;
+            }
+
+            log.info("[TraceCleanup] Deleting page {}: {} traces", pageNum, traceIdsToDelete.size());
 
             try {
                 // 先删除 Span（子表）
-                spanRepository.deleteByTraceIdIn(batch);
+                spanRepository.deleteByTraceIdIn(traceIdsToDelete);
                 // 再删除 Trace（主表）
-                traceRepository.deleteByTraceIdIn(batch);
-                totalDeleted += batch.size();
+                traceRepository.deleteByTraceIdIn(traceIdsToDelete);
+                totalDeleted += traceIdsToDelete.size();
 
-                log.debug("[TraceCleanup] Deleted batch: {}/{}", totalDeleted, traceIdsToDelete.size());
+                log.debug("[TraceCleanup] Deleted batch: {}", totalDeleted);
             } catch (Exception e) {
-                log.error("[TraceCleanup] Failed to delete batch: start={}, end={}, error={}",
-                    i, end, e.getMessage(), e);
+                log.error("[TraceCleanup] Failed to delete batch: page={}, size={}, error={}",
+                    pageNum, traceIdsToDelete.size(), e.getMessage(), e);
             }
+
+            // 如果是最后一页，退出循环
+            if (!traceIdPage.hasNext()) {
+                break;
+            }
+            pageNum++;
         }
 
         log.info("[TraceCleanup] Cleanup completed: deleted={}", totalDeleted);

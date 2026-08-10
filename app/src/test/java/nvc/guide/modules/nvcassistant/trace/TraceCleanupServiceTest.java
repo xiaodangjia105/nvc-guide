@@ -5,6 +5,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -39,18 +42,20 @@ class TraceCleanupServiceTest {
             // 配置保留 30 天
             traceProperties.getCleanup().setEnabled(true);
             traceProperties.getCleanup().setRetentionDays(30);
+            traceProperties.getCleanup().setBatchSize(100);
 
-            // 模拟需要删除的 Trace ID
+            // 模拟需要删除的 Trace ID（分页返回）
             List<String> oldTraceIds = List.of("trace-1", "trace-2", "trace-3");
-            when(traceRepository.findTraceIdsOlderThan(any(LocalDateTime.class)))
-                .thenReturn(oldTraceIds);
+            Page<String> page = new PageImpl<>(oldTraceIds);
+            when(traceRepository.findTraceIdsOlderThan(any(LocalDateTime.class), any(Pageable.class)))
+                .thenReturn(page);
 
             // 执行清理
             int deletedCount = cleanupService.cleanupOldTraces();
 
             // 验证
             assertEquals(3, deletedCount);
-            verify(traceRepository).findTraceIdsOlderThan(any(LocalDateTime.class));
+            verify(traceRepository).findTraceIdsOlderThan(any(LocalDateTime.class), any(Pageable.class));
             verify(spanRepository).deleteByTraceIdIn(oldTraceIds);
             verify(traceRepository).deleteByTraceIdIn(oldTraceIds);
         }
@@ -60,9 +65,11 @@ class TraceCleanupServiceTest {
         void shouldReturn0WhenNoOldTraces() {
             traceProperties.getCleanup().setEnabled(true);
             traceProperties.getCleanup().setRetentionDays(30);
+            traceProperties.getCleanup().setBatchSize(100);
 
-            when(traceRepository.findTraceIdsOlderThan(any(LocalDateTime.class)))
-                .thenReturn(List.of());
+            Page<String> emptyPage = new PageImpl<>(List.of());
+            when(traceRepository.findTraceIdsOlderThan(any(LocalDateTime.class), any(Pageable.class)))
+                .thenReturn(emptyPage);
 
             int deletedCount = cleanupService.cleanupOldTraces();
 
@@ -79,25 +86,28 @@ class TraceCleanupServiceTest {
             int deletedCount = cleanupService.cleanupOldTraces();
 
             assertEquals(0, deletedCount);
-            verify(traceRepository, never()).findTraceIdsOlderThan(any());
+            verify(traceRepository, never()).findTraceIdsOlderThan(any(), any());
         }
 
         @Test
-        @DisplayName("应该批量删除避免内存溢出")
-        void shouldDeleteInBatches() {
+        @DisplayName("应该分页删除避免内存溢出")
+        void shouldDeleteInPages() {
             traceProperties.getCleanup().setEnabled(true);
             traceProperties.getCleanup().setRetentionDays(30);
             traceProperties.getCleanup().setBatchSize(2);
 
-            // 模拟 5 个需要删除的 Trace
-            List<String> oldTraceIds = List.of("trace-1", "trace-2", "trace-3", "trace-4", "trace-5");
-            when(traceRepository.findTraceIdsOlderThan(any(LocalDateTime.class)))
-                .thenReturn(oldTraceIds);
+            // 模拟分页返回：第一页 2 条，第二页 2 条，第三页 1 条
+            Page<String> page1 = new PageImpl<>(List.of("trace-1", "trace-2"));
+            Page<String> page2 = new PageImpl<>(List.of("trace-3", "trace-4"));
+            Page<String> page3 = new PageImpl<>(List.of("trace-5"));
+
+            when(traceRepository.findTraceIdsOlderThan(any(LocalDateTime.class), any(Pageable.class)))
+                .thenReturn(page1, page2, page3);
 
             int deletedCount = cleanupService.cleanupOldTraces();
 
             assertEquals(5, deletedCount);
-            // 验证分批删除（batch size = 2，应该调用 3 次：2 + 2 + 1）
+            // 验证分页删除（3 页）
             verify(spanRepository, times(3)).deleteByTraceIdIn(anyList());
             verify(traceRepository, times(3)).deleteByTraceIdIn(anyList());
         }

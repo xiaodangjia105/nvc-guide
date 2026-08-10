@@ -5,8 +5,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import nvc.guide.modules.nvcassistant.trace.AgentSpanEntity;
-import nvc.guide.modules.nvcassistant.trace.TraceManager;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
@@ -30,7 +28,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class HttpTraceInterceptor implements HandlerInterceptor {
 
-    private final TraceManager traceManager;
+    private final TraceSpanManager traceSpanManager;
     private final ObjectMapper objectMapper;
 
     private static final String SPAN_TYPE = "HTTP_REQUEST";
@@ -42,7 +40,7 @@ public class HttpTraceInterceptor implements HandlerInterceptor {
         request.setAttribute("traceStartTime", startTime);
 
         // 创建 Span
-        AgentSpanEntity span = traceManager.startSpan(SPAN_TYPE, COMPONENT_NAME);
+        TraceSpan span = traceSpanManager.startSpan(SPAN_TYPE, COMPONENT_NAME);
         request.setAttribute("traceSpan", span);
 
         // 记录请求信息
@@ -78,7 +76,7 @@ public class HttpTraceInterceptor implements HandlerInterceptor {
 
     @Override
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
-        AgentSpanEntity span = (AgentSpanEntity) request.getAttribute("traceSpan");
+        TraceSpan span = (TraceSpan) request.getAttribute("traceSpan");
         Long startTime = (Long) request.getAttribute("traceStartTime");
 
         if (span == null || startTime == null) {
@@ -115,6 +113,6 @@ public class HttpTraceInterceptor implements HandlerInterceptor {
             failureReason = ex.getMessage();
         }
 
-        traceManager.endSpan(span, status, failureReason);
+        traceSpanManager.endSpan(span, status, failureReason);
     }
 }

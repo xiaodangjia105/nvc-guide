@@ -6,15 +6,13 @@ import lombok.RequiredArgsConstructor;
 import nvc.guide.common.result.Result;
 import nvc.guide.modules.nvcassistant.evaluation.OfflineEvaluationService;
 import nvc.guide.modules.nvcassistant.evaluation.dto.EvaluationReport;
-import nvc.guide.modules.nvcassistant.trace.AgentSpanRepository;
 import nvc.guide.modules.nvcassistant.trace.AgentTraceEntity;
-import nvc.guide.modules.nvcassistant.trace.AgentTraceRepository;
+import nvc.guide.modules.nvcassistant.trace.AgentTraceService;
 import nvc.guide.modules.nvcassistant.trace.TraceStatsService;
 import nvc.guide.modules.nvcassistant.trace.dto.TraceStats;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -33,8 +31,7 @@ import java.util.List;
 @Validated
 public class TraceController {
 
-    private final AgentTraceRepository traceRepository;
-    private final AgentSpanRepository spanRepository;
+    private final AgentTraceService agentTraceService;
     private final TraceStatsService traceStatsService;
     private final OfflineEvaluationService offlineEvaluationService;
 
@@ -46,13 +43,8 @@ public class TraceController {
             @RequestParam(required = false) String sessionId,
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
-        Page<AgentTraceEntity> result;
-        if (sessionId != null && !sessionId.isBlank()) {
-            result = traceRepository.findBySessionIdOrderByCreatedAtDesc(
-                sessionId, PageRequest.of(page, size));
-        } else {
-            result = traceRepository.findAllByOrderByCreatedAtDesc(PageRequest.of(page, size));
-        }
+        Page<AgentTraceEntity> result =
+            agentTraceService.listTraces(sessionId, PageRequest.of(page, size));
         return Result.success(result.getContent());
     }
 
@@ -60,34 +52,32 @@ public class TraceController {
      * 查询单个 Trace 详情（含 Spans）
      */
     @GetMapping("/{traceId}")
-    @Transactional(readOnly = true)
     public Result<AgentTraceEntity> getDetail(@PathVariable String traceId) {
-        return traceRepository.findById(traceId)
-            .map(trace -> {
-                // 显式触发懒加载，确保 spans 被加载
-                trace.getSpans().size();
-                return Result.success(trace);
-            })
+        return agentTraceService.getTraceDetail(traceId)
+            .map(Result::success)
             .orElse(Result.success(null));
     }
 
     /**
-     * 按时间范围查询 Trace（支持筛选）
+     * 按时间范围查询 Trace（支持筛选，分页）
      */
     @GetMapping("/search")
-    public Result<List<AgentTraceEntity>> search(
+    public Result<Page<AgentTraceEntity>> search(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to,
             @RequestParam(required = false) String status,
-            @RequestParam(required = false) String mode) {
+            @RequestParam(required = false) String mode,
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
 
-        List<AgentTraceEntity> traces;
+        PageRequest pageRequest = PageRequest.of(page, size);
+        Page<AgentTraceEntity> traces;
         if (status != null) {
-            traces = traceRepository.findByStatusAndTimeRange(status, from, to);
+            traces = agentTraceService.searchByStatus(status, from, to, pageRequest);
         } else if (mode != null) {
-            traces = traceRepository.findByModeAndTimeRange(mode, from, to);
+            traces = agentTraceService.searchByMode(mode, from, to, pageRequest);
         } else {
-            traces = traceRepository.findByCreatedAtBetween(from, to);
+            traces = agentTraceService.searchByTimeRange(from, to, pageRequest);
         }
         return Result.success(traces);
     }

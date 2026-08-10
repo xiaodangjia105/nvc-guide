@@ -12,6 +12,7 @@ import nvc.guide.modules.nvcassistant.trace.AgentTraceEntity;
 import nvc.guide.modules.nvcassistant.trace.AgentTraceRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -42,6 +43,12 @@ public class OfflineEvaluationService {
     private final ObjectMapper objectMapper;
 
     /**
+     * 离线评估最大加载条数，防止数据量过大导致 OOM
+     */
+    private static final int MAX_EVAL_TRACES = 10000;
+    private static final int MAX_EVAL_METRICS = 50000;
+
+    /**
      * 运行离线评估
      *
      * @param from 评估起始时间
@@ -51,8 +58,10 @@ public class OfflineEvaluationService {
     public EvaluationReport evaluate(LocalDateTime from, LocalDateTime to) {
         log.info("[OfflineEvaluation] Starting evaluation: from={}, to={}", from, to);
 
-        List<AgentTraceEntity> traces = traceRepository.findByCreatedAtBetween(from, to);
-        List<AgentMetricsEntity> allMetrics = metricsRepository.findByCreatedAtBetweenOrderByCreatedAtAsc(from, to);
+        List<AgentTraceEntity> traces = traceRepository.findByCreatedAtBetween(
+            from, to, PageRequest.of(0, MAX_EVAL_TRACES)).getContent();
+        List<AgentMetricsEntity> allMetrics = metricsRepository.findByCreatedAtBetweenOrderByCreatedAtAsc(
+            from, to, PageRequest.of(0, MAX_EVAL_METRICS)).getContent();
 
         // 1. 意图路由准确率
         double intentAccuracy = calculateIntentRoutingAccuracy(traces);

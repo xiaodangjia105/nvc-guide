@@ -5,11 +5,6 @@ import nvc.guide.common.config.LlmProviderProperties.AdvisorConfig;
 import nvc.guide.common.config.LlmProviderProperties.ProviderConfig;
 import nvc.guide.common.exception.BusinessException;
 import nvc.guide.common.exception.ErrorCode;
-import nvc.guide.modules.llmprovider.model.LlmGlobalSettingEntity;
-import nvc.guide.modules.llmprovider.model.LlmProviderEntity;
-import nvc.guide.modules.llmprovider.repository.LlmGlobalSettingRepository;
-import nvc.guide.modules.llmprovider.repository.LlmProviderRepository;
-import nvc.guide.modules.llmprovider.service.ApiKeyEncryptionService;
 import io.micrometer.observation.ObservationRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
@@ -50,9 +45,7 @@ public class LlmProviderRegistry {
     private final LlmProviderProperties properties;
     private final Map<String, ChatClient> clientCache = new ConcurrentHashMap<>();
     private final Map<String, EmbeddingModel> embeddingModelCache = new ConcurrentHashMap<>();
-    private final LlmProviderRepository providerRepository;
-    private final LlmGlobalSettingRepository globalSettingRepository;
-    private final ApiKeyEncryptionService encryptionService;
+    private final LlmProviderDataSource providerDataSource;
 
     private final ToolCallingManager toolCallingManager;
     private final ObservationRegistry observationRegistry;
@@ -68,16 +61,12 @@ public class LlmProviderRegistry {
     @Autowired
     public LlmProviderRegistry(
             LlmProviderProperties properties,
-            LlmProviderRepository providerRepository,
-            LlmGlobalSettingRepository globalSettingRepository,
-            ApiKeyEncryptionService encryptionService,
+            @Autowired(required = false) LlmProviderDataSource providerDataSource,
             @Autowired(required = false) ToolCallingManager toolCallingManager,
             @Autowired(required = false) ObservationRegistry observationRegistry,
             @Autowired(required = false) @Qualifier("interviewSkillsToolCallback") ToolCallback interviewSkillsToolCallback) {
         this.properties = properties;
-        this.providerRepository = providerRepository;
-        this.globalSettingRepository = globalSettingRepository;
-        this.encryptionService = encryptionService;
+        this.providerDataSource = providerDataSource;
         this.toolCallingManager = toolCallingManager;
         this.observationRegistry = observationRegistry;
         this.interviewSkillsToolCallback = interviewSkillsToolCallback;
@@ -88,7 +77,7 @@ public class LlmProviderRegistry {
             ToolCallingManager toolCallingManager,
             ObservationRegistry observationRegistry,
             ToolCallback interviewSkillsToolCallback) {
-        this(properties, null, null, null, toolCallingManager, observationRegistry, interviewSkillsToolCallback);
+        this(properties, null, toolCallingManager, observationRegistry, interviewSkillsToolCallback);
     }
 
     /**
@@ -327,46 +316,32 @@ public class LlmProviderRegistry {
     }
 
     private String resolveDefaultChatProviderId() {
-        if (globalSettingRepository == null) {
+        if (providerDataSource == null) {
             return properties.getDefaultProvider();
         }
-        return globalSettingRepository.findById(LlmGlobalSettingEntity.SINGLETON_ID)
-            .map(LlmGlobalSettingEntity::getDefaultChatProviderId)
-            .filter(id -> !isBlank(id))
-            .orElse(properties.getDefaultProvider());
+        String dbDefault = providerDataSource.resolveDefaultChatProviderId();
+        return !isBlank(dbDefault) ? dbDefault : properties.getDefaultProvider();
     }
 
     private String resolveDefaultEmbeddingProviderId() {
-        if (globalSettingRepository == null) {
+        if (providerDataSource == null) {
             return !isBlank(properties.getDefaultEmbeddingProvider())
                 ? properties.getDefaultEmbeddingProvider()
                 : properties.getDefaultProvider();
         }
-        return globalSettingRepository.findById(LlmGlobalSettingEntity.SINGLETON_ID)
-            .map(LlmGlobalSettingEntity::getDefaultEmbeddingProviderId)
-            .filter(id -> !isBlank(id))
-            .orElseGet(() -> !isBlank(properties.getDefaultEmbeddingProvider())
+        String dbDefault = providerDataSource.resolveDefaultEmbeddingProviderId();
+        return !isBlank(dbDefault) ? dbDefault
+            : (!isBlank(properties.getDefaultEmbeddingProvider())
                 ? properties.getDefaultEmbeddingProvider()
                 : properties.getDefaultProvider());
     }
 
     private ProviderSnapshot loadProviderOrThrow(String providerId) {
-        if (providerRepository == null) {
+        if (providerDataSource == null) {
             return loadProviderFromPropertiesOrThrow(providerId);
         }
-        LlmProviderEntity entity = providerRepository.findById(providerId)
-            .filter(LlmProviderEntity::isEnabled)
+        return providerDataSource.loadProvider(providerId)
             .orElseThrow(() -> new IllegalArgumentException("Unknown LLM provider: " + providerId));
-        return new ProviderSnapshot(
-            entity.getId(),
-            entity.getBaseUrl(),
-            encryptionService.decrypt(entity.getApiKeyNonce(), entity.getApiKeyCiphertext()),
-            entity.getModel(),
-            entity.getEmbeddingModel(),
-            entity.getEmbeddingDimensions(),
-            entity.isSupportsEmbedding(),
-            entity.getTemperature()
-        );
     }
 
     private ProviderSnapshot loadProviderFromPropertiesOrThrow(String providerId) {
@@ -410,15 +385,4 @@ public class LlmProviderRegistry {
             || lower.startsWith("ernie");
     }
 
-    private record ProviderSnapshot(
-        String id,
-        String baseUrl,
-        String apiKey,
-        String model,
-        String embeddingModel,
-        Integer embeddingDimensions,
-        boolean supportsEmbedding,
-        Double temperature
-    ) {
-    }
 }

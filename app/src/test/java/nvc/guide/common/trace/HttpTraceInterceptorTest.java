@@ -1,8 +1,6 @@
 package nvc.guide.common.trace;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import nvc.guide.modules.nvcassistant.trace.AgentSpanEntity;
-import nvc.guide.modules.nvcassistant.trace.TraceManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -16,35 +14,31 @@ import static org.mockito.Mockito.*;
 @DisplayName("HttpTraceInterceptor HTTP 请求追踪")
 class HttpTraceInterceptorTest {
 
-    private TraceManager traceManager;
+    private TraceSpanManager traceSpanManager;
     private ObjectMapper objectMapper;
     private HttpTraceInterceptor interceptor;
 
     @BeforeEach
     void setUp() {
-        traceManager = mock(TraceManager.class);
+        traceSpanManager = mock(TraceSpanManager.class);
         objectMapper = new ObjectMapper();
-        interceptor = new HttpTraceInterceptor(traceManager, objectMapper);
+        interceptor = new HttpTraceInterceptor(traceSpanManager, objectMapper);
     }
 
     @Test
     @DisplayName("应该支持创建 HTTP_REQUEST 类型的 Span")
     void shouldSupportHttpRequestSpanType() {
         // 准备
-        AgentSpanEntity span = AgentSpanEntity.builder()
-            .spanId("test-span")
-            .spanType("HTTP_REQUEST")
-            .componentName("HttpTraceInterceptor")
-            .build();
-        when(traceManager.startSpan("HTTP_REQUEST", "HttpTraceInterceptor")).thenReturn(span);
+        TraceSpan span = mock(TraceSpan.class);
+        when(span.getSpanType()).thenReturn("HTTP_REQUEST");
+        when(traceSpanManager.startSpan("HTTP_REQUEST", "HttpTraceInterceptor")).thenReturn(span);
 
         // 执行
-        AgentSpanEntity result = traceManager.startSpan("HTTP_REQUEST", "HttpTraceInterceptor");
+        TraceSpan result = traceSpanManager.startSpan("HTTP_REQUEST", "HttpTraceInterceptor");
 
         // 验证
         assertNotNull(result);
         assertEquals("HTTP_REQUEST", result.getSpanType());
-        assertEquals("HttpTraceInterceptor", result.getComponentName());
     }
 
     @Test
@@ -59,15 +53,11 @@ class HttpTraceInterceptorTest {
         MockHttpServletResponse response = new MockHttpServletResponse();
         response.setStatus(200);
 
-        AgentSpanEntity span = AgentSpanEntity.builder()
-            .spanId("test-span")
-            .spanType("HTTP_REQUEST")
-            .componentName("HttpTraceInterceptor")
-            .build();
-        when(traceManager.startSpan("HTTP_REQUEST", "HttpTraceInterceptor")).thenReturn(span);
+        TraceSpan span = mock(TraceSpan.class);
+        when(traceSpanManager.startSpan("HTTP_REQUEST", "HttpTraceInterceptor")).thenReturn(span);
 
         // 执行
-        AgentSpanEntity result = traceManager.startSpan("HTTP_REQUEST", "HttpTraceInterceptor");
+        TraceSpan result = traceSpanManager.startSpan("HTTP_REQUEST", "HttpTraceInterceptor");
 
         // 设置输入
         String inputPayload = String.format("{\"method\":\"%s\",\"uri\":\"%s\",\"params\":%s}",
@@ -78,13 +68,12 @@ class HttpTraceInterceptorTest {
         result.setOutputPayload("{\"status\":200}");
         result.setDurationMs(50L);
 
-        traceManager.endSpan(result, "SUCCESS", null);
+        traceSpanManager.endSpan(result, "SUCCESS", null);
 
         // 验证
-        verify(traceManager).endSpan(eq(result), eq("SUCCESS"), isNull());
-        assertNotNull(result.getInputPayload());
-        assertTrue(result.getInputPayload().contains("POST"));
-        assertTrue(result.getInputPayload().contains("/api/nvc/chat"));
+        verify(traceSpanManager).endSpan(eq(result), eq("SUCCESS"), isNull());
+        verify(result).setInputPayload(contains("POST"));
+        verify(result).setInputPayload(contains("/api/nvc/chat"));
     }
 
     @Test
@@ -98,15 +87,11 @@ class HttpTraceInterceptorTest {
         MockHttpServletResponse response = new MockHttpServletResponse();
         response.setStatus(404);
 
-        AgentSpanEntity span = AgentSpanEntity.builder()
-            .spanId("test-span")
-            .spanType("HTTP_REQUEST")
-            .componentName("HttpTraceInterceptor")
-            .build();
-        when(traceManager.startSpan("HTTP_REQUEST", "HttpTraceInterceptor")).thenReturn(span);
+        TraceSpan span = mock(TraceSpan.class);
+        when(traceSpanManager.startSpan("HTTP_REQUEST", "HttpTraceInterceptor")).thenReturn(span);
 
         // 执行
-        AgentSpanEntity result = traceManager.startSpan("HTTP_REQUEST", "HttpTraceInterceptor");
+        TraceSpan result = traceSpanManager.startSpan("HTTP_REQUEST", "HttpTraceInterceptor");
 
         // 设置输入
         result.setInputPayload("{\"method\":\"GET\",\"uri\":\"/api/nvc/chat/invalid\"}");
@@ -115,9 +100,9 @@ class HttpTraceInterceptorTest {
         result.setOutputPayload("{\"status\":404}");
         result.setDurationMs(10L);
 
-        traceManager.endSpan(result, "FAILED", "Not Found");
+        traceSpanManager.endSpan(result, "FAILED", "Not Found");
 
         // 验证
-        verify(traceManager).endSpan(eq(result), eq("FAILED"), eq("Not Found"));
+        verify(traceSpanManager).endSpan(eq(result), eq("FAILED"), eq("Not Found"));
     }
 }

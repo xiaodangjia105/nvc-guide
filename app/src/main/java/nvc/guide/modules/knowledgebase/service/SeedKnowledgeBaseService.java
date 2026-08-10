@@ -11,6 +11,7 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import java.io.BufferedReader;
@@ -61,9 +62,10 @@ public class SeedKnowledgeBaseService {
     @EventListener(ApplicationReadyEvent.class)
     public void checkAndSeed() {
         try {
-            // 检查是否已有 NVC 类型的知识库
+            // 检查是否已有 NVC 类型的知识库（种子数据量有限，限制 1000 条足够）
             List<KnowledgeBaseEntity> existingDocs = knowledgeBaseRepository
-                .findByTypeInOrderByUploadedAtDesc(NVC_TYPES);
+                .findByTypeInOrderByUploadedAtDesc(NVC_TYPES, PageRequest.of(0, 1000))
+                .getContent();
 
             if (existingDocs.isEmpty()) {
                 log.info("NVC knowledge base not found, starting seed...");

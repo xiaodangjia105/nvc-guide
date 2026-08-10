@@ -2,6 +2,8 @@ package nvc.guide.modules.nvcassistant.trace;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import nvc.guide.common.trace.TraceSpan;
+import nvc.guide.common.trace.TraceSpanManager;
 import org.springframework.stereotype.Component;
 import reactor.util.context.Context;
 
@@ -34,7 +36,7 @@ import java.util.UUID;
 @Component
 @Slf4j
 @RequiredArgsConstructor
-public class TraceManager {
+public class TraceManager implements TraceSpanManager {
 
     private final TraceStreamProducer traceStreamProducer;
 
@@ -125,6 +127,7 @@ public class TraceManager {
      * @param componentName 组件名称（IntentRouter / AgentLoop / ToolExecutor 等）
      * @return 新创建的 Span 实体（尚未持久化）
      */
+    @Override
     public AgentSpanEntity startSpan(String spanType, String componentName) {
         TraceContext context = CURRENT_TRACE.get();
         if (context == null) {
@@ -177,6 +180,19 @@ public class TraceManager {
 
         log.debug("[Trace] Ended span: type={}, status={}, duration={}ms",
             span.getSpanType(), status, span.getDurationMs());
+    }
+
+    /**
+     * 完成 Span（TraceSpanManager 接口实现）
+     * 委托给具体的 endSpan(AgentSpanEntity, ...) 方法
+     */
+    @Override
+    public void endSpan(TraceSpan span, String status, String failureReason) {
+        if (span instanceof AgentSpanEntity entity) {
+            endSpan(entity, status, failureReason);
+        } else {
+            log.warn("[Trace] endSpan called with non-AgentSpanEntity type: {}", span.getClass().getName());
+        }
     }
 
     /**

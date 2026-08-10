@@ -3,6 +3,8 @@ package nvc.guide.modules.nvcassistant.trace;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import nvc.guide.modules.nvcassistant.trace.dto.TraceStats;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -18,10 +20,17 @@ public class TraceStatsService {
     private final AgentSpanRepository spanRepository;
 
     /**
+     * 统计查询最大加载条数，防止数据量过大导致 OOM
+     */
+    private static final int MAX_STATS_TRACES = 10000;
+
+    /**
      * 获取 Trace 统计概览
      */
     public TraceStats getStats(LocalDateTime from, LocalDateTime to) {
-        List<AgentTraceEntity> traces = traceRepository.findByCreatedAtBetween(from, to);
+        Page<AgentTraceEntity> tracePage = traceRepository.findByCreatedAtBetween(
+            from, to, PageRequest.of(0, MAX_STATS_TRACES));
+        List<AgentTraceEntity> traces = tracePage.getContent();
 
         if (traces.isEmpty()) {
             return TraceStats.builder()
