@@ -128,6 +128,10 @@ public class AgentLoop {
                 log.info("[AgentLoop] Sending {} messages to LLM: userId={}, conversationId={}",
                     messages.size(), userId, conversationId);
 
+                // 构建练习上下文标识（供 callLlm 使用）
+                nvc.guide.common.PracticeContext agentCtx =
+                    new nvc.guide.common.PracticeContext(conversationId, userId, "dialog");
+
                 // 3. 发送 thinking 事件
                 sink.next(AgentEvent.thinking("正在思考..."));
 
@@ -161,7 +165,7 @@ public class AgentLoop {
                             .scene("dialog")
                             .build();
                         response = fallbackHandler.executeWithFallback(
-                            () -> callLlm(messages, userId, conversationId),
+                            () -> callLlm(messages, agentCtx),
                             () -> buildFallbackResponse(),
                             fallbackCtx);
                         llmSpan.setDurationMs(System.currentTimeMillis() - llmStartTime);
@@ -290,7 +294,9 @@ public class AgentLoop {
     /**
      * 调用 LLM（不自动执行工具）
      */
-    private ChatResponse callLlm(List<Message> messages, Long userId, Long conversationId) {
+    private ChatResponse callLlm(List<Message> messages, nvc.guide.common.PracticeContext ctx) {
+        Long userId = ctx.userId();
+        Long conversationId = ctx.sessionId();
         ChatClient client = llmProviderRegistry.getDefaultChatClient();
 
         // 调试日志：显示可用工具（降级为 debug，避免热路径过度日志）
