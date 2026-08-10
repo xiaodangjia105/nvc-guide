@@ -10,6 +10,7 @@ import nvc.guide.modules.nvcpractice.model.NvcEvaluationType;
 import nvc.guide.modules.nvcpractice.model.NvcMessageRole;
 import nvc.guide.modules.nvcpractice.model.NvcPracticeMessageEntity;
 import nvc.guide.modules.nvcpractice.model.NvcPracticeStep;
+import nvc.guide.modules.nvcpractice.fallback.EvaluationFallbackService;
 import nvc.guide.modules.nvcpractice.repository.NvcEvaluationRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,6 +34,7 @@ public class NvcEvaluationService {
     private final LlmProviderRegistry llmProviderRegistry;
     private final NvcEvaluationRepository evaluationRepository;
     private final StructuredOutputInvoker structuredOutputInvoker;
+    private final EvaluationFallbackService evaluationFallbackService;
 
     // ==================== 实时评估 ====================
 
@@ -46,16 +48,34 @@ public class NvcEvaluationService {
     public NvcEvaluationEntity evaluateRealtime(Long sessionId, Long userId,
                                                  String userMessage, String aiContext,
                                                  NvcPracticeStep currentStep) {
-        String systemPrompt = loadPrompt("prompts/nvc-evaluation-system.st");
-        String userPrompt = buildRealtimeUserPrompt(userMessage, aiContext, currentStep);
+        NvcEvaluationResult result;
+        boolean degraded = false;
 
-        NvcEvaluationResult result = invokeEvaluation(systemPrompt, userPrompt);
+        try {
+            String systemPrompt = loadPrompt("prompts/nvc-evaluation-system.st");
+            String userPrompt = buildRealtimeUserPrompt(userMessage, aiContext, currentStep);
+            result = invokeEvaluation(systemPrompt, userPrompt);
+        } catch (Exception e) {
+            log.warn("[EvalFallback] LLM evaluation failed, falling back to keyword scorer: {}",
+                e.getMessage());
+            try {
+                result = evaluationFallbackService.evaluateByKeyWords(
+                    userMessage, currentStep != null ? currentStep.name() : null);
+                degraded = true;
+            } catch (Exception fallbackEx) {
+                log.error("[EvalFallback] Keyword fallback also failed", fallbackEx);
+                throw e;
+            }
+        }
 
         NvcEvaluationEntity entity = buildEvaluationEntity(
             sessionId, userId, result, NvcEvaluationType.REALTIME);
+        if (degraded) {
+            entity.setDegraded(true);
+        }
         NvcEvaluationEntity saved = evaluationRepository.save(entity);
-        log.info("Realtime evaluation saved: sessionId={}, overallScore={}",
-            sessionId, result.overallScore());
+        log.info("Realtime evaluation saved: sessionId={}, overallScore={}, degraded={}",
+            sessionId, result.overallScore(), degraded);
         return saved;
     }
 
@@ -69,16 +89,38 @@ public class NvcEvaluationService {
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public NvcEvaluationEntity evaluateFinal(Long sessionId, Long userId,
                                               List<NvcPracticeMessageEntity> messages) {
-        String systemPrompt = loadPrompt("prompts/nvc-evaluation-summary-system.st");
-        String userPrompt = buildFinalUserPrompt(messages);
+        NvcEvaluationResult result;
+        boolean degraded = false;
 
-        NvcEvaluationResult result = invokeEvaluation(systemPrompt, userPrompt);
+        try {
+            String systemPrompt = loadPrompt("prompts/nvc-evaluation-summary-system.st");
+            String userPrompt = buildFinalUserPrompt(messages);
+            result = invokeEvaluation(systemPrompt, userPrompt);
+        } catch (Exception e) {
+            log.warn("[EvalFallback] LLM final evaluation failed, falling back to keyword scorer: {}",
+                e.getMessage());
+            try {
+                String allUserMessages = messages.stream()
+                    .filter(m -> m.getRole() == NvcMessageRole.USER && m.getContent() != null)
+                    .map(NvcPracticeMessageEntity::getContent)
+                    .reduce((a, b) -> a + "\n" + b)
+                    .orElse("");
+                result = evaluationFallbackService.evaluateByKeyWords(allUserMessages, null);
+                degraded = true;
+            } catch (Exception fallbackEx) {
+                log.error("[EvalFallback] Keyword fallback also failed", fallbackEx);
+                throw e;
+            }
+        }
 
         NvcEvaluationEntity entity = buildEvaluationEntity(
             sessionId, userId, result, NvcEvaluationType.FINAL);
+        if (degraded) {
+            entity.setDegraded(true);
+        }
         NvcEvaluationEntity saved = evaluationRepository.save(entity);
-        log.info("Final evaluation saved: sessionId={}, overallScore={}",
-            sessionId, result.overallScore());
+        log.info("Final evaluation saved: sessionId={}, overallScore={}, degraded={}",
+            sessionId, result.overallScore(), degraded);
         return saved;
     }
 

@@ -8,6 +8,7 @@ import nvc.guide.modules.nvcpractice.model.NvcEvaluationType;
 import nvc.guide.modules.nvcpractice.model.NvcMessageRole;
 import nvc.guide.modules.nvcpractice.model.NvcPracticeMessageEntity;
 import nvc.guide.modules.nvcpractice.model.NvcPracticeStep;
+import nvc.guide.modules.nvcpractice.fallback.EvaluationFallbackService;
 import nvc.guide.modules.nvcpractice.repository.NvcEvaluationRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -41,13 +42,16 @@ class NvcEvaluationServiceTest {
     private NvcEvaluationRepository evaluationRepository;
     @Mock
     private StructuredOutputInvoker structuredOutputInvoker;
+    @Mock
+    private EvaluationFallbackService evaluationFallbackService;
 
     private NvcEvaluationService evaluationService;
 
     @BeforeEach
     void setUp() {
         evaluationService = new NvcEvaluationService(
-            llmProviderRegistry, evaluationRepository, structuredOutputInvoker);
+            llmProviderRegistry, evaluationRepository, structuredOutputInvoker,
+            evaluationFallbackService);
     }
 
     private NvcEvaluationResult buildResult(int overall) {
