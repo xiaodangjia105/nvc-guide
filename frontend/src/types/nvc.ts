@@ -85,6 +85,16 @@ export interface NvcEvaluation {
   createdAt: string;
 }
 
+// ========== 总结 ==========
+
+export interface NvcSummary {
+  observation: string | null;
+  feeling: string | null;
+  need: string | null;
+  request: string | null;
+  hint: string | null;
+}
+
 // ========== 报告 ==========
 
 export interface NvcPracticeReport {

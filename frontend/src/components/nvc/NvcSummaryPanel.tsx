@@ -1,14 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Eye, Heart, Target, Handshake, Lightbulb, Loader2 } from 'lucide-react';
 import { practiceApi } from '../../api/nvc';
-
-interface NvcSummary {
-  observation: string | null;
-  feeling: string | null;
-  need: string | null;
-  request: string | null;
-  hint: string | null;
-}
+import type { NvcSummary } from '../../types/nvc';
 
 interface NvcSummaryPanelProps {
   sessionId: number;

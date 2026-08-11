@@ -1,7 +1,7 @@
 import { request, getAuthHeaders } from './request';
 import type {
   PracticeSession, CreatePracticeSessionRequest, DialogueResponse,
-  PracticeMessage, NvcPracticeReport, UserProfile, UserProfileUpdateRequest,
+  PracticeMessage, NvcEvaluation, NvcSummary, NvcPracticeReport, UserProfile, UserProfileUpdateRequest,
   AbilityRadar, AbilityTrend, NvcScenario, ScenarioGenerateRequest,
   AgentConfig, AgentConfigUpdateRequest, StepProgress,
   CommunicationAnalysisRequest, CommunicationRecord, DashboardStats,
@@ -53,12 +53,12 @@ export const practiceApi = {
     ),
 
   getEvaluation: (sessionId: number) =>
-    request.get<any>(
+    request.get<NvcEvaluation>(
       `/api/nvc/practice/sessions/${sessionId}/evaluation`
     ),
 
   getSummary: (sessionId: number) =>
-    request.get<any>(
+    request.get<NvcSummary>(
       `/api/nvc/practice/sessions/${sessionId}/summary`
     ),
 
