@@ -353,7 +353,7 @@ class NvcPracticeSessionServiceTest {
             List<NvcPracticeSessionEntity> sessions = List.of(
                 buildSession(1L, NvcSessionPhase.IN_PROGRESS),
                 buildSession(2L, NvcSessionPhase.COMPLETED));
-            when(sessionRepository.findByUserIdOrderByCreatedAtDesc(100L))
+            when(sessionRepository.findByUserIdWithMessages(100L))
                 .thenReturn(sessions);
 
             // Act
@@ -362,7 +362,7 @@ class NvcPracticeSessionServiceTest {
 
             // Assert
             assertEquals(2, result.size());
-            verify(sessionRepository).findByUserIdOrderByCreatedAtDesc(100L);
+            verify(sessionRepository).findByUserIdWithMessages(100L);
         }
 
         @Test
@@ -371,7 +371,7 @@ class NvcPracticeSessionServiceTest {
             // Arrange
             List<NvcPracticeSessionEntity> sessions = List.of(
                 buildSession(1L, NvcSessionPhase.IN_PROGRESS));
-            when(sessionRepository.findByUserIdAndCurrentPhaseOrderByCreatedAtDesc(
+            when(sessionRepository.findByUserIdAndPhaseWithMessages(
                 100L, NvcSessionPhase.IN_PROGRESS))
                 .thenReturn(sessions);
 

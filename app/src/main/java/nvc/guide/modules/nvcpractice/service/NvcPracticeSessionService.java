@@ -164,12 +164,9 @@ public class NvcPracticeSessionService {
   public List<NvcPracticeSessionEntity> getUserSessions(
       Long userId, NvcSessionPhase phase) {
     if (phase != null) {
-      return sessionRepository
-          .findByUserIdAndCurrentPhaseOrderByCreatedAtDesc(
-              userId, phase);
+      return sessionRepository.findByUserIdAndPhaseWithMessages(userId, phase);
     }
-    return sessionRepository
-        .findByUserIdOrderByCreatedAtDesc(userId);
+    return sessionRepository.findByUserIdWithMessages(userId);
   }
 
   /**
