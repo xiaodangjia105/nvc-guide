@@ -14,7 +14,6 @@ import nvc.guide.modules.nvcpractice.model.NvcSessionPhase;
 import nvc.guide.modules.nvcpractice.repository.NvcPracticeMessageRepository;
 import nvc.guide.modules.nvcpractice.repository.NvcPracticeSessionRepository;
 import nvc.guide.modules.nvcscenario.model.NvcScenarioEntity;
-import nvc.guide.modules.nvcscenario.repository.NvcScenarioRepository;
 import nvc.guide.modules.nvcscenario.service.NvcScenarioService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -59,8 +58,6 @@ class NvcPracticeSessionServiceTest {
     @Mock
     private NvcEvaluationService evaluationService;
     @Mock
-    private NvcScenarioRepository scenarioRepository;
-    @Mock
     private NvcScenarioService scenarioService;
     @Mock
     private RedisService redisService;
@@ -82,7 +79,7 @@ class NvcPracticeSessionServiceTest {
         validator.validateTransitions();
         sessionService = new NvcPracticeSessionService(
             sessionRepository, messageRepository, evaluationService,
-            scenarioRepository, scenarioService, redisService, objectMapper,
+            scenarioService, redisService, objectMapper,
             eventPublisher, validator, reflectionService, orchestrator);
 
         // Mock executeWithLock to execute the operation directly (no real locking in tests)
@@ -171,7 +168,7 @@ class NvcPracticeSessionServiceTest {
             // Assert
             assertEquals(42L, result.getScenarioId());
             assertEquals(NvcPracticeMode.SCENARIO, result.getPracticeMode());
-            verify(scenarioRepository, never()).findByDifficulty(any());
+            verify(scenarioService, never()).findByDifficulty(any());
         }
 
         @Test
@@ -192,7 +189,7 @@ class NvcPracticeSessionServiceTest {
                 .updatedAt(LocalDateTime.now())
                 .build();
 
-            when(scenarioRepository.findByDifficulty(NvcDifficulty.EASY))
+            when(scenarioService.findByDifficulty(NvcDifficulty.EASY))
                 .thenReturn(List.of(scenario));
             when(sessionRepository.save(any())).thenReturn(saved);
             try { when(objectMapper.writeValueAsString(any())).thenReturn("{}"); } catch (Exception ignored) {}
@@ -202,7 +199,7 @@ class NvcPracticeSessionServiceTest {
 
             // Assert
             assertEquals(10L, result.getScenarioId());
-            verify(scenarioRepository).findByDifficulty(NvcDifficulty.EASY);
+            verify(scenarioService).findByDifficulty(NvcDifficulty.EASY);
         }
 
         @Test
@@ -223,9 +220,9 @@ class NvcPracticeSessionServiceTest {
                 .updatedAt(LocalDateTime.now())
                 .build();
 
-            when(scenarioRepository.findByDifficulty(NvcDifficulty.HARD))
+            when(scenarioService.findByDifficulty(NvcDifficulty.HARD))
                 .thenReturn(Collections.emptyList());
-            when(scenarioRepository.findAll())
+            when(scenarioService.findAll())
                 .thenReturn(List.of(scenario));
             when(sessionRepository.save(any())).thenReturn(saved);
             try { when(objectMapper.writeValueAsString(any())).thenReturn("{}"); } catch (Exception ignored) {}
@@ -235,8 +232,8 @@ class NvcPracticeSessionServiceTest {
 
             // Assert
             assertEquals(20L, result.getScenarioId());
-            verify(scenarioRepository).findByDifficulty(NvcDifficulty.HARD);
-            verify(scenarioRepository).findAll();
+            verify(scenarioService).findByDifficulty(NvcDifficulty.HARD);
+            verify(scenarioService).findAll();
         }
 
         @Test
@@ -246,9 +243,9 @@ class NvcPracticeSessionServiceTest {
             CreatePracticeSessionRequest request = new CreatePracticeSessionRequest(
                 NvcPracticeMode.SCENARIO, null, null);
 
-            when(scenarioRepository.findByDifficulty(NvcDifficulty.MEDIUM))
+            when(scenarioService.findByDifficulty(NvcDifficulty.MEDIUM))
                 .thenReturn(Collections.emptyList());
-            when(scenarioRepository.findAll())
+            when(scenarioService.findAll())
                 .thenReturn(Collections.emptyList());
 
             // Act & Assert

@@ -17,7 +17,6 @@ import nvc.guide.modules.nvcpractice.model.NvcSessionPhase;
 import nvc.guide.modules.nvcpractice.repository.NvcPracticeMessageRepository;
 import nvc.guide.modules.nvcpractice.repository.NvcPracticeSessionRepository;
 import nvc.guide.modules.nvcscenario.model.NvcScenarioEntity;
-import nvc.guide.modules.nvcscenario.repository.NvcScenarioRepository;
 import nvc.guide.modules.nvcscenario.service.NvcScenarioService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -39,7 +38,6 @@ public class NvcPracticeSessionService {
   private final NvcPracticeSessionRepository sessionRepository;
   private final NvcPracticeMessageRepository messageRepository;
   private final NvcEvaluationService evaluationService;
-  private final NvcScenarioRepository scenarioRepository;
   private final NvcScenarioService scenarioService;
   private final RedisService redisService;
   private final ObjectMapper objectMapper;
@@ -51,7 +49,6 @@ public class NvcPracticeSessionService {
       NvcPracticeSessionRepository sessionRepository,
       NvcPracticeMessageRepository messageRepository,
       NvcEvaluationService evaluationService,
-      NvcScenarioRepository scenarioRepository,
       NvcScenarioService scenarioService,
       RedisService redisService,
       ObjectMapper objectMapper,
@@ -62,7 +59,6 @@ public class NvcPracticeSessionService {
     this.sessionRepository = sessionRepository;
     this.messageRepository = messageRepository;
     this.evaluationService = evaluationService;
-    this.scenarioRepository = scenarioRepository;
     this.scenarioService = scenarioService;
     this.redisService = redisService;
     this.objectMapper = objectMapper;
@@ -319,9 +315,9 @@ public class NvcPracticeSessionService {
     NvcDifficulty d = difficulty != null
         ? difficulty : NvcDifficulty.MEDIUM;
     List<NvcScenarioEntity> scenarios =
-        scenarioRepository.findByDifficulty(d);
+        scenarioService.findByDifficulty(d);
     if (scenarios.isEmpty()) {
-      scenarios = scenarioRepository.findAll();
+      scenarios = scenarioService.findAll();
     }
     if (scenarios.isEmpty()) {
       throw new BusinessException(

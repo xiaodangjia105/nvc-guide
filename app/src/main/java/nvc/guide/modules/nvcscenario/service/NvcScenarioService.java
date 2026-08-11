@@ -136,6 +136,20 @@ public class NvcScenarioService {
     }
 
     /**
+     * 按难度查找场景列表
+     */
+    public List<NvcScenarioEntity> findByDifficulty(NvcDifficulty difficulty) {
+        return scenarioRepository.findByDifficulty(difficulty);
+    }
+
+    /**
+     * 获取全部场景列表
+     */
+    public List<NvcScenarioEntity> findAll() {
+        return scenarioRepository.findAll();
+    }
+
+    /**
      * 场景使用次数 +1
      */
 
