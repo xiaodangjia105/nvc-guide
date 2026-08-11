@@ -47,7 +47,7 @@ spring:
     defer-datasource-initialization: true
     hibernate:
       ddl-auto: update #首次启动用 create，表创建成功后，改回 update
-    show-sql: true
+    show-sql: ${JPA_SHOW_SQL:false}
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect

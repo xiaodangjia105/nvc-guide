@@ -111,12 +111,12 @@ public class NvcPracticeFacade {
 
   // ── Response mapping ────────────────────────────────────────────────
 
-  public PracticeSessionResponse toSessionResponse(
+  private PracticeSessionResponse toSessionResponse(
       NvcPracticeSessionEntity session) {
     return toSessionResponse(session, false);
   }
 
-  public PracticeSessionResponse toSessionResponse(
+  private PracticeSessionResponse toSessionResponse(
       NvcPracticeSessionEntity session, boolean evaluationFailed) {
     Long scenarioId = session.getScenarioId();
     String scenarioTitle = null;
