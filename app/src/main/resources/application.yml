@@ -47,11 +47,12 @@ spring:
     defer-datasource-initialization: true
     hibernate:
       ddl-auto: update #首次启动用 create，表创建成功后，改回 update
-    show-sql: false
+    show-sql: true
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
+        use_sql_comments: true
 
   sql:
     init:
@@ -282,5 +283,5 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,metrics,prometheus
 
