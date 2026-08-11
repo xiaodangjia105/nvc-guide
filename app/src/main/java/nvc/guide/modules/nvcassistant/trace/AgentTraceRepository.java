@@ -13,23 +13,9 @@ import java.util.List;
 
 public interface AgentTraceRepository extends JpaRepository<AgentTraceEntity, String> {
 
-    /**
-     * @deprecated 使用分页版本 {@link #findBySessionIdOrderByCreatedAtDesc(String, Pageable)}
-     */
-    @Deprecated
-    List<AgentTraceEntity> findBySessionIdOrderByCreatedAtDesc(String sessionId);
-
     Page<AgentTraceEntity> findBySessionIdOrderByCreatedAtDesc(String sessionId, Pageable pageable);
 
     Page<AgentTraceEntity> findAllByOrderByCreatedAtDesc(Pageable pageable);
-
-    /**
-     * @deprecated 使用分页版本 {@link #findByCreatedAtBetween(LocalDateTime, LocalDateTime, Pageable)}
-     */
-    @Deprecated
-    @Query("SELECT t FROM AgentTraceEntity t WHERE t.createdAt BETWEEN :from AND :to ORDER BY t.createdAt DESC")
-    List<AgentTraceEntity> findByCreatedAtBetween(
-        @Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 
     /**
      * 按时间范围分页查询 Trace
@@ -39,28 +25,12 @@ public interface AgentTraceRepository extends JpaRepository<AgentTraceEntity, St
         @Param("from") LocalDateTime from, @Param("to") LocalDateTime to, Pageable pageable);
 
     /**
-     * @deprecated 使用分页版本 {@link #findByStatusAndTimeRange(String, LocalDateTime, LocalDateTime, Pageable)}
-     */
-    @Deprecated
-    @Query("SELECT t FROM AgentTraceEntity t WHERE t.finalStatus = :status AND t.createdAt BETWEEN :from AND :to ORDER BY t.createdAt DESC")
-    List<AgentTraceEntity> findByStatusAndTimeRange(
-        @Param("status") String status, @Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
-
-    /**
      * 按状态 + 时间范围分页查询 Trace
      */
     @Query("SELECT t FROM AgentTraceEntity t WHERE t.finalStatus = :status AND t.createdAt BETWEEN :from AND :to ORDER BY t.createdAt DESC")
     Page<AgentTraceEntity> findByStatusAndTimeRange(
         @Param("status") String status, @Param("from") LocalDateTime from, @Param("to") LocalDateTime to,
         Pageable pageable);
-
-    /**
-     * @deprecated 使用分页版本 {@link #findByModeAndTimeRange(String, LocalDateTime, LocalDateTime, Pageable)}
-     */
-    @Deprecated
-    @Query("SELECT t FROM AgentTraceEntity t WHERE t.mode = :mode AND t.createdAt BETWEEN :from AND :to ORDER BY t.createdAt DESC")
-    List<AgentTraceEntity> findByModeAndTimeRange(
-        @Param("mode") String mode, @Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 
     /**
      * 按模式 + 时间范围分页查询 Trace

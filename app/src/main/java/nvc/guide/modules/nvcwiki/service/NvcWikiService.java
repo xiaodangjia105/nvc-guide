@@ -25,8 +25,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -188,25 +186,6 @@ public class NvcWikiService {
                     null
             );
         }).filter(r -> r != null).toList();
-    }
-
-    /**
-     * 关键词搜索
-     * @deprecated 使用 {@link #searchByKeyword(Long, String, Pageable)} 分页查询
-     */
-    @Deprecated
-    @Transactional(readOnly = true)
-    public List<WikiResponse> searchByKeyword(Long userId, String keyword) {
-        // 转义 LIKE 通配符
-        String escaped = keyword.trim()
-            .replace("\\", "\\\\")
-            .replace("%", "\\%")
-            .replace("_", "\\_");
-        List<KnowledgeBaseEntity> entities = knowledgeBaseRepository
-                .searchByTypeAndUserIdAndKeyword(KnowledgeBaseType.PERSONAL_WIKI, userId, escaped);
-        return entities.stream()
-                .map(entity -> toResponse(entity, null, null, null))
-                .toList();
     }
 
     /**

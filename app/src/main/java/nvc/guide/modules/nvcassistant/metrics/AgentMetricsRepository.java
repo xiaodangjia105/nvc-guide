@@ -11,30 +11,10 @@ import java.util.List;
 
 public interface AgentMetricsRepository extends JpaRepository<AgentMetricsEntity, Long> {
 
-    /**
-     * @deprecated 使用分页版本 {@link #findBySessionIdOrderByCreatedAtAsc(String, Pageable)}
-     */
-    @Deprecated
-    List<AgentMetricsEntity> findBySessionIdOrderByCreatedAtAsc(String sessionId);
-
     Page<AgentMetricsEntity> findBySessionIdOrderByCreatedAtAsc(String sessionId, Pageable pageable);
-
-    /**
-     * @deprecated 使用分页版本
-     */
-    @Deprecated
-    List<AgentMetricsEntity> findByMetricTypeAndCreatedAtBetweenOrderByCreatedAtAsc(
-        String metricType, LocalDateTime from, LocalDateTime to);
 
     Page<AgentMetricsEntity> findByMetricTypeAndCreatedAtBetweenOrderByCreatedAtAsc(
         String metricType, LocalDateTime from, LocalDateTime to, Pageable pageable);
-
-    /**
-     * @deprecated 使用分页版本 {@link #findByCreatedAtBetweenOrderByCreatedAtAsc(LocalDateTime, LocalDateTime, Pageable)}
-     */
-    @Deprecated
-    List<AgentMetricsEntity> findByCreatedAtBetweenOrderByCreatedAtAsc(
-        LocalDateTime from, LocalDateTime to);
 
     Page<AgentMetricsEntity> findByCreatedAtBetweenOrderByCreatedAtAsc(
         LocalDateTime from, LocalDateTime to, Pageable pageable);
