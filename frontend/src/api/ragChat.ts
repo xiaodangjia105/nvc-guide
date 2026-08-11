@@ -1,6 +1,6 @@
 import { request, getAuthHeaders, getErrorMessage } from './request';
 
-const API_BASE_URL = import.meta.env.PROD ? '' : 'http://localhost:8080';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 // ========== 类型定义 ==========
 
@@ -186,7 +186,7 @@ export const ragChatApi = {
         buffer += decoder.decode(value, { stream: true });
 
         // SSE 事件以 \n\n 分隔，但也需要处理单行的情况
-        let newlineIndex = buffer.indexOf('\n\n');
+        const newlineIndex = buffer.indexOf('\n\n');
         if (newlineIndex === -1) {
           // 如果没有找到 \n\n，尝试处理单行 data: 格式
           const singleLineIndex = buffer.indexOf('\n');

@@ -86,7 +86,7 @@ export function sendChatStream(
   onEvent: (event: StreamEvent) => void,
   onError?: (error: Error) => void
 ): AbortController {
-  const baseURL = import.meta.env.PROD ? '' : 'http://localhost:8080';
+  const baseURL = import.meta.env.VITE_API_BASE_URL || '';
 
   return consumeSSEEventsWithAbort<string | Record<string, unknown>>(
     `${baseURL}/api/nvc/assistant/chat/stream?userId=${userId}`,

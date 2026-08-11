@@ -35,7 +35,7 @@ export const practiceApi = {
 
   sendMessageStream: (sessionId: number, content: string) =>
     fetch(
-      (import.meta.env.PROD ? '' : 'http://localhost:8080')
+      (import.meta.env.VITE_API_BASE_URL || '')
       + `/api/nvc/practice/sessions/${sessionId}/messages/stream`,
       {
         method: 'POST',
@@ -92,7 +92,7 @@ export const reportApi = {
     ),
 
   downloadPdfUrl: (sessionId: number) =>
-    (import.meta.env.PROD ? '' : 'http://localhost:8080')
+    (import.meta.env.VITE_API_BASE_URL || '')
     + `/api/nvc/report/sessions/${sessionId}/pdf`,
 };
 
