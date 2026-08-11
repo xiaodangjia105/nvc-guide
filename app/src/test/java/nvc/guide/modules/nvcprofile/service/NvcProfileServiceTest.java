@@ -34,11 +34,13 @@ class NvcProfileServiceTest {
     @Mock
     private NvcUserAbilityScoreRepository abilityScoreRepository;
 
+    private NvcAbilityService abilityService;
     private NvcProfileService service;
 
     @BeforeEach
     void setUp() {
-        service = new NvcProfileService(profileRepository, abilityScoreRepository);
+        abilityService = new NvcAbilityService(abilityScoreRepository, profileRepository);
+        service = new NvcProfileService(profileRepository, abilityScoreRepository, abilityService);
     }
 
     private NvcUserProfileEntity buildProfile(Long userId, NvcLevel level) {
