@@ -73,14 +73,17 @@ class NvcPracticeSessionServiceTest {
     @Mock
     private NvcAgentOrchestrator orchestrator;
 
+    private NvcPracticeSessionValidator validator;
     private NvcPracticeSessionService sessionService;
 
     @BeforeEach
     void setUp() {
+        validator = new NvcPracticeSessionValidator();
+        validator.validateTransitions();
         sessionService = new NvcPracticeSessionService(
             sessionRepository, messageRepository, evaluationService,
             scenarioRepository, scenarioService, redisService, objectMapper,
-            eventPublisher, reflectionService, orchestrator);
+            eventPublisher, validator, reflectionService, orchestrator);
 
         // Mock executeWithLock to execute the operation directly (no real locking in tests)
         when(redisService.executeWithLock(anyString(), anyLong(), anyLong(), any(TimeUnit.class), any(RedisService.LockedOperation.class)))

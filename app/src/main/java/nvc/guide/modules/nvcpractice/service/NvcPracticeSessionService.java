@@ -26,13 +26,8 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import jakarta.annotation.PostConstruct;
-
-import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
@@ -40,18 +35,7 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class NvcPracticeSessionService {
 
-  /**
-   * 合法的状态转换表
-   * key: 当前状态 → value: 可转移到的目标状态集合
-   */
-  private static final Map<NvcSessionPhase, Set<NvcSessionPhase>> VALID_TRANSITIONS = Map.of(
-      NvcSessionPhase.CREATED, Set.of(NvcSessionPhase.IN_PROGRESS, NvcSessionPhase.COMPLETED),
-      NvcSessionPhase.IN_PROGRESS, Set.of(NvcSessionPhase.PAUSED, NvcSessionPhase.COMPLETED),
-      NvcSessionPhase.PAUSED, Set.of(NvcSessionPhase.IN_PROGRESS, NvcSessionPhase.COMPLETED),
-      NvcSessionPhase.COMPLETED, Set.of(NvcSessionPhase.EVALUATED),
-      NvcSessionPhase.EVALUATED, Set.of()  // 终态，不可转移
-  );
-
+  private final NvcPracticeSessionValidator validator;
   private final NvcPracticeSessionRepository sessionRepository;
   private final NvcPracticeMessageRepository messageRepository;
   private final NvcEvaluationService evaluationService;
@@ -72,6 +56,7 @@ public class NvcPracticeSessionService {
       RedisService redisService,
       ObjectMapper objectMapper,
       ApplicationEventPublisher eventPublisher,
+      NvcPracticeSessionValidator validator,
       @Lazy NvcReflectionService reflectionService,
       @Lazy NvcAgentOrchestrator orchestrator) {
     this.sessionRepository = sessionRepository;
@@ -82,22 +67,9 @@ public class NvcPracticeSessionService {
     this.redisService = redisService;
     this.objectMapper = objectMapper;
     this.eventPublisher = eventPublisher;
+    this.validator = validator;
     this.reflectionService = reflectionService;
     this.orchestrator = orchestrator;
-  }
-
-  /**
-   * 启动时校验 VALID_TRANSITIONS 覆盖所有枚举值
-   */
-  @PostConstruct
-  public void validateTransitions() {
-    for (NvcSessionPhase phase : NvcSessionPhase.values()) {
-      if (!VALID_TRANSITIONS.containsKey(phase)) {
-        throw new IllegalStateException(
-            "VALID_TRANSITIONS 缺少枚举值: " + phase + "，请补充状态转换规则");
-      }
-    }
-    log.info("VALID_TRANSITIONS 校验通过，覆盖所有 {} 个枚举值", NvcSessionPhase.values().length);
   }
 
   /**
@@ -191,14 +163,7 @@ public class NvcPracticeSessionService {
     NvcSessionPhase currentPhase = session.getCurrentPhase();
 
     // 状态转换校验
-    Set<NvcSessionPhase> allowed = VALID_TRANSITIONS.getOrDefault(currentPhase, Set.of());
-    if (!allowed.contains(newPhase)) {
-      log.warn("Invalid phase transition attempted: sessionId={}, {} -> {}",
-          sessionId, currentPhase, newPhase);
-      throw new BusinessException(
-          ErrorCode.INVALID_OPERATION,
-          "不允许从 " + currentPhase + " 转换到 " + newPhase);
-    }
+    validator.validatePhaseTransition(currentPhase, newPhase, sessionId);
 
     session.setCurrentPhase(newPhase);
 
