@@ -24,12 +24,12 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function TraceSpanCard({ span, maxDuration }: Props) {
+  const [expanded, setExpanded] = useState(false);
+
   // 工具调用使用专用卡片
   if (span.spanType === 'TOOL_CALL') {
     return <ToolCallSpanCard span={span} maxDuration={maxDuration} />;
   }
-
-  const [expanded, setExpanded] = useState(false);
 
   const widthPercent = maxDuration > 0 ? Math.max((span.durationMs / maxDuration) * 100, 2) : 2;
   const statusColor = STATUS_COLORS[span.status] || STATUS_COLORS.SUCCESS;
