@@ -2,10 +2,7 @@ package nvc.guide.modules.nvcpractice.controller;
 
 import nvc.guide.modules.nvcpractice.dto.StepProgressDTO;
 import nvc.guide.modules.nvcpractice.model.NvcPracticeStep;
-import nvc.guide.modules.nvcpractice.service.NvcPracticeDialogueService;
-import nvc.guide.modules.nvcpractice.service.NvcPracticeSessionService;
-import nvc.guide.modules.nvcpractice.service.NvcStructuredPracticeService;
-import nvc.guide.modules.nvcpractice.listener.NvcEvaluateStreamProducer;
+import nvc.guide.modules.nvcpractice.service.NvcPracticeFacade;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,10 +18,7 @@ import static org.mockito.Mockito.when;
 @DisplayName("NvcPracticeController - Step Progress API 测试")
 class NvcPracticeControllerStepTest {
 
-  @Mock private NvcPracticeSessionService sessionService;
-  @Mock private NvcPracticeDialogueService dialogueService;
-  @Mock private NvcEvaluateStreamProducer evaluateStreamProducer;
-  @Mock private NvcStructuredPracticeService structuredPracticeService;
+  @Mock private NvcPracticeFacade practiceFacade;
 
   @InjectMocks private NvcPracticeController controller;
 
@@ -36,7 +30,7 @@ class NvcPracticeControllerStepTest {
         "步骤1/4：观察练习 — 学会区分观察（客观事实）和评论（主观判断）",
         10, null, null, 30
     );
-    when(structuredPracticeService.getStepProgress(1L)).thenReturn(progress);
+    when(practiceFacade.getStepProgress(1L)).thenReturn(progress);
 
     var result = controller.getStepProgress(1L);
 
@@ -55,7 +49,7 @@ class NvcPracticeControllerStepTest {
         "步骤2/4：感受练习 — 学会识别和表达真实感受，区分感受和想法",
         10, null, null, 30
     );
-    when(structuredPracticeService.advanceStep(1L)).thenReturn(progress);
+    when(practiceFacade.advanceStep(1L)).thenReturn(progress);
 
     var result = controller.advanceStep(1L);
 
@@ -73,7 +67,7 @@ class NvcPracticeControllerStepTest {
         "步骤1/4：观察练习 — 学会区分观察（客观事实）和评论（主观判断）",
         10, null, null, 30
     );
-    when(structuredPracticeService.resetStep(1L)).thenReturn(progress);
+    when(practiceFacade.resetStep(1L)).thenReturn(progress);
 
     var result = controller.resetStep(1L);
 
@@ -91,7 +85,7 @@ class NvcPracticeControllerStepTest {
         "四步练习全部完成！进入综合练习。",
         null, null, null, null
     );
-    when(structuredPracticeService.getStepProgress(1L)).thenReturn(progress);
+    when(practiceFacade.getStepProgress(1L)).thenReturn(progress);
 
     var result = controller.getStepProgress(1L);
 
